@@ -40,7 +40,32 @@ def SeqToArray(seq):
 
 
 def parse_tuni(filepath):
-    """"""
+    """Parser for '.tuni' files
+
+    Parameters
+    ----------
+    filepath : str
+        The path to the '.tuni' file
+
+    Returns
+    -------
+    dict of {str: float}
+        A dict with the sequence frequencies keyed by sequence
+    list of str
+        The sequences of the file
+    list of str
+        The sequence labels of the file
+    list of numpy arrays of integers
+        The numpy array version of the sequences
+    list of floats
+        The frequencies of the sequences
+
+    Raises
+    ------
+    ValueError
+        If the extension of `filepath` is not '.tuni'
+        If there are no sequences in the filepath
+    """
     # Check that the input file is a .tuni file
     fname, ext = splitext(filepath)
     if ext != '.tuni':
