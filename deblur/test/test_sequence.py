@@ -103,6 +103,22 @@ class SequenceTests(TestCase):
         s2 = Sequence(self.label, self.sequence)
         self.assertFalse(s1 != s2)
 
+    def test_to_fasta(self):
+        seq = Sequence(self.label, self.sequence)
+        obs = seq.to_fasta()
+        exp = ">151_4447;size=1812;\n---AGGATGCGAGATGCGTGGT-----\n"
+        self.assertEqual(obs, exp)
+
+        seq.frequency = 1811.1
+        obs = seq.to_fasta()
+        exp = ">151_4447;size=1811;\n---AGGATGCGAGATGCGTGGT-----\n"
+        self.assertEqual(obs, exp)
+
+        seq.frequency = 1811.5
+        obs = seq.to_fasta()
+        exp = ">151_4447;size=1812;\n---AGGATGCGAGATGCGTGGT-----\n"
+        self.assertEqual(obs, exp)
+
 
 if __name__ == '__main__':
     main()
