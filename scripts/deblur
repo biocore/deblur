@@ -10,45 +10,48 @@
 
 import click
 
-from deblur.deblur import CleanSeqs
+from skbio.parse.sequences import parse_fasta
+
+from deblur.deblurring import deblur
 
 
 @click.group()
-def deblur():
+def deblur_cmds():
     pass
 
 
-@deblur.command()
-@click.argument('dirpath', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True))
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
               help="Read error rate")
-@click.option('--indel-max', required=False, type=int, default=3,
-              help="Maximal indel number")
-@click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
-              help='Indel probability (same for N indels)')
-@click.option('--pyroseq', '-p', is_flag=True,
-              help="Use pairwise alignment for pyrosequencing (slower)")
-@click.option('--mean-error', '-m', required=False, type=float, default=-1,
-              help="The mean error, used for original sequence estimate. Pass "
-                   "-1 (default) to use the same value as --read-error")
+@click.option('--mean-error', '-m', required=False, type=float, default=None,
+              help="The mean error, used for original sequence estimate. If "
+                   "not passed the same value as --read-error will be used")
 @click.option('--error-dist', '-e', required=False, type=str, default=None,
               help="A comma separated list of error probabilities for each "
-                   "edit distance (mininum list length: 10)")
-def deblur_seqs(dirpath, read_error, indel_max, indel_prob, pyroseq,
-                mean_error, error_dist):
+                   "hamming distance. The length of the list determines the "
+                   "number of hamming distances taken into account.")
+@click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
+              help='Indel probability (same for N indels)')
+@click.option('--indel-max', required=False, type=int, default=3,
+              help="Maximal indel number")
+def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
+                indel_max):
     """Clean read errors from illumina reads"""
-    # If mean_error is -1, we will use the same value as read_error
-    if mean_error == -1:
-        mean_error = read_error
-
     # If the user provided an error_dist value, we map it to a list of floats
-    # else we set the default value to 0
-    # TODO: the code does not actually works if providing a 0.
-    error_dist = list(map(float, error_dist.split(','))) if error_dist else 0
+    if error_dist:
+        error_dist = list(map(float, error_dist.split(',')))
 
-    CleanSeqs(dirpath, read_error, mean_error, error_dist, indel_prob,
-              indel_max, pyroseq)
+    with open(seqs_fp, 'U') as f:
+        seqs = deblur(parse_fasta(f), read_error, mean_error, error_dist,
+                      indel_prob, indel_max)
+
+    output_path = "%s.clean" % seqs_fp
+    with open(output_path, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
 
 if __name__ == '__main__':
-    deblur()
+    deblur_cmds()
