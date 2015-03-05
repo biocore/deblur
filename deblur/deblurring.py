@@ -6,33 +6,15 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 
-from collections import defaultdict
-from operator import itemgetter
-import re
+from operator import attrgetter
 
 import numpy as np
 
-
-def seq_to_array(seq):
-    """Convert a string sequence to a numpy array
-
-    Parameters
-    ----------
-    seq : str
-        The sequence string
-
-    Returns
-    -------
-    np.array
-        The numpy representation of `seq`
-    """
-    trans_dict = defaultdict(lambda: 5, A=0, C=1, G=2, T=3)
-    trans_dict['-'] = 4
-    return np.array([trans_dict[base] for base in seq.upper()], dtype=np.int8)
+from deblur.sequence import Sequence
 
 
-def get_sequences_stats(input_seqs):
-    """Gets the sequence information
+def get_sequences(input_seqs):
+    """Returns a list of Sequences
 
     Parameters
     ----------
@@ -41,11 +23,7 @@ def get_sequences_stats(input_seqs):
 
     Returns
     -------
-    (seq_freqs, seqs, seq_labels, np_seqs)
-        seq_freqs: dictionary of {sequence: num_seqs}
-        seqs: list of sequences, sorted by num_seqs
-        seq_labels: list of sequence labels, sorted by num_seqs
-        np_seqs: list of numpy-sequences, sorted by num_seqs
+    list of Sequence
 
     Raises
     ------
@@ -54,44 +32,24 @@ def get_sequences_stats(input_seqs):
         If all the sequences do not have the same length either aligned or
         unaligned.
     """
-    seq_freqs = {}
-    seq_info = []
-    seq_lengths = []
-    real_lengths = []
-    for label, seq in input_seqs:
-        # Store the sequence length
-        seq_lengths.append(len(seq))
-        real_lengths.append(len(seq) - seq.count('-'))
-        # Get the number of reads from the label
-        num_seqs = float(re.search('(?<=size=)\w+', label).group(0))
-        # Convert the sequences to numpy array
-        np_seq = seq_to_array(seq)
-        # Hash the number of reads
-        seq_freqs[seq] = num_seqs
-        # Store the list of sequences
-        seq_info.append((num_seqs, seq, label, np_seq))
+    seqs = [Sequence(label, seq) for label, seq in input_seqs]
 
-    # Check if we actually had sequences
-    if len(seq_info) == 0:
+    if len(seqs) == 0:
         raise ValueError("No sequences found!")
 
-    # The code assumes that all sequences are of equal length, raising a
-    # ValueError in case that is not true
-    seq_lengths = set(seq_lengths)
-    real_lengths = set(real_lengths)
-    if len(seq_lengths) != 1 or len(real_lengths) != 1:
+    # Check that all the sequence lengths (aligned and unaligned are the same)
+    aligned_lengths = set(s.length for s in seqs)
+    unaligned_lengths = set(s.unaligned_length for s in seqs)
+
+    if len(aligned_lengths) != 1 or len(unaligned_lengths) != 1:
         raise ValueError(
             "Not all sequence have the same length. Aligned lengths: %s, "
             "sequence lengths: %s"
-            % (", ".join(map(str, seq_lengths)),
-               ", ".join(map(str, real_lengths))))
+            % (", ".join(map(str, aligned_lengths)),
+               ", ".join(map(str, unaligned_lengths))))
 
-    # Get 3 lists: the sequence, the sequence label and the numpy sequence
-    # all lists sorted by the num_seqs value
-    _, seqs, seq_labels, np_seqs = zip(
-        *sorted(seq_info, key=itemgetter(0), reverse=True))
-
-    return seq_freqs, seqs, seq_labels, np_seqs
+    seqs = sorted(seqs, key=attrgetter('frequency'), reverse=True)
+    return seqs
 
 
 def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
@@ -103,16 +61,18 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     input_seqs : iterable of (str, str)
         The list of input sequences in (label, sequence) format
     read_error : float, optional
-        the maximal read error expected (fraction - typically 0.01)
-    mean_error :
-        the mean read error used for peak spread normalization, typically 0.01
-    error_dist :
-        the error distribution array, or 0 if use default
-    indel_prob :
-        the probability for an indel (currently constant for number of indels
-        until max is reached)
-    indel_max :
-        the maximal number of indels expected by errors (error cutoff)
+        The read error rate. Default: 0.05
+    mean_error : float, optional
+        The mean error, used for original sequence estimate. Default: same
+        value as `read_error`
+    error_dist : list of float, optional
+        A list of error probabilities. The length of the list determines the
+        amount of hamming distances taken into accound. Default: None, computed
+        from mean error and sequence length.
+    indel_prob : float, optional
+        Indel probability (same for N indels). Default: 0.01
+    indel_max : int, optional
+        The maximal number of indels expected by errors. Default: 3
 
     Results
     -------
@@ -128,83 +88,75 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     Xi = max frequency of error hamming. If it is 0, we use the default
     distribution
     """
-    # Step 1: get the sequence information
-    seq_freqs, seqs, seq_labels, np_seqs = get_sequences_stats(input_seqs)
+    # Get the sequences
+    seqs = get_sequences(input_seqs)
 
-    num_real = len(seqs[0]) - seqs[0].count('-')
-    mod_factor = pow((1 - mean_error), num_real)
+    # If mean error is not provided, use the same value as read_error
+    mean_error = mean_error if mean_error else read_error
 
     # if error_list not supplied, use the default (22 mock mixture setup)
+    mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
     if not error_dist:
-        error_dist = [1.0 / mod_factor, pow(read_error, 1) / mod_factor, 0.01,
-                      0.01, 0.01, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005,
-                      0.001, 0.001, 0.001, 0.001]
+        error_dist = np.array(
+            [1.0 / mod_factor, pow(read_error, 1) / mod_factor, 0.01, 0.01,
+             0.01, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.001, 0.001,
+             0.001, 0.001])
     else:
-        error_dist[:] = [val / mod_factor for val in error_dist]
+        error_dist = np.array(error_dist) / mod_factor
 
     max_h_dist = len(error_dist)-1
 
-    for idx, curr_seq in enumerate(seqs):
-        curr_seq_freq = seq_freqs[curr_seq]
-
+    for seq_i in seqs:
         # no need to remove neighbors if freq. is <=0
-        if curr_seq_freq <= 0:
+        if seq_i.frequency <= 0:
             continue
 
-        # correct for the fact that many reads are expected to be mutated
-        num_err = [val * curr_seq_freq for val in error_dist]
+        # Correct for the fact that many reads are expected to be mutated
+        num_err = [val * seq_i.frequency for val in error_dist]
 
         # if it's low level, just continue
         if num_err[1] < 0.1:
             continue
 
-        # compare to all other sequences and calculate hamming dist
-        curr_np_seq = np_seqs[idx]
-
-        curr_seq_len = len(seqs[idx].rstrip('-'))
-
-        for idx_tmp, np_seq_tmp in enumerate(np_seqs):
+        # Compare to all other sequences and calculate hamming dist
+        seq_i_len = len(seq_i.sequence.rstrip('-'))
+        for seq_j in seqs:
             # Ignore current sequence
-            if idx_tmp == idx:
+            if seq_i == seq_j:
                 continue
 
-            # calculate the hamming distance
-            h_dist = np.count_nonzero(np.not_equal(np_seq_tmp, curr_np_seq))
+            # Calculate the hamming distance
+            h_dist = np.count_nonzero(np.not_equal(seq_i.np_sequence,
+                                                   seq_j.np_sequence))
 
-            # if far away, don't need to correct
+            # If far away, don't need to correct
             if h_dist > max_h_dist:
                 continue
 
-            # close, so lets calculate exact distance
-            # num_sub -> num substitutions
-            num_sub = 0
-            num_indel = 0
+            # Close, so lets calculate exact distance
+            num_substitutions = 0
+            num_indels = 0
 
-            # We stop checking in the shortest "real" sequence. We need to do
-            # this in order to avoid double counting the insertion/deletions
-            l = len(seqs[idx_tmp].rstrip('-'))
-            stop_length = min(curr_seq_len, l)
-
-            for curr_pos in range(stop_length):
-                if not curr_np_seq[curr_pos] == np_seq_tmp[curr_pos]:
-                    # 4 is '-'
-                    if np_seq_tmp[curr_pos] == 4:
-                        num_indel += 1
+            # We stop checking in the shortest sequence after removing trailing
+            # indels. We need to do this in order to avoid double counting
+            # the insertions/deletions
+            l = min(seq_i_len, len(seq_j.sequence.rstrip('-')))
+            for bi, bj in zip(seq_i.np_sequence[:l], seq_i.np_sequence[:l]):
+                if bi != bj:
+                    if bi == 4 or bj == 4:
+                        num_indels += 1
                     else:
-                        if curr_np_seq[curr_pos] == 4:
-                            num_indel += 1
-                        else:
-                            num_sub += 1
+                        num_substitutions += 1
 
-            correction_value = num_err[num_sub]
+            correction_value = num_err[num_substitutions]
 
-            if num_indel > indel_max:
+            if num_indels > indel_max:
                 correction_value = 0
-            elif num_indel > 0:
+            elif num_indels > 0:
                 # remove errors due to (PCR?) indels (saw in 22 mock mixture)
                 correction_value = correction_value * indel_prob
 
             # met all the criteria - so correct the frequency of the neighbor
-            seq_freqs[seqs[idx_tmp]] -= correction_value
+            seq_j.frequency -= correction_value
 
-    return seq_freqs
+    return seqs
