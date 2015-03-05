@@ -25,3 +25,12 @@ class Sequence(object):
         self.frequency = float(re.search('(?<=size=)\w+', self.label).group(0))
         self.np_sequence = np.array(
             [trans_dict[b] for b in self.sequence], dtype=np.int8)
+
+    def __eq__(self, other):
+        return (type(self) == type(other)
+                and self.label == other.label
+                and self.sequence == other.sequence
+                and self.frequency == other.frequency)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

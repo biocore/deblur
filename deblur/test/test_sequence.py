@@ -71,5 +71,38 @@ class SequenceTests(TestCase):
         self.assertEqual(obs.frequency, 1812)
         npt.assert_equal(obs.np_sequence, exp_np_seq)
 
+    def test_eq_true(self):
+        s1 = Sequence(self.label, self.sequence)
+        s2 = Sequence(self.label, self.sequence)
+        self.assertTrue(s1 == s2)
+
+    def test_eq_false(self):
+        s1 = Sequence(self.label, self.sequence)
+        s2 = Sequence(self.label, "---aggatgcgagatgcgtgtt-----")
+        self.assertFalse(s1 == s2)
+
+        s2 = Sequence("152_4447;size=1812;", self.sequence)
+        self.assertFalse(s1 == s2)
+
+        self.assertFalse(s1 == 2)
+        self.assertFalse(s1 == "---aggatgcgagatgcgtgtt-----")
+
+    def test_ne_true(self):
+        s1 = Sequence(self.label, self.sequence)
+        s2 = Sequence(self.label, "---aggatgcgagatgcgtgtt-----")
+        self.assertTrue(s1 != s2)
+
+        s2 = Sequence("152_4447;size=1812;", self.sequence)
+        self.assertTrue(s1 != s2)
+
+        self.assertTrue(s1 != 2)
+        self.assertTrue(s1 != "---aggatgcgagatgcgtgtt-----")
+
+    def test_ne_false(self):
+        s1 = Sequence(self.label, self.sequence)
+        s2 = Sequence(self.label, self.sequence)
+        self.assertFalse(s1 != s2)
+
+
 if __name__ == '__main__':
     main()
