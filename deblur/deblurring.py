@@ -54,7 +54,7 @@ def get_sequences(input_seqs):
 
 def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
            indel_prob=0.01, indel_max=3):
-    """ Deblur the reads
+    """Deblur the reads
 
     Parameters
     ----------
@@ -67,7 +67,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
         value as `read_error`
     error_dist : list of float, optional
         A list of error probabilities. The length of the list determines the
-        amount of hamming distances taken into accound. Default: None, computed
+        amount of hamming distances taken into account. Default: None, computed
         from mean error and sequence length.
     indel_prob : float, optional
         Indel probability (same for N indels). Default: 0.01
@@ -76,17 +76,19 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
 
     Results
     -------
-    seq_freqs - the deblurred number of reads for each sequence
-            (0 if not present)
+    list of Sequence
+        The deblurred sequences
 
     Notes
     -----
     mean_error is used only for normalizing the peak height before deblurring,
     whereas read_error is used for calculating the expected number of errors
     for each position.
-    The error distribution array 'error_dist' should be of length >10, where
-    Xi = max frequency of error hamming. If it is 0, we use the default
-    distribution
+    The array 'error_dist' represents the error distribution, where
+    Xi = max frequency of error hamming. The length of this array - 1 limits
+    the hamming distance taken into account, i.e. if the length if `error_dist`
+    is 10, sequences up to 10 - 1 = 9 hamming distance will be taken into
+    account
     """
     # Get the sequences
     seqs = get_sequences(input_seqs)
@@ -112,6 +114,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             continue
 
         # Correct for the fact that many reads are expected to be mutated
+        num_err = error_dist * seq_i.frequency
         num_err = [val * seq_i.frequency for val in error_dist]
 
         # if it's low level, just continue
@@ -159,4 +162,6 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             # met all the criteria - so correct the frequency of the neighbor
             seq_j.frequency -= correction_value
 
-    return seqs
+    result = [s for s in seqs if s.frequency > 0]
+
+    return result
