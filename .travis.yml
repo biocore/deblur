@@ -11,7 +11,7 @@ before_install:
 install:
   - conda create --yes -n env_name python=$PYTHON_VERSION pip nose flake8
   - source activate env_name
-  - pip install coveralls
+  - pip install coveralls numpy
   - pip install .
 script:
   - nosetests --with-doctest --with-coverage
