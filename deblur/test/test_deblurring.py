@@ -44,6 +44,10 @@ class DeblurringTests(TestCase):
         with self.assertRaises(ValueError):
             get_sequences(seqs)
 
+    def test_get_sequences_error_empty(self):
+        with self.assertRaises(ValueError):
+            get_sequences([])
+
     def test_get_sequences(self):
         exp_seqs = [
             Sequence("151_4447;size=1812;", "---aggatgcgagatgcgtggt-----"),
@@ -75,6 +79,21 @@ class DeblurringTests(TestCase):
         seqs_f = StringIO(TEST_SEQS_2)
 
         obs = deblur(parse_fasta(seqs_f))
+        exp = [
+            Sequence("E.Coli-999;size=720;",
+                     "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
+                     "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
+                     "gcaagcttgagtctcgtagaggggggcagaattccag")]
+
+        self.assertEqual(obs, exp)
+
+    def test_deblur_with_non_default_error_profile(self):
+        error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
+                      0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000025,
+                      0.0000005, 0.0000005, 0.0000005, 0.0000005]
+        seqs_f = StringIO(TEST_SEQS_2)
+
+        obs = deblur(parse_fasta(seqs_f), error_dist=error_dist)
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
