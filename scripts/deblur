@@ -29,12 +29,13 @@ def deblur_cmds():
 @click.option('--mean-error', '-m', required=False, type=float, default=None,
               help="The mean error, used for original sequence estimate. If "
                    "not passed the same value as --read-error will be used")
-@click.option('--error-dist', '-e', required=False, type=str, default=None,
+@click.option('--error-dist', '-d', required=False, type=str, default=None,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account.")
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
-              help='Indel probability (same for N indels)')
+              help='Insertion/deletion (indel) probability '
+                   '(same for N indels)')
 @click.option('--indel-max', required=False, type=int, default=3,
               help="Maximal indel number")
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,

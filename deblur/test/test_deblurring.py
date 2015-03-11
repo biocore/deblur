@@ -10,6 +10,7 @@ from unittest import TestCase, main
 from StringIO import StringIO
 
 from skbio.parse.sequences import parse_fasta
+import numpy as np
 
 from deblur.sequence import Sequence
 from deblur.deblurring import get_sequences, deblur
@@ -99,6 +100,14 @@ class DeblurringTests(TestCase):
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
                      "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
+
+        # Trying with a numpy array
+        error_dist = np.array(
+            [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005, 0.0000025,
+             0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000005, 0.0000005,
+             0.0000005, 0.0000005])
+        seqs_f = StringIO(TEST_SEQS_2)
+        obs = deblur(parse_fasta(seqs_f), error_dist=error_dist)
 
         self.assertEqual(obs, exp)
 

@@ -59,7 +59,8 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     Parameters
     ----------
     input_seqs : iterable of (str, str)
-        The list of input sequences in (label, sequence) format
+        The list of input sequences in (label, sequence) format. The label
+        should include the sequence count in the 'size=X' format.
     read_error : float, optional
         The read error rate. Default: 0.05
     mean_error : float, optional
@@ -94,15 +95,15 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     seqs = get_sequences(input_seqs)
 
     # If mean error is not provided, use the same value as read_error
-    mean_error = mean_error if mean_error else read_error
+    mean_error = mean_error if mean_error is not None else read_error
 
     # if error_list not supplied, use the default (22 mock mixture setup)
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
-    if not error_dist:
+    if error_dist is None:
         error_dist = np.array(
-            [1.0 / mod_factor, pow(read_error, 1) / mod_factor, 0.01, 0.01,
-             0.01, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.001, 0.001,
-             0.001, 0.001])
+            [1.0 / mod_factor, read_error / mod_factor, 0.01, 0.01, 0.01,
+             0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001,
+             0.001])
     else:
         error_dist = np.array(error_dist) / mod_factor
 
@@ -115,7 +116,6 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
 
         # Correct for the fact that many reads are expected to be mutated
         num_err = error_dist * seq_i.frequency
-        num_err = [val * seq_i.frequency for val in error_dist]
 
         # if it's low level, just continue
         if num_err[1] < 0.1:
@@ -137,19 +137,18 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
                 continue
 
             # Close, so lets calculate exact distance
-            num_substitutions = 0
-            num_indels = 0
 
             # We stop checking in the shortest sequence after removing trailing
             # indels. We need to do this in order to avoid double counting
             # the insertions/deletions
             l = min(seq_i_len, len(seq_j.sequence.rstrip('-')))
-            for bi, bj in zip(seq_i.np_sequence[:l], seq_i.np_sequence[:l]):
-                if bi != bj:
-                    if bi == 4 or bj == 4:
-                        num_indels += 1
-                    else:
-                        num_substitutions += 1
+            sub_seq_i = seq_i.np_sequence[:l]
+            sub_seq_j = seq_i.np_sequence[:l]
+
+            mask = (sub_seq_i != sub_seq_j)
+            muttype = np.logical_or(sub_seq_i[mask] == 4, sub_seq_j[mask] == 4)
+            num_indels = muttype.sum()
+            num_substitutions = len(muttype) - num_indels
 
             correction_value = num_err[num_substitutions]
 

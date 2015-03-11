@@ -16,6 +16,27 @@ trans_dict['-'] = 4
 
 
 class Sequence(object):
+    """Sequence object to represent the aligned reads
+
+    Attributes
+    ----------
+    label : str
+        The sequence label
+    sequence : str
+        The sequence string
+    length : int
+        The sequence length (aligned)
+    unaligned_length : int
+        The unaligned sequence length
+    frequency : float
+        The number of times the sequence have been seen in the dataset
+    np_sequence : numpy array of int8
+        An int8 numpy representation of the sequence string
+
+    Methods
+    -------
+    to_fasta
+    """
 
     def __init__(self, label, sequence):
         self.label = label
@@ -28,7 +49,6 @@ class Sequence(object):
 
     def __eq__(self, other):
         return (type(self) == type(other) and
-                self.label == other.label and
                 self.sequence == other.sequence and
                 self.frequency == other.frequency)
 
