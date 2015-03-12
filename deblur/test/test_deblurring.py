@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Copyright (c) 2013, The Deblur Development Team.
+# Copyright (c) 2015, The Deblur Development Team.
 #
 # Distributed under the terms of the BSD 3-clause License.
 #
