@@ -38,13 +38,16 @@ class workflowTests(TestCase):
 	def test_multiple_sequence_alignment(self):
 		pass
 
-	def remove_chimeras_denovo_from_seqs(self):
+	def test_remove_chimeras_denovo_from_seqs(self):
 		pass
 
-	def generate_biom_table(self):
+	def test_generate_biom_table(self):
 		pass
 
-	def assign_taxonomy(self):
+	def test_assign_taxonomy(self):
+		pass
+
+	def test_launch_workflow(self):
 		pass
 
 
