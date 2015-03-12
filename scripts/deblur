@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+
+# -----------------------------------------------------------------------------
+# Copyright (c) 2013, The Deblur Development Team.
+#
+# Distributed under the terms of the BSD 3-clause License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# -----------------------------------------------------------------------------
+
+import click
+
+from skbio.parse.sequences import parse_fasta
+
+from deblur.deblurring import deblur
+
+
+@click.group()
+def deblur_cmds():
+    pass
+
+
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.option('--read-error', '-e', required=False, type=float, default=0.05,
+              help="Read error rate")
+@click.option('--mean-error', '-m', required=False, type=float, default=None,
+              help="The mean error, used for original sequence estimate. If "
+                   "not passed the same value as --read-error will be used")
+@click.option('--error-dist', '-d', required=False, type=str, default=None,
+              help="A comma separated list of error probabilities for each "
+                   "hamming distance. The length of the list determines the "
+                   "number of hamming distances taken into account.")
+@click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
+              help='Insertion/deletion (indel) probability '
+                   '(same for N indels)')
+@click.option('--indel-max', required=False, type=int, default=3,
+              help="Maximal indel number")
+def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
+                indel_max):
+    """Clean read errors from illumina reads"""
+    # If the user provided an error_dist value, we map it to a list of floats
+    if error_dist:
+        error_dist = list(map(float, error_dist.split(',')))
+
+    with open(seqs_fp, 'U') as f:
+        seqs = deblur(parse_fasta(f), read_error, mean_error, error_dist,
+                      indel_prob, indel_max)
+
+    output_path = "%s.clean" % seqs_fp
+    with open(output_path, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+if __name__ == '__main__':
+    deblur_cmds()
