@@ -15,7 +15,10 @@ from skbio.util import remove_files
 
 
 class workflowTests(TestCase):
-    def SetUp(self):
+    """ Test deblur pipeline and individual methods
+        functionality """
+
+    def setUp(self):
         """ Create working directory and two FASTA input
             files corresponding to two samples (s1 and s2).
             Each input file contains 120 sequences, of which
@@ -49,7 +52,7 @@ class workflowTests(TestCase):
 
     def tearDown(self):
         remove_files(self.files_to_remove)
-        rmtree(self.output_dir)
+        rmtree(self.working_dir)
 
     def test_demultiplex_seqs(self):
         pass
