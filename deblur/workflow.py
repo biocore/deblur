@@ -7,9 +7,22 @@
 # -----------------------------------------------------------------------------
 
 
-def trim_seqs(seqs_fp, trim_len):
-    """Step 1: trim FASTA sequences to specified length"""
-    pass
+def trim_seqs(input_seqs, trim_len):
+    """Step 1: trim FASTA sequences to specified length
+
+    Parameters
+    ----------
+    input_seqs : iterable of (str, str)
+        The list of input sequences in (label, sequence) format
+
+    Returns
+    -------
+    Generator of (str, str)
+        The trimmed sequences in (label, sequence) format
+    """
+    for label, seq in input_seqs:
+        if len(seq) >= trim_len:
+            yield label, seq[:trim_len]
 
 
 def dereplicate_seqs(seqs_fp):

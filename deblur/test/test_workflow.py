@@ -10,8 +10,11 @@ from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
 from os import close
+from types import GeneratorType
 
 from skbio.util import remove_files
+
+from deblur.workflow import trim_seqs
 
 
 class workflowTests(TestCase):
@@ -53,7 +56,24 @@ class workflowTests(TestCase):
         rmtree(self.working_dir)
 
     def test_trim_seqs(self):
-        pass
+        seqs = [("seq1", "tagggcaagactccatggtatga"),
+                ("seq2", "cggaggcgagatgcgtggta"),
+                ("seq3", "tactagcaagattcctggtaaagga"),
+                ("seq4", "aggatgcgagatgcgtg"),
+                ("seq5", "gagtgcgagatgcgtggtgagg"),
+                ("seq6", "ggatgcgagatgcgtggtgatt"),
+                ("seq7", "agggcgagattcctagtgga--")]
+        obs = trim_seqs(seqs, 20)
+
+        self.assertTrue(isinstance(obs, GeneratorType))
+
+        exp = [("seq1", "tagggcaagactccatggta"),
+               ("seq2", "cggaggcgagatgcgtggta"),
+               ("seq3", "tactagcaagattcctggta"),
+               ("seq5", "gagtgcgagatgcgtggtga"),
+               ("seq6", "ggatgcgagatgcgtggtga"),
+               ("seq7", "agggcgagattcctagtgga")]
+        self.assertEqual(list(obs), exp)
 
     def test_dereplicate_seqs(self):
         pass
