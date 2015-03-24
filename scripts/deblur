@@ -74,7 +74,8 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
               help="Sequence trim length")
 def trim(seqs_fp, output_fp, trim_len):
     """Step 1: trim FASTA sequences"""
-    seqs = trim_seqs(seqs_fp, trim_len)
+    with open(seqs_fp, 'U') as f:
+        seqs = trim_seqs(parse_fasta(f), trim_len)
 
     with open(output_fp, 'w') as f:
         for s in seqs:

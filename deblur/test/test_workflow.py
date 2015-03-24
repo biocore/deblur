@@ -37,7 +37,6 @@ class workflowTests(TestCase):
         close(f)
         with open(self.seqs_s1_fp, 'w') as t:
             t.write(seqs_s1)
-        t.close()
 
         # create temp FASTA file for s2 sequences
         f, self.seqs_s2_fp = mkstemp(prefix='seqs_s2_',
@@ -45,7 +44,6 @@ class workflowTests(TestCase):
         close(f)
         with open(self.seqs_s2_fp, 'w') as t:
             t.write(seqs_s2)
-        t.close()
 
         self.files_to_remove = [self.seqs_s1_fp,
                                 self.seqs_s2_fp]
