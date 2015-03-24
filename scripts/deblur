@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # -----------------------------------------------------------------------------
-# Copyright (c) 2013, The Deblur Development Team.
+# Copyright (c) 2015, The Deblur Development Team.
 #
 # Distributed under the terms of the BSD 3-clause License.
 #
@@ -11,8 +11,14 @@
 import click
 
 from skbio.parse.sequences import parse_fasta
+from biom.util import biom_open
 
 from deblur.deblurring import deblur
+from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
+                             remove_singletons_seqs, remove_artifacts_seqs,
+                             multiple_sequence_alignment,
+                             remove_chimeras_denovo_from_seqs,
+                             generate_biom_table)
 
 
 @click.group()
@@ -20,6 +26,7 @@ def deblur_cmds():
     pass
 
 
+# DEBLUR SEQUENCES COMMAND
 @deblur_cmds.command()
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -40,7 +47,7 @@ def deblur_cmds():
               help="Maximal indel number")
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 indel_max):
-    """Clean read errors from illumina reads"""
+    """Step 6: clean read errors from Illumina reads"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
@@ -53,6 +60,166 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
     with open(output_path, 'w') as f:
         for s in seqs:
             f.write(s.to_fasta())
+
+
+# TRIM LENGTH COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.option('--trim-length', '-t', required=False, type=int, default=100,
+              help="Sequence trim length")
+def trim(seqs_fp, output_fp, trim_len):
+    """Step 1: trim FASTA sequences"""
+    with open(seqs_fp, 'U') as f:
+        seqs = trim_seqs(parse_fasta(f), trim_len)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# SEQUENCE DEREPLICATION COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def dereplicate(seqs_fp, output_fp):
+    """Step 2a: dereplicate FASTA sequences"""
+    seqs = dereplicate_seqs(seqs_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# SINGLETON REMOVAL COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def remove_singletons(seqs_fp, output_fp):
+    """Step 2b: remove singletons"""
+    seqs = remove_singletons_seqs(seqs_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# ARTIFACT REMOVAL COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('sortmerna_ref_fp', required=False,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.option('--sortmerna', required=False, type=bool, default=True,
+              help="Use SortMeRNA to filter out artifacts "
+                   "using input reference database")
+@click.option('--hmmer', required=False, type=bool, default=False,
+              help="Use HMMER to filter out artifacts "
+                   "using default 16S archaeal/bacterial HMM "
+                   "models")
+def remove_artifacts(seqs_fp, output_fp):
+    """Step 3: remove artifacts"""
+    seqs = remove_artifacts_seqs(seqs_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# MULTIPLE SEQUENCE ALIGNMENT COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def multiple_seq_alignment(seqs_fp, output_fp):
+    """Step 4: multiple sequence alignment"""
+    seqs = multiple_sequence_alignment(seqs_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# DE NOVO CHIMERA REMOVAL COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def remove_chimeras_denovo(seqs_fp, output_fp):
+    """Step 5: remove chimeras de novo using UCHIME"""
+    seqs = remove_chimeras_denovo_from_seqs(seqs_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
+
+# GENERATE BIOM TABLE COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_biom_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_rep_set_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def build_biom_table(seqs_fp, output_biom_fp, output_rep_set_fp):
+    """Step 6: Generate a BIOM table"""
+    rep_set, biom_table = generate_biom_table(seqs_fp)
+
+    with open(output_rep_set_fp, 'w') as f:
+        for s in rep_set:
+            f.write(s.to_fasta())
+
+    with biom_open(output_biom_fp, 'w') as f:
+        biom_table.to_hdf5(f, "deblur")
+
+
+# LAUNCH FULL DEBLUR PIPELINE COMMAND
+@deblur_cmds.command()
+@click.argument('seqs_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('mapping_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+def workflow(seqs_fp, output_fp, mapping_fp, read_error, mean_error,
+             error_dist, indel_prob, indel_max):
+    """Launch full deblur workflow"""
+    seqs = launch_workflow(seqs_fp, mapping_fp)
+
+    with open(output_fp, 'w') as f:
+        for s in seqs:
+            f.write(s.to_fasta())
+
 
 if __name__ == '__main__':
     deblur_cmds()
