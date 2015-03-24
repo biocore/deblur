@@ -54,12 +54,6 @@ class workflowTests(TestCase):
         remove_files(self.files_to_remove)
         rmtree(self.working_dir)
 
-    def test_demultiplex_seqs(self):
-        pass
-
-    def test_split_seqs_on_sample_ids(self):
-        pass
-
     def test_trim_seqs(self):
         pass
 
@@ -79,9 +73,6 @@ class workflowTests(TestCase):
         pass
 
     def test_generate_biom_table(self):
-        pass
-
-    def test_assign_taxonomy(self):
         pass
 
     def test_launch_workflow(self):
