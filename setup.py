@@ -59,7 +59,7 @@ def download_file(URL, dest_dir, local_file, num_retries=4):
             tmpLocalFP, headers = url_opener.retrieve(URL, tmpDownloadFP)
             rename(tmpDownloadFP, localFP)
             return_code = 0
-        except IOError as msg:
+        except IOError:
             if num_retries == 1:
                 status('  Download of %s failed.' % URL)
             else:
