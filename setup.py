@@ -145,10 +145,10 @@ setup(name='deblur',
       scripts=glob('scripts/*'),
       extras_require={'test': ["nose >= 0.10.1", "pep8"],
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
-      dependency_links=['https://github.com/biocore/burrito-fillings/archive/master.zip#egg=burrito_fillings-0.2.0'],
       install_requires=['click', 'numpy >= 1.7',
                         'scikit-bio >= 0.2.2, < 0.3.0',
                         'burrito < 1.0.0',
-                        'burrito-fillings >= 0.2.0'],
+                        'burrito-fillings == 0.1.0-dev'],
+      dependency_links=['https://github.com/biocore/burrito-fillings/archive/master.zip#egg=burrito_fillings-0.1.0_dev'],
       classifiers=classifiers
       )
