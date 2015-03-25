@@ -83,7 +83,7 @@ def download_VSEARCH():
         URL = ('https://github.com/torognes/vsearch/releases/download/'
                'v1.1.1/vsearch-1.1.1-linux-x86_64')
     else:
-        status("Platform %r not supported by vsearch.\n" % sys.platform)
+        status("Platform %r not supported by VSEARCH.\n" % sys.platform)
         return
 
     return_value = download_file(URL, 'scripts/', 'vsearch')
@@ -145,6 +145,7 @@ setup(name='deblur',
       scripts=glob('scripts/*'),
       extras_require={'test': ["nose >= 0.10.1", "pep8"],
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
+      dependency_links=['https://github.com/biocore/burrito-fillings/archive/master.zip#egg=burrito-fillings-0.1.0']
       install_requires=['click', 'numpy >= 1.7',
                         'scikit-bio >= 0.2.2, < 0.3.0',
                         'burrito < 1.0.0',
