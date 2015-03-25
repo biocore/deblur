@@ -8,9 +8,92 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 from setuptools import setup
+from stat import S_IEXEC
 from glob import glob
+from os.path import join
+from os import chmod, rename, stat
+import sys
+from urllib import FancyURLopener
+
 
 __version__ = "0.0.1-dev"
+
+
+# heavily based on lib.util.download_file from github.com/qiime/qiime-deploy
+class URLOpener(FancyURLopener):
+    def http_error_default(self, url, fp, errcode, errmsg, headers):
+        raise IOError(
+            'Could not download %s\nPlease ensure the URL is valid and that '
+            'you have an active Internet connection.' % url)
+
+
+def status(msg):
+    """Write message immediately to stdout."""
+    sys.stdout.write(msg)
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+
+
+# heavily based on lib.util.download_file from github.com/qiime/qiime-deploy
+def download_file(URL, dest_dir, local_file, num_retries=4):
+    """General file downloader
+
+    Inputs:
+    URL: string to download the file from
+    dest_dir: directory where you want to download the file
+    local_file: output filename of the download
+    num_retries: number of times the function will try to download the file
+
+    Output:
+    return_code: exit status for the download 0 = success, 1 = fail
+    """
+    status('  Downloading %s...' % local_file)
+
+    url_opener = URLOpener()
+    localFP = join(dest_dir, local_file)
+    tmpDownloadFP = '%s.part' % localFP
+
+    return_code = 1
+    while num_retries > 0:
+        try:
+            tmpLocalFP, headers = url_opener.retrieve(URL, tmpDownloadFP)
+            rename(tmpDownloadFP, localFP)
+            return_code = 0
+        except IOError as msg:
+            if num_retries == 1:
+                status('  Download of %s failed.' % URL)
+            else:
+                status('  Download failed. Trying again... %d tries remain.' %
+                       (num_retries - 1))
+            num_retries -= 1
+        else:
+            num_retries = 0
+            status('  %s downloaded successfully.' % local_file)
+    return return_code
+
+
+def download_VSEARCH():
+    """Download the VSEARCH executable and set it to the scripts directory"""
+    status("Installing VSEARCH...")
+
+    if sys.platform == 'macos':
+        URL = ('https://github.com/torognes/vsearch/releases/download/'
+               'v1.1.1/vsearch-1.1.1-osx-x86_64')
+    elif sys.platform == 'linux2':
+        URL = ('https://github.com/torognes/vsearch/releases/download/'
+               'v1.1.1/vsearch-1.1.1-linux-x86_64')
+    else:
+        status("Platform %r not supported by vsearch.\n" % sys.platform)
+        return
+
+    return_value = download_file(URL, 'scripts/', 'vsearch')
+
+    # make the file an executable file
+    if not return_value:
+        chmod('scripts/vsearch', stat('scripts/vsearch').st_mode | S_IEXEC)
+        status("VSEARCH installed.\n")
+    else:
+        status("VSEARCH could not be installed.\n")
 
 
 classes = """

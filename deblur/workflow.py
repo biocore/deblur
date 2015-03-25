@@ -17,8 +17,10 @@ def trim_seqs(seqs_fp, trim_len):
 
 
 def dereplicate_seqs(seqs_fp,
-                     output_fp):
-    """Step 2a: dereplicate FASTA sequences using VSEARCH
+                     output_fp,
+                     minuniquesize=2):
+    """Step 2a: dereplicate FASTA sequences and remove
+       singletons using VSEARCH
 
     Parameters
     ----------
@@ -36,13 +38,8 @@ def dereplicate_seqs(seqs_fp,
     vsearch_dereplicate_exact_seqs(
         fasta_filepath=seqs_fp,
         output_filepath=output_fp,
+        minuniquesize=minuniquesize,
         log_name=log_name)
-
-
-def remove_singletons_seqs(seqs_fp):
-    """Step 2b: remove singletons from dereplicated FASTA
-       file using VSEARCH"""
-    pass
 
 
 def remove_artifacts_seqs(seqs_fp):

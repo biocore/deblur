@@ -15,7 +15,7 @@ from biom.util import biom_open
 
 from deblur.deblurring import deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
-                             remove_singletons_seqs, remove_artifacts_seqs,
+                             remove_artifacts_seqs,
                              multiple_sequence_alignment,
                              remove_chimeras_denovo_from_seqs,
                              generate_biom_table)
@@ -82,7 +82,7 @@ def trim(seqs_fp, output_fp, trim_len):
             f.write(s.to_fasta())
 
 
-# SEQUENCE DEREPLICATION COMMAND
+# SEQUENCE DEREPLICATION/SINGLETON REMOVAL COMMAND
 @deblur_cmds.command()
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -90,26 +90,14 @@ def trim(seqs_fp, output_fp, trim_len):
 @click.argument('output_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-def dereplicate(seqs_fp, output_fp):
+@click.option('--minuniquesize', required=False, type=int, default=2,
+              show_default=True, help="Discard sequences with an abundance "
+              "value smaller than minuniquesize")
+def dereplicate(seqs_fp, output_fp, minuniquesize):
     """Step 2a: dereplicate FASTA sequences"""
-    dereplicate_seqs(seqs_fp, output_fp)
-
-
-# SINGLETON REMOVAL COMMAND
-@deblur_cmds.command()
-@click.argument('seqs_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
-@click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
-def remove_singletons(seqs_fp, output_fp):
-    """Step 2b: remove singletons"""
-    seqs = remove_singletons_seqs(seqs_fp)
-
-    with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+    dereplicate_seqs(seqs_fp=seqs_fp,
+                     output_fp=output_fp,
+                     minuniquesize=minuniquesize)
 
 
 # ARTIFACT REMOVAL COMMAND

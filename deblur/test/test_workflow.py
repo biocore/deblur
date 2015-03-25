@@ -59,7 +59,7 @@ class workflowTests(TestCase):
     def test_trim_seqs(self):
         pass
 
-    def test_dereplicate_seqs(self):
+    def test_dereplicate_seqs_remove_singletons(self):
         """Test dereplicate_seqs() method functionality
         """
         seqs = [("seq1", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
@@ -85,19 +85,12 @@ class workflowTests(TestCase):
         exp = [("seq1;size=3;",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
                ("seq6;size=2;",
-                "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT"),
-               ("seq4;size=1;",
-                "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT"),
-               ("seq5;size=1;",
-                "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG")]
+                "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]
 
         with open(output_fp, 'U') as out_f:
             act = [item for item in parse_fasta(out_f)]
 
         self.assertEqual(act, exp)
-
-    def test_remove_singletons_seqs(self):
-        pass
 
     def test_remove_artifacts_seqs(self):
         pass
