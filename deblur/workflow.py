@@ -7,14 +7,36 @@
 # -----------------------------------------------------------------------------
 
 
+from os.path import splitext
+from bfillings.vsearch import vsearch_dereplicate_exact_seqs
+
+
 def trim_seqs(seqs_fp, trim_len):
     """Step 1: trim FASTA sequences to specified length"""
     pass
 
 
-def dereplicate_seqs(seqs_fp):
-    """Step 2a: dereplicate FASTA sequences using VSEARCH"""
-    pass
+def dereplicate_seqs(seqs_fp,
+                     output_fp):
+    """Step 2a: dereplicate FASTA sequences using VSEARCH
+
+    Parameters
+    ----------
+    seqs_fp : string
+        filepath to FASTA sequence file
+    output_fp : string
+        filepath to dereplicated FASTA file
+
+    Returns
+    -------
+    None
+    """
+    log_name = "%s.log" % splitext(output_fp)[0]
+
+    vsearch_dereplicate_exact_seqs(
+        fasta_filepath=seqs_fp,
+        output_filepath=output_fp,
+        log_name=log_name)
 
 
 def remove_singletons_seqs(seqs_fp):
