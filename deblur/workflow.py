@@ -14,6 +14,8 @@ def trim_seqs(input_seqs, trim_len):
     ----------
     input_seqs : iterable of (str, str)
         The list of input sequences in (label, sequence) format
+    trim_len : int
+        Sequence trimming length
 
     Returns
     -------
