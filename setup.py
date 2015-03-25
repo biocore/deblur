@@ -96,6 +96,23 @@ def download_VSEARCH():
         status("VSEARCH could not be installed.\n")
 
 
+def catch_install_errors(install_function, name):
+    try:
+        install_function()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except:
+        exception_type, exception_value = sys.exc_info()[:2]
+        status(
+            "Skipping installation of %s due to failure while downloading, "
+            "building, or installing:\n  %s: %s\n" %
+            (name, exception_type.__name__, exception_value))
+
+# don't build any of the non-Python dependencies if the following modes are
+# invoked
+if all([e not in sys.argv for e in 'egg_info', 'sdist', 'register']):
+    catch_install_errors(download_VSEARCH, 'VSEARCH')
+
 classes = """
     Development Status :: 2 - Pre-Alpha
     License :: OSI Approved :: BSD License
