@@ -72,7 +72,7 @@ class workflowTests(TestCase):
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
-                seqs_f.write(">%s\n%s\n" % (seq[0], seq[1]))
+                seqs_f.write(">%s\n%s\n" % seq)
 
         output_fp = join(self.working_dir, "seqs_derep.fasta")
         log_fp = join(self.working_dir, "seqs_derep.log")
@@ -91,10 +91,8 @@ class workflowTests(TestCase):
                ("seq5;size=1;",
                 "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG")]
 
-        act = []
         with open(output_fp, 'U') as out_f:
-            for label, seq in parse_fasta(out_f):
-                act.append((label, seq))
+            act = [item for item in parse_fasta(out_f)]
 
         self.assertEqual(act, exp)
 
