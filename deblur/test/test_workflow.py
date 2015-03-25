@@ -10,8 +10,12 @@ from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
 from os import close
+from os.path import join, isfile
 
 from skbio.util import remove_files
+from skbio.parse.sequences import parse_fasta
+
+from deblur.workflow import dereplicate_seqs
 
 
 class workflowTests(TestCase):
@@ -55,11 +59,38 @@ class workflowTests(TestCase):
     def test_trim_seqs(self):
         pass
 
-    def test_dereplicate_seqs(self):
-        pass
+    def test_dereplicate_seqs_remove_singletons(self):
+        """Test dereplicate_seqs() method functionality
+        """
+        seqs = [("seq1", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                ("seq2", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                ("seq3", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                ("seq4", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT"),
+                ("seq5", "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG"),
+                ("seq6", "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT"),
+                ("seq7", "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
 
-    def test_remove_singletons_seqs(self):
-        pass
+        output_fp = join(self.working_dir, "seqs_derep.fasta")
+        log_fp = join(self.working_dir, "seqs_derep.log")
+
+        dereplicate_seqs(seqs_fp=seqs_fp,
+                         output_fp=output_fp)
+        self.assertTrue(isfile(output_fp))
+        self.assertTrue(isfile(log_fp))
+
+        exp = [("seq1;size=3;",
+                "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+               ("seq6;size=2;",
+                "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]
+
+        with open(output_fp, 'U') as out_f:
+            act = [item for item in parse_fasta(out_f)]
+
+        self.assertEqual(act, exp)
 
     def test_remove_artifacts_seqs(self):
         pass

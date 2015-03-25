@@ -12,6 +12,7 @@ install:
   - conda create --yes -n env_name python=$PYTHON_VERSION pip numpy scipy nose flake8
   - source activate env_name
   - pip install coveralls
+  - pip install https://github.com/biocore/burrito-fillings/archive/master.zip
   - pip install .
 script:
   - nosetests --with-doctest --with-coverage
