@@ -28,6 +28,9 @@ def dereplicate_seqs(seqs_fp,
         filepath to FASTA sequence file
     output_fp : string
         filepath to dereplicated FASTA file
+    min_size : integer
+        discard sequences with an abundance value smaller
+        than integer
     """
     log_name = "%s.log" % splitext(output_fp)[0]
 
