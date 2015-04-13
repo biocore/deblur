@@ -90,14 +90,14 @@ def trim(seqs_fp, output_fp, trim_len):
 @click.argument('output_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-@click.option('--minuniquesize', required=False, type=int, default=2,
+@click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
-              "value smaller than minuniquesize")
-def dereplicate(seqs_fp, output_fp, minuniquesize):
+              "value smaller than min-size")
+def dereplicate(seqs_fp, output_fp, min_size):
     """Step 2a: dereplicate FASTA sequences"""
     dereplicate_seqs(seqs_fp=seqs_fp,
                      output_fp=output_fp,
-                     minuniquesize=minuniquesize)
+                     min_size=min_size)
 
 
 # ARTIFACT REMOVAL COMMAND
