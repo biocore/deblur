@@ -7,8 +7,10 @@
 # -----------------------------------------------------------------------------
 
 
-from os.path import splitext
-from bfillings.vsearch import vsearch_dereplicate_exact_seqs
+from os.path import splitext, join, dirname, exists
+from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
+                               vsearch_chimera_filter_de_novo)
+from os import rename, makedirs
 
 
 def trim_seqs(seqs_fp, trim_len):
@@ -52,9 +54,33 @@ def multiple_sequence_alignment(seqs_fp):
     pass
 
 
-def remove_chimeras_denovo_from_seqs(seqs_fp):
-    """Step 5: remove chimeras de novo using UCHIME"""
-    pass
+def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
+    """Step 5: remove chimeras de novo using UCHIME
+       (VSEARCH implementation)
+
+    Parameters
+    ----------
+    seqs_fp: string
+        file path to FASTA input sequence file
+    output_fp: string
+        file path to store chimera-free results
+    """
+    working_dir = join(dirname(output_fp), "working_dir")
+    if not exists(working_dir):
+        makedirs(working_dir)
+
+    output_chimera_filepath, output_non_chimera_filepath,\
+        output_alns_filepath, output_tabular_filepath, log_filepath =\
+        vsearch_chimera_filter_de_novo(
+            fasta_filepath=seqs_fp,
+            working_dir=working_dir,
+            output_chimeras=False,
+            output_nonchimeras=True,
+            output_alns=False,
+            output_tabular=False,
+            log_name="vsearch_uchime_de_novo_chimera_filtering.log")
+
+    rename(output_non_chimera_filepath, output_fp)
 
 
 def generate_biom_table(seqs_fp):
