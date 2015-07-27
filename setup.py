@@ -113,6 +113,65 @@ def download_VSEARCH():
         status("VSEARCH could not be installed.\n")
 
 
+def build_SortMeRNA():
+    """Download and build SortMeRNA then copy it to the scripts directory"""
+    status("Building SortMeRNA...")
+
+    # SortMeRNA's configure script doesn't correctly guess the C/C++ compilers
+    # to use on OS X. Try to figure that out here.
+    if sys.platform.lower() in ['darwin', 'macos']:
+        cxx = 'clang++'
+        cc = 'clang'
+    elif sys.platform.lower() in ['linux', 'linux2']:
+        cxx = 'g++'
+        cc = 'gcc'
+    else:
+        status("Unknown or unsupported platform %r, so cannot build SortMeRNA.\n" % sys.platform)
+        return
+
+    for compiler in cxx, cc:
+        if not app_available(compiler):
+            status("%r not installed, so cannot build SortMeRNA.\n" % compiler)
+            return
+
+    cwd = getcwd()
+    scripts = join(cwd, 'scripts')
+    cxx_old = environ.get('CXX', '')
+    cc_old = environ.get('CC', '')
+
+    try:
+        tempdir = mkdtemp()
+        if download_file('ftp://ftp.microbio.me/pub/sortmerna-2.0-no-db.tar.gz',
+                         tempdir, 'sortmerna-2.0-no-db.tar.gz'):
+            status("Could not download SortMeRNA, so cannot install it.\n")
+            return
+
+        chdir(tempdir)
+
+        if not system_call('tar xzf sortmerna-2.0-no-db.tar.gz',
+                           'extract SortMeRNA archive'):
+            return
+
+        chdir('sortmerna-2.0')
+
+        environ['CXX'] = cxx
+        environ['CC'] = cc
+
+        if not system_call('bash build.sh', 'build SortMeRNA'):
+            return
+
+        copy('sortmerna', scripts)
+        copy('indexdb_rna', scripts)
+        status("SortMeRNA built.\n")
+    finally:
+        environ['CXX'] = cxx_old
+        environ['CC'] = cc_old
+
+        # remove the source
+        rmtree(tempdir)
+        chdir(cwd)
+
+
 def catch_install_errors(install_function, name):
     try:
         install_function()
@@ -129,6 +188,7 @@ def catch_install_errors(install_function, name):
 # invoked
 if all([e not in sys.argv for e in 'egg_info', 'sdist', 'register']):
     catch_install_errors(download_VSEARCH, 'VSEARCH')
+    catch_install_errors(build_SortMeRNA, 'SortMeRNA')
 
 classes = """
     Development Status :: 2 - Pre-Alpha
