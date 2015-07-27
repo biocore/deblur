@@ -92,10 +92,10 @@ def remove_artifacts_seqs(seqs_fp,
         else:
             # build index
             sortmerna_db, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=db,
-                max_pos=10000,
-                output_dir=db_dir)
+                build_database_sortmerna(
+                    fasta_path=db,
+                    max_pos=10000,
+                    output_dir=db_dir)
 
         # run SortMeRNA
         app_result = sortmerna_map(
@@ -131,7 +131,7 @@ def remove_artifacts_seqs(seqs_fp,
             for label, seq in parse_fasta(seqs_f):
                 label = label.split()[0]
                 if negate:
-                    if label not in aligned_seq_ids:  
+                    if label not in aligned_seq_ids:
                         out_f.write(">%s\n%s\n" % (label, seq))
                 else:
                     if label in aligned_seq_ids:

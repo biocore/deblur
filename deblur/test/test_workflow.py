@@ -157,12 +157,18 @@ class workflowTests(TestCase):
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
 
-        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
-              ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
 
         ref_fp = join(self.working_dir, "ref.fasta")
         with open(ref_fp, 'w') as ref_f:
@@ -207,12 +213,18 @@ class workflowTests(TestCase):
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
 
-        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
-              ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
 
         ref_fp = join(self.working_dir, "ref.fasta")
         with open(ref_fp, 'w') as ref_f:
@@ -221,10 +233,10 @@ class workflowTests(TestCase):
 
         # build index
         sortmerna_db, files_to_remove = \
-        build_database_sortmerna(
-            fasta_path=ref_fp,
-            max_pos=10000,
-            output_dir=self.working_dir)
+            build_database_sortmerna(
+                fasta_path=ref_fp,
+                max_pos=10000,
+                output_dir=self.working_dir)
 
         self.files_to_remove.extend(files_to_remove)
 
@@ -266,12 +278,18 @@ class workflowTests(TestCase):
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
 
-        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
-              ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
 
         ref_fp = join(self.working_dir, "ref.fasta")
         with open(ref_fp, 'w') as ref_f:
@@ -311,29 +329,37 @@ class workflowTests(TestCase):
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
 
-        exp_seqs = ["seq1", "seq2", "seq3", "seq4", "seq5", "seq6"]
-
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
 
-        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-              ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
-              ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
 
         ref_fp = join(self.working_dir, "ref.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
 
-        ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatggatatc"),
-                   ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggtcgcaaggctgaaacttaaaggaattgacggaaggg"),
-                   ("ref9", "aattgcgataacgaacgagaccttaacctactaaatagtgctgctagcatttgc"),
-                   ("ref10", "gacgggtgacggagaattagggttcgattccggagagggagcctgagaaacggctaccacatccaag")]
+        ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatgga"
+                            "tatc"),
+                   ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggt"
+                            "cgcaaggctgaaacttaaaggaattgacggaaggg"),
+                   ("ref9", "aattgcgataacgaacgagaccttaacctactaaatagtgctgct"
+                            "agcatttgc"),
+                   ("ref10", "gacgggtgacggagaattagggttcgattccggagagggagcct"
+                             "gagaaacggctaccacatccaag")]
 
         ref_bis_fp = join(self.working_dir, "ref_bis.fasta")
         with open(ref_bis_fp, 'w') as ref_bis_f:
@@ -342,10 +368,10 @@ class workflowTests(TestCase):
 
         # build index
         sortmerna_db, files_to_remove = \
-        build_database_sortmerna(
-            fasta_path=ref_bis_fp,
-            max_pos=10000,
-            output_dir=self.working_dir)
+            build_database_sortmerna(
+                fasta_path=ref_bis_fp,
+                max_pos=10000,
+                output_dir=self.working_dir)
 
         self.files_to_remove.extend(files_to_remove)
 

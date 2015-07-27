@@ -9,7 +9,6 @@
 # -----------------------------------------------------------------------------
 
 import click
-import re
 
 from skbio.parse.sequences import parse_fasta
 from biom.util import biom_open
@@ -144,10 +143,10 @@ def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
     --ref-db-fp (indexed database) options.
     """
     if ref_db_fp:
-      if len(ref_fp) != len(ref_db_fp):
-        raise ValueError("The number of FASTA reference databases "
-                         "does not match the number of indexed "
-                         "reference databases")
+        if len(ref_fp) != len(ref_db_fp):
+            raise ValueError("The number of FASTA reference databases "
+                             "does not match the number of indexed "
+                             "reference databases")
 
     remove_artifacts_seqs(seqs_fp=seqs_fp,
                           ref_fp=ref_fp,

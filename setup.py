@@ -11,9 +11,12 @@ from setuptools import setup
 from stat import S_IEXEC
 from glob import glob
 from os.path import join
-from os import chmod, rename, stat
+from os import (chmod, rename, stat, devnull, getcwd, environ, chdir)
 import sys
 from urllib import FancyURLopener
+from subprocess import call, Popen, PIPE
+from tempfile import mkdtemp
+from shutil import rmtree, copy
 
 
 __version__ = "0.0.1-dev"
@@ -87,6 +90,58 @@ def download_file(URL, dest_dir, local_file, num_retries=4):
     return return_code
 
 
+def app_available(app_name):
+    """Check if a binary is available and on the user Path
+
+    Inputs:
+    app_name: Name of the binary, i. e. 'ls', 'gcc' etc.
+
+    Output:
+    False if the binary is not found, True if the binary is found
+    """
+    # redirect all output to /dev/null so nothing is seen on screen
+    devnull_fd = open(devnull, 'w')
+    output = True
+
+    try:
+        call([app_name], stdout=devnull_fd, stderr=devnull_fd)
+    except OSError:
+        output = False
+    finally:
+        devnull_fd.close()
+
+    return output
+
+
+def system_call(cmd, error_msg):
+    """Call `cmd` and return whether it was successful or not.
+
+    This function is taken and modified from qcli (previously
+    `qcli_system_call`).
+
+    """
+    proc = Popen(cmd,
+                 shell=True,
+                 universal_newlines=True,
+                 stdout=PIPE,
+                 stderr=PIPE)
+    # communicate pulls all stdout/stderr from the PIPEs to
+    # avoid blocking -- don't remove this line!
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+
+    success = return_value == 0
+    if not success:
+        status("Unable to %s:" % error_msg)
+        status("  stdout:")
+        for line in stdout.split('\n'):
+            status("    " + line)
+        status("  stderr:")
+        for line in stderr.split('\n'):
+            status("    " + line)
+    return success
+
+
 def download_VSEARCH():
     """ Download the VSEARCH executable and set it
         to the scripts directory
@@ -126,7 +181,8 @@ def build_SortMeRNA():
         cxx = 'g++'
         cc = 'gcc'
     else:
-        status("Unknown or unsupported platform %r, so cannot build SortMeRNA.\n" % sys.platform)
+        status("Unknown or unsupported platform %r, so cannot "
+               "build SortMeRNA.\n" % sys.platform)
         return
 
     for compiler in cxx, cc:
@@ -141,10 +197,12 @@ def build_SortMeRNA():
 
     try:
         tempdir = mkdtemp()
-        if download_file('ftp://ftp.microbio.me/pub/sortmerna-2.0-no-db.tar.gz',
-                         tempdir, 'sortmerna-2.0-no-db.tar.gz'):
-            status("Could not download SortMeRNA, so cannot install it.\n")
-            return
+        if download_file(
+            'ftp://ftp.microbio.me/pub/sortmerna-2.0-no-db.tar.gz', tempdir,
+                'sortmerna-2.0-no-db.tar.gz'):
+                    status("Could not download SortMeRNA, so cannot "
+                           "install it.\n")
+                    return
 
         chdir(tempdir)
 
