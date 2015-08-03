@@ -12,7 +12,7 @@ install:
   - conda create --yes -n env_name python=$PYTHON_VERSION pip numpy scipy nose flake8
   - source activate env_name
   - pip install coveralls
-  - pip install .
+  - pip install --process-dependency-links .
 script:
   - nosetests --with-doctest --with-coverage
   - flake8 deblur scripts setup.py
