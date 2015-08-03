@@ -68,18 +68,15 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               help="Sequence trim length")
-def trim(seqs_fp, output_fp, trim_len):
+def trim(seqs_fp, output_fp, trim_length):
     """Step 1: trim FASTA sequences"""
-    with open(seqs_fp, 'U') as f:
-        seqs = trim_seqs(parse_fasta(f), trim_len)
-
-    with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+    with open(seqs_fp, 'U') as in_f, open(output_fp, 'w') as out_f:
+        for label, seq in trim_seqs(parse_fasta(in_f), trim_length):
+            out_f.write(">%s\n%s\n" % (label, seq))
 
 
 # SEQUENCE DEREPLICATION/SINGLETON REMOVAL COMMAND
