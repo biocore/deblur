@@ -25,8 +25,7 @@ def trim_seqs(seqs_fp, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2):
-    """Step 2a: dereplicate FASTA sequences and remove
-       singletons using VSEARCH
+    """de-replicate FASTA sequences and remove singletons using VSEARCH
 
     Parameters
     ----------
@@ -53,8 +52,7 @@ def remove_artifacts_seqs(seqs_fp,
                           ref_db_fp=None,
                           negate=False,
                           threads=1):
-    """Step 3: remove artifacts from FASTA file using
-       SortMeRNA
+    """Remove artifacts from FASTA file using SortMeRNA
 
     Parameters
     ----------
@@ -124,17 +122,18 @@ def remove_artifacts_seqs(seqs_fp,
         # remove indexed database files
         remove_files(files_to_remove, error_on_missing=False)
 
+    if negate:
+        op = lambda x: x not in aligned_seq_ids
+    else:
+        op = lambda x: x in aligned_seq_ids
+
     # if negate = False, only output sequences
     # matching to at least one of the databases
     with open(seqs_fp, 'U') as seqs_f:
         with open(output_fp, 'w') as out_f:
             for label, seq in parse_fasta(seqs_f):
                 label = label.split()[0]
-                if negate:
-                    if label not in aligned_seq_ids:
-                        out_f.write(">%s\n%s\n" % (label, seq))
-                else:
-                    if label in aligned_seq_ids:
+                if op(label):
                         out_f.write(">%s\n%s\n" % (label, seq))
 
 

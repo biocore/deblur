@@ -47,7 +47,7 @@ def deblur_cmds():
               help="Maximal indel number")
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 indel_max):
-    """Step 6: clean read errors from Illumina reads"""
+    """Clean read errors from Illumina reads"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
@@ -73,7 +73,7 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               help="Sequence trim length")
 def trim(seqs_fp, output_fp, trim_len):
-    """Step 1: trim FASTA sequences"""
+    """Trim FASTA sequences"""
     with open(seqs_fp, 'U') as f:
         seqs = trim_seqs(parse_fasta(f), trim_len)
 
@@ -95,7 +95,7 @@ def trim(seqs_fp, output_fp, trim_len):
               "value smaller than min-size")
 def dereplicate(seqs_fp, output_fp, min_size):
     """
-    Step 2a: dereplicate FASTA sequences.
+    Dereplicate FASTA sequences.
 
     Dereplicate input FASTA sequences and remove clusters
     with fewer than minimum number of occurrences (set by --min-size).
@@ -136,7 +136,7 @@ def dereplicate(seqs_fp, output_fp, min_size):
 def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
                      negate, threads):
     """
-    Step 3: filter artifacts.
+    Filter artifacts.
 
     Filter artifacts from input sequences based on database(s)
     provided with the --ref-fp (raw FASTA file) or
@@ -165,7 +165,7 @@ def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 def multiple_seq_alignment(seqs_fp, output_fp):
-    """Step 4: multiple sequence alignment"""
+    """Multiple sequence alignment"""
     seqs = multiple_sequence_alignment(seqs_fp)
 
     with open(output_fp, 'w') as f:
@@ -202,7 +202,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 def build_biom_table(seqs_fp, output_biom_fp, output_rep_set_fp):
-    """Step 6: Generate a BIOM table"""
+    """Generate a BIOM table"""
     rep_set, biom_table = generate_biom_table(seqs_fp)
 
     with open(output_rep_set_fp, 'w') as f:

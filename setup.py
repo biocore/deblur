@@ -93,11 +93,15 @@ def download_file(URL, dest_dir, local_file, num_retries=4):
 def app_available(app_name):
     """Check if a binary is available and on the user Path
 
-    Inputs:
-    app_name: Name of the binary, i. e. 'ls', 'gcc' etc.
+    Parameters
+    ----------
+    app_name : string
+        Name of the binary, i. e. 'ls', 'gcc' etc.
 
-    Output:
-    False if the binary is not found, True if the binary is found
+    Returns
+    -------
+    output : boolean
+        False if the binary is not found, True if the binary is found
     """
     # redirect all output to /dev/null so nothing is seen on screen
     devnull_fd = open(devnull, 'w')
@@ -115,9 +119,16 @@ def app_available(app_name):
 
 def system_call(cmd, error_msg):
     """Call `cmd` and return whether it was successful or not.
+       This function is taken and modified from qcli (previously
+       `qcli_system_call`).
 
-    This function is taken and modified from qcli (previously
-    `qcli_system_call`).
+    Parameters
+    ----------
+    cmd : string
+        command for system call
+    error_msg : string
+        error message output on an unsuccessful
+        system call
 
     """
     proc = Popen(cmd,
