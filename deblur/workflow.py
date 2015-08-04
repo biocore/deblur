@@ -5,8 +5,6 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
-
-
 from os.path import splitext, dirname, join, exists, basename
 from os import makedirs, stat
 
@@ -17,9 +15,24 @@ from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 
 
-def trim_seqs(seqs_fp, trim_len):
-    """Step 1: trim FASTA sequences to specified length"""
-    pass
+def trim_seqs(input_seqs, trim_len):
+    """Step 1: trim FASTA sequences to specified length
+
+    Parameters
+    ----------
+    input_seqs : iterable of (str, str)
+        The list of input sequences in (label, sequence) format
+    trim_len : int
+        Sequence trimming length
+
+    Returns
+    -------
+    Generator of (str, str)
+        The trimmed sequences in (label, sequence) format
+    """
+    for label, seq in input_seqs:
+        if len(seq) >= trim_len:
+            yield label, seq[:trim_len]
 
 
 def dereplicate_seqs(seqs_fp,
