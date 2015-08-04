@@ -136,9 +136,9 @@ def remove_artifacts_seqs(seqs_fp,
         remove_files(files_to_remove, error_on_missing=False)
 
     if negate:
-        op = lambda x: x not in aligned_seq_ids
+        def op(x): return x not in aligned_seq_ids
     else:
-        op = lambda x: x in aligned_seq_ids
+        def op(x): return x in aligned_seq_ids
 
     # if negate = False, only output sequences
     # matching to at least one of the databases
