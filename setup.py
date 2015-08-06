@@ -130,6 +130,10 @@ def system_call(cmd, error_msg):
         error message output on an unsuccessful
         system call
 
+    Returns
+    -------
+    success : integer
+        return code from system call
     """
     proc = Popen(cmd,
                  shell=True,
