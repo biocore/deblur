@@ -113,20 +113,20 @@ def dereplicate(seqs_fp, output_fp, min_size):
 @click.option('--ref-fp', required=True, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
-              help=("Keep all sequences aligning to this database "
-                    "(for multiple databases, use "
-                    "--ref-fp db1.fa --ref-fp db2.fa ..)"))
+              help="Keep all sequences aligning to this database "
+                   "(for multiple databases, use "
+                   "--ref-fp db1.fa --ref-fp db2.fa ..)")
 @click.option('--ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
-              help=("Keep all sequences aligning to this indexed "
+              help="Keep all sequences aligning to this indexed "
                     "database. For multiple databases, the order "
                     "must follow that of --ref-fp, for example, "
-                    "--ref-db-fp db1.idx --ref-db-fp db2.idx .."))
+                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
 @click.option('--negate', '-n', required=False, default=False,
               show_default=True, type=bool,
-              help=("Discard all sequences aligning to the database "
-                    "passed via --ref-fp option"))
+              help="Discard all sequences aligning to the database "
+                   "passed via --ref-fp option")
 @click.option('--threads', '-t', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use for SortMeRNA")

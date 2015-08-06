@@ -16,7 +16,7 @@ from skbio.parse.sequences import parse_fasta
 
 
 def trim_seqs(input_seqs, trim_len):
-    """Step 1: trim FASTA sequences to specified length
+    """Trim FASTA sequences to specified length
 
     Parameters
     ----------
@@ -38,7 +38,7 @@ def trim_seqs(input_seqs, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2):
-    """de-replicate FASTA sequences and remove singletons using VSEARCH
+    """Dereplicate FASTA sequences and remove singletons using VSEARCH
 
     Parameters
     ----------
@@ -151,19 +151,18 @@ def remove_artifacts_seqs(seqs_fp,
 
 
 def multiple_sequence_alignment(seqs_fp):
-    """Step 4: perform multiple sequence alignment on FASTA
+    """Perform multiple sequence alignment on FASTA
        file using MAFFT"""
     pass
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp):
-    """Step 5: remove chimeras de novo using UCHIME"""
+    """Remove chimeras de novo using UCHIME"""
     pass
 
 
 def generate_biom_table(seqs_fp):
-    """Step 6: generate BIOM table and representative
-       FASTA set"""
+    """Generate BIOM table and representative FASTA set"""
     pass
 
 
