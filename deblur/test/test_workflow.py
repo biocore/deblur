@@ -15,8 +15,10 @@ from os.path import join, isfile
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
+from bfillings.sortmerna_v2 import build_database_sortmerna
 
-from deblur.workflow import dereplicate_seqs
+from deblur.workflow import (dereplicate_seqs,
+                             remove_artifacts_seqs)
 
 from deblur.workflow import trim_seqs
 
@@ -153,7 +155,256 @@ class workflowTests(TestCase):
         self.assertEqual(act, exp)
 
     def test_remove_artifacts_seqs(self):
-        pass
+        """ Test remove_artifacts_seqs() function for removing
+            sequences not matching to a reference database
+            using SortMeRNA. This test forces a new index
+            construction for the reference sequences.
+        """
+        seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("seq3", "TCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCC"),
+                ("seq4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq5", "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGTC"),
+                ("seq6", "TTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAAT"),
+                ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
+                ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
+                ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
+
+        exp_seqs = ["seq1", "seq2", "seq3", "seq4", "seq5", "seq6"]
+
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+
+        ref_fp = join(self.working_dir, "ref.fasta")
+        with open(ref_fp, 'w') as ref_f:
+            for seq in ref:
+                ref_f.write(">%s\n%s\n" % seq)
+
+        output_fp = join(self.working_dir, "seqs_filtered.fasta")
+
+        remove_artifacts_seqs(seqs_fp=seqs_fp,
+                              ref_fp=(ref_fp,),
+                              output_fp=output_fp,
+                              ref_db_fp=None,
+                              negate=False,
+                              threads=1)
+
+        obs_seqs = []
+        with open(output_fp, 'U') as output_f:
+            for label, seq in parse_fasta(output_f):
+                obs_seqs.append(label)
+
+        self.assertEqual(obs_seqs, exp_seqs)
+
+    def test_remove_artifacts_seqs_index_prebuilt(self):
+        """ Test remove_artifacts_seqs() function for removing
+            sequences not matching to a reference database
+            using SortMeRNA. This test passes a built index.
+        """
+        seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("seq3", "TCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCC"),
+                ("seq4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq5", "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGTC"),
+                ("seq6", "TTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAAT"),
+                ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
+                ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
+                ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
+
+        exp_seqs = ["seq1", "seq2", "seq3", "seq4", "seq5", "seq6"]
+
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+
+        ref_fp = join(self.working_dir, "ref.fasta")
+        with open(ref_fp, 'w') as ref_f:
+            for seq in ref:
+                ref_f.write(">%s\n%s\n" % seq)
+
+        # build index
+        sortmerna_db, files_to_remove = \
+            build_database_sortmerna(
+                fasta_path=ref_fp,
+                max_pos=10000,
+                output_dir=self.working_dir)
+
+        self.files_to_remove.extend(files_to_remove)
+
+        output_fp = join(self.working_dir, "seqs_filtered.fasta")
+
+        remove_artifacts_seqs(seqs_fp=seqs_fp,
+                              ref_fp=(ref_fp,),
+                              output_fp=output_fp,
+                              ref_db_fp=(sortmerna_db,),
+                              negate=False,
+                              threads=1)
+
+        obs_seqs = []
+        with open(output_fp, 'U') as output_f:
+            for label, seq in parse_fasta(output_f):
+                obs_seqs.append(label)
+
+        self.assertEqual(obs_seqs, exp_seqs)
+
+    def test_remove_artifacts_seqs_negate(self):
+        """ Test remove_artifacts_seqs() function for removing
+            sequences matching to a reference database
+            using SortMeRNA (negate option).
+        """
+        seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("seq3", "TCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCC"),
+                ("seq4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq5", "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGTC"),
+                ("seq6", "TTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAAT"),
+                ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
+                ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
+                ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
+
+        exp_seqs = ["phix1", "phix2", "phix3"]
+
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+
+        ref_fp = join(self.working_dir, "ref.fasta")
+        with open(ref_fp, 'w') as ref_f:
+            for seq in ref:
+                ref_f.write(">%s\n%s\n" % seq)
+
+        output_fp = join(self.working_dir, "seqs_filtered.fasta")
+
+        remove_artifacts_seqs(seqs_fp=seqs_fp,
+                              ref_fp=(ref_fp,),
+                              output_fp=output_fp,
+                              ref_db_fp=None,
+                              negate=True,
+                              threads=1)
+
+        obs_seqs = []
+        with open(output_fp, 'U') as output_f:
+            for label, seq in parse_fasta(output_f):
+                obs_seqs.append(label)
+
+        self.assertEqual(obs_seqs, exp_seqs)
+
+    def test_remove_artifacts_seqs_mismatch_ref_index(self):
+        """ Test remove_artifacts_seqs() function for removing
+            sequences not matching to a reference database
+            using SortMeRNA. A ValueError() should be raised
+            when a user passes a reference sequence and an index
+            database that do not match.
+        """
+        seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("seq3", "TCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCC"),
+                ("seq4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
+                ("seq5", "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGTC"),
+                ("seq6", "TTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAAT"),
+                ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
+                ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
+                ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
+
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+
+        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+
+        ref_fp = join(self.working_dir, "ref.fasta")
+        with open(ref_fp, 'w') as ref_f:
+            for seq in ref:
+                ref_f.write(">%s\n%s\n" % seq)
+
+        ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatgga"
+                            "tatc"),
+                   ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggt"
+                            "cgcaaggctgaaacttaaaggaattgacggaaggg"),
+                   ("ref9", "aattgcgataacgaacgagaccttaacctactaaatagtgctgct"
+                            "agcatttgc"),
+                   ("ref10", "gacgggtgacggagaattagggttcgattccggagagggagcct"
+                             "gagaaacggctaccacatccaag")]
+
+        ref_bis_fp = join(self.working_dir, "ref_bis.fasta")
+        with open(ref_bis_fp, 'w') as ref_bis_f:
+            for seq in ref_bis:
+                ref_bis_f.write(">%s\n%s\n" % seq)
+
+        # build index
+        sortmerna_db, files_to_remove = \
+            build_database_sortmerna(
+                fasta_path=ref_bis_fp,
+                max_pos=10000,
+                output_dir=self.working_dir)
+
+        self.files_to_remove.extend(files_to_remove)
+
+        output_fp = join(self.working_dir, "seqs_filtered.fasta")
+
+        self.assertRaises(ValueError,
+                          remove_artifacts_seqs,
+                          seqs_fp=seqs_fp,
+                          ref_fp=(ref_fp,),
+                          output_fp=output_fp,
+                          ref_db_fp=(sortmerna_db,),
+                          negate=False,
+                          threads=1)
 
     def test_multiple_sequence_alignment(self):
         pass
