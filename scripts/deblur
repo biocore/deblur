@@ -47,7 +47,7 @@ def deblur_cmds():
               help="Maximal indel number")
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 indel_max):
-    """Step 6: clean read errors from Illumina reads"""
+    """Clean read errors from Illumina reads"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
@@ -68,18 +68,15 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               help="Sequence trim length")
-def trim(seqs_fp, output_fp, trim_len):
-    """Step 1: trim FASTA sequences"""
-    with open(seqs_fp, 'U') as f:
-        seqs = trim_seqs(parse_fasta(f), trim_len)
-
-    with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+def trim(seqs_fp, output_fp, trim_length):
+    """Trim FASTA sequences"""
+    with open(seqs_fp, 'U') as in_f, open(output_fp, 'w') as out_f:
+        for label, seq in trim_seqs(parse_fasta(in_f), trim_length):
+            out_f.write(">%s\n%s\n" % (label, seq))
 
 
 # SEQUENCE DEREPLICATION/SINGLETON REMOVAL COMMAND
@@ -94,7 +91,12 @@ def trim(seqs_fp, output_fp, trim_len):
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
 def dereplicate(seqs_fp, output_fp, min_size):
-    """Step 2a: dereplicate FASTA sequences"""
+    """
+    Dereplicate FASTA sequences.
+
+    Dereplicate input FASTA sequences and remove clusters
+    with fewer than minimum number of occurrences (set by --min-size).
+    """
     dereplicate_seqs(seqs_fp=seqs_fp,
                      output_fp=output_fp,
                      min_size=min_size)
@@ -106,25 +108,49 @@ def dereplicate(seqs_fp, output_fp, min_size):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-@click.argument('sortmerna_ref_fp', required=False,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
-@click.option('--sortmerna', required=False, type=bool, default=True,
-              help="Use SortMeRNA to filter out artifacts "
-                   "using input reference database")
-@click.option('--hmmer', required=False, type=bool, default=False,
-              help="Use HMMER to filter out artifacts "
-                   "using default 16S archaeal/bacterial HMM "
-                   "models")
-def remove_artifacts(seqs_fp, output_fp):
-    """Step 3: remove artifacts"""
-    seqs = remove_artifacts_seqs(seqs_fp)
+@click.option('--ref-fp', required=True, multiple=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              file_okay=True),
+              help="Keep all sequences aligning to this database "
+                   "(for multiple databases, use "
+                   "--ref-fp db1.fa --ref-fp db2.fa ..)")
+@click.option('--ref-db-fp', required=False, multiple=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              file_okay=True),
+              help="Keep all sequences aligning to this indexed "
+                    "database. For multiple databases, the order "
+                    "must follow that of --ref-fp, for example, "
+                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+@click.option('--negate', '-n', required=False, default=False,
+              show_default=True, type=bool,
+              help="Discard all sequences aligning to the database "
+                   "passed via --ref-fp option")
+@click.option('--threads', '-t', required=False, type=int,
+              default=1, show_default=True,
+              help="Number of threads to use for SortMeRNA")
+def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
+                     negate, threads):
+    """
+    Filter artifacts.
 
-    with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+    Filter artifacts from input sequences based on database(s)
+    provided with the --ref-fp (raw FASTA file) or
+    --ref-db-fp (indexed database) options.
+    """
+    if ref_db_fp:
+        if len(ref_fp) != len(ref_db_fp):
+            raise ValueError("The number of FASTA reference databases "
+                             "does not match the number of indexed "
+                             "reference databases")
+
+    remove_artifacts_seqs(seqs_fp=seqs_fp,
+                          ref_fp=ref_fp,
+                          output_fp=output_fp,
+                          ref_db_fp=ref_db_fp,
+                          negate=negate,
+                          threads=threads)
 
 
 # MULTIPLE SEQUENCE ALIGNMENT COMMAND
@@ -136,7 +162,7 @@ def remove_artifacts(seqs_fp, output_fp):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 def multiple_seq_alignment(seqs_fp, output_fp):
-    """Step 4: multiple sequence alignment"""
+    """Multiple sequence alignment"""
     seqs = multiple_sequence_alignment(seqs_fp)
 
     with open(output_fp, 'w') as f:
@@ -169,7 +195,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 def build_biom_table(seqs_fp, output_biom_fp, output_rep_set_fp):
-    """Step 6: Generate a BIOM table"""
+    """Generate a BIOM table"""
     rep_set, biom_table = generate_biom_table(seqs_fp)
 
     with open(output_rep_set_fp, 'w') as f:

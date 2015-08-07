@@ -11,9 +11,12 @@ from setuptools import setup
 from stat import S_IEXEC
 from glob import glob
 from os.path import join
-from os import chmod, rename, stat
+from os import (chmod, rename, stat, devnull, getcwd, environ, chdir)
 import sys
 from urllib import FancyURLopener
+from subprocess import call, Popen, PIPE
+from tempfile import mkdtemp
+from shutil import rmtree, copy
 
 
 __version__ = "0.0.1-dev"
@@ -87,6 +90,73 @@ def download_file(URL, dest_dir, local_file, num_retries=4):
     return return_code
 
 
+def app_available(app_name):
+    """Check if a binary is available and on the user Path
+
+    Parameters
+    ----------
+    app_name : string
+        Name of the binary, i. e. 'ls', 'gcc' etc.
+
+    Returns
+    -------
+    output : boolean
+        False if the binary is not found, True if the binary is found
+    """
+    # redirect all output to /dev/null so nothing is seen on screen
+    devnull_fd = open(devnull, 'w')
+    output = True
+
+    try:
+        call([app_name], stdout=devnull_fd, stderr=devnull_fd)
+    except OSError:
+        output = False
+    finally:
+        devnull_fd.close()
+
+    return output
+
+
+def system_call(cmd, error_msg):
+    """Call `cmd` and return whether it was successful or not.
+       This function is taken and modified from qcli (previously
+       `qcli_system_call`).
+
+    Parameters
+    ----------
+    cmd : string
+        command for system call
+    error_msg : string
+        error message output on an unsuccessful
+        system call
+
+    Returns
+    -------
+    success : integer
+        return code from system call
+    """
+    proc = Popen(cmd,
+                 shell=True,
+                 universal_newlines=True,
+                 stdout=PIPE,
+                 stderr=PIPE)
+    # communicate pulls all stdout/stderr from the PIPEs to
+    # avoid blocking -- don't remove this line!
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+
+    success = return_value == 0
+    if not success:
+        status("Unable to %s:" % error_msg)
+        status("  stdout:")
+        for line in stdout.split('\n'):
+            status("    " + line)
+        status("  stderr:")
+        for line in stderr.split('\n'):
+            status("    " + line)
+    return success
+
+
 def download_VSEARCH():
     """ Download the VSEARCH executable and set it
         to the scripts directory
@@ -113,6 +183,68 @@ def download_VSEARCH():
         status("VSEARCH could not be installed.\n")
 
 
+def build_SortMeRNA():
+    """Download and build SortMeRNA then copy it to the scripts directory"""
+    status("Building SortMeRNA...")
+
+    # SortMeRNA's configure script doesn't correctly guess the C/C++ compilers
+    # to use on OS X. Try to figure that out here.
+    if sys.platform.lower() in ['darwin', 'macos']:
+        cxx = 'clang++'
+        cc = 'clang'
+    elif sys.platform.lower() in ['linux', 'linux2']:
+        cxx = 'g++'
+        cc = 'gcc'
+    else:
+        status("Unknown or unsupported platform %r, so cannot "
+               "build SortMeRNA.\n" % sys.platform)
+        return
+
+    for compiler in cxx, cc:
+        if not app_available(compiler):
+            status("%r not installed, so cannot build SortMeRNA.\n" % compiler)
+            return
+
+    cwd = getcwd()
+    scripts = join(cwd, 'scripts')
+    cxx_old = environ.get('CXX', '')
+    cc_old = environ.get('CC', '')
+
+    try:
+        tempdir = mkdtemp()
+        if download_file(
+            'ftp://ftp.microbio.me/pub/sortmerna-2.0-no-db.tar.gz', tempdir,
+                'sortmerna-2.0-no-db.tar.gz'):
+                    status("Could not download SortMeRNA, so cannot "
+                           "install it.\n")
+                    return
+
+        chdir(tempdir)
+
+        if not system_call('tar xzf sortmerna-2.0-no-db.tar.gz',
+                           'extract SortMeRNA archive'):
+            return
+
+        chdir('sortmerna-2.0')
+
+        environ['CXX'] = cxx
+        environ['CC'] = cc
+
+        if not system_call('bash build.sh', 'build SortMeRNA'):
+            return
+
+        copy('sortmerna', scripts)
+        copy('indexdb_rna', scripts)
+        status("SortMeRNA built.\n")
+    finally:
+        environ['CXX'] = cxx_old
+        environ['CC'] = cc_old
+
+        # remove the source
+        rmtree(tempdir)
+        chdir(cwd)
+
+
 def catch_install_errors(install_function, name):
     try:
         install_function()
@@ -129,6 +261,7 @@ def catch_install_errors(install_function, name):
 # invoked
 if all([e not in sys.argv for e in 'egg_info', 'sdist', 'register']):
     catch_install_errors(download_VSEARCH, 'VSEARCH')
+    catch_install_errors(build_SortMeRNA, 'SortMeRNA')
 
 classes = """
     Development Status :: 2 - Pre-Alpha
@@ -164,6 +297,7 @@ setup(name='deblur',
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
       install_requires=['click', 'numpy >= 1.7',
                         'scikit-bio >= 0.2.2, < 0.3.0',
+                        'biom-format >= 2.1.3, < 2.2.0',
                         'burrito < 1.0.0',
                         'burrito-fillings == 0.1.0-dev'],
       dependency_links=[('https://github.com/biocore/burrito-fillings/archive/'
