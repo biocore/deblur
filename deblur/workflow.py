@@ -16,7 +16,6 @@ from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 
 
-
 def trim_seqs(input_seqs, trim_len):
     """Trim FASTA sequences to specified length
 
@@ -158,10 +157,8 @@ def multiple_sequence_alignment(seqs_fp):
     pass
 
 
-<<<<<<< HEAD
 def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
-    """Step 5: remove chimeras de novo using UCHIME
-       (VSEARCH implementation)
+    """Remove chimeras de novo using UCHIME (VSEARCH implementation)
 
     Parameters
     ----------
@@ -186,11 +183,6 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
             log_name="vsearch_uchime_de_novo_chimera_filtering.log")
 
     rename(output_non_chimera_filepath, output_fp)
-=======
-def remove_chimeras_denovo_from_seqs(seqs_fp):
-    """Remove chimeras de novo using UCHIME"""
-    pass
->>>>>>> dfacdb4e9e53106ff5458de9bf3a17dfe70d283c
 
 
 def generate_biom_table(seqs_fp):
