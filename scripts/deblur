@@ -176,15 +176,11 @@ def multiple_seq_alignment(seqs_fp, output_fp):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
+                type=click.Path(resolve_path=True, readable=True,
+                                exists=False, file_okay=True))
 def remove_chimeras_denovo(seqs_fp, output_fp):
-    """Step 5: remove chimeras de novo using UCHIME"""
-    seqs = remove_chimeras_denovo_from_seqs(seqs_fp)
-
-    with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+    """Remove chimeras de novo using UCHIME (VSEARCH implementation)"""
+    remove_chimeras_denovo_from_seqs(seqs_fp, output_fp)
 
 
 # GENERATE BIOM TABLE COMMAND
