@@ -19,18 +19,12 @@ from bfillings.sortmerna_v2 import build_database_sortmerna
 from biom.table import Table
 
 from deblur.workflow import (dereplicate_seqs,
-<<<<<<< HEAD
+                             remove_chimeras_denovo_from_seqs,
                              remove_artifacts_seqs,
                              parse_deblur_output,
                              generate_biom_data,
-                             generate_biom_table)
-
-from deblur.workflow import trim_seqs
-=======
-                             remove_chimeras_denovo_from_seqs,
-                             remove_artifacts_seqs,
+                             generate_biom_table,
                              trim_seqs)
->>>>>>> c30f3b42a75201af27555a858743b37a1fad45eb
 
 
 class workflowTests(TestCase):
