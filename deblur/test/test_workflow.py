@@ -19,12 +19,18 @@ from bfillings.sortmerna_v2 import build_database_sortmerna
 from biom.table import Table
 
 from deblur.workflow import (dereplicate_seqs,
+<<<<<<< HEAD
                              remove_artifacts_seqs,
                              parse_deblur_output,
                              generate_biom_data,
                              generate_biom_table)
 
 from deblur.workflow import trim_seqs
+=======
+                             remove_chimeras_denovo_from_seqs,
+                             remove_artifacts_seqs,
+                             trim_seqs)
+>>>>>>> c30f3b42a75201af27555a858743b37a1fad45eb
 
 
 class workflowTests(TestCase):
@@ -414,7 +420,53 @@ class workflowTests(TestCase):
         pass
 
     def test_remove_chimeras_denovo_from_seqs(self):
-        pass
+        """ Test remove_chimeras_denovo_from_seqs() method functionality.
+            Remove chimeric sequences from a FASTA file using the UCHIME
+            algorithm, implemented in VSEARCH.
+        """
+        seqs = [("s1_104;size=2;", "GTGCCAGCCGCCGCGGTAATACCCGCAGCTCAAGTGGTG"
+                                   "GTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTT"
+                                   "GTAAATCCCTGGGTAAATCGGGAAGCTTAACTTTCCGAC"
+                                   "TTCCGAGGAGACTGTCAAACTTGGGACCGGGAG"),
+                ("s1_106;size=2;", "GTGTCAGCCGCCGCGGTAATACCAGCTCTCCGAGTGGTG"
+                                   "TGGATGTTTATTGGGCCTAAAGCGTCCGTAGCCGGCTGC"
+                                   "GCAAGTCTGTCGGGAAATCCGCACGCCTAACGTGCGGGC"
+                                   "GTCCGGCGGAAACTGCGTGGCTTGGGACCGGAA"),
+                ("s1_1;size=9;", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAA"
+                                 "ACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"
+                                 "CGCTTAACGATCCGATTCTGGGGAGACTGCAAAGCTTGGGA"
+                                 "CCGGGCGAGGTTAGAGGTACTCTCGGG"),
+                ("s1_20;size=9;", "TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAA"
+                                  "AACGTTCGTAGCCGGTTTGATAAATCCTTGGGTAAATCGG"
+                                  "GAAGCTTAACTTTCCGATTCCGAGGAGACTGTCAAACTTG"
+                                  "GGACCGGGAGAGGCTAGAGGTACTTCTGGG"),
+                ("s1_40;size=8;", "TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAA"
+                                  "AGCATCCGTAGCTGGCTAGGTTAGTCCCCTGTTAAATCCA"
+                                  "CCGAATTAATCGTTGGATGCGGGGGATACTGCTTGGCTAG"
+                                  "GGGACGAGAGAGGCAGACGGTATTTCCGGG"),
+                ("s1_60;size=8;", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAA"
+                                  "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
+                                  "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
+                                  "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
+
+        seqs_non_chimera = ["s1_1;size=9;", "s1_20;size=9;",
+                            "s1_40;size=8;", "s1_60;size=8;"]
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+
+        output_fp = join(self.working_dir, "seqs_derep.fasta")
+
+        remove_chimeras_denovo_from_seqs(seqs_fp, output_fp)
+
+        seqs_obs = []
+        with open(output_fp, 'U') as output_f:
+            for label, seq in parse_fasta(output_f):
+                label = label.split()[0]
+                seqs_obs.append(label)
+
+        self.assertEqual(seqs_non_chimera, seqs_obs)
 
     def test_parse_deblur_output(self):
         """ Test parsing of deblur output into a dictionary

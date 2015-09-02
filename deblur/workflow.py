@@ -6,11 +6,12 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 from os.path import splitext, dirname, join, exists, basename
-from os import makedirs, stat
 from collections import defaultdict
 from datetime import datetime
+from os import makedirs, stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
+                               vsearch_chimera_filter_de_novo,
                                parse_uc_to_clusters)
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
@@ -166,9 +167,32 @@ def multiple_sequence_alignment(seqs_fp):
     pass
 
 
-def remove_chimeras_denovo_from_seqs(seqs_fp):
-    """Remove chimeras de novo using UCHIME"""
-    pass
+def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
+    """Remove chimeras de novo using UCHIME (VSEARCH implementation)
+
+    Parameters
+    ----------
+    seqs_fp: string
+        file path to FASTA input sequence file
+    output_fp: string
+        file path to store chimera-free results
+    """
+    working_dir = join(dirname(output_fp), "working_dir")
+    if not exists(working_dir):
+        makedirs(working_dir)
+
+    output_chimera_filepath, output_non_chimera_filepath,\
+        output_alns_filepath, output_tabular_filepath, log_filepath =\
+        vsearch_chimera_filter_de_novo(
+            fasta_filepath=seqs_fp,
+            working_dir=working_dir,
+            output_chimeras=False,
+            output_nonchimeras=True,
+            output_alns=False,
+            output_tabular=False,
+            log_name="vsearch_uchime_de_novo_chimera_filtering.log")
+
+    rename(output_non_chimera_filepath, output_fp)
 
 
 def parse_deblur_output(seqs_fp, derep_clusters):
