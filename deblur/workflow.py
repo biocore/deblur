@@ -18,7 +18,6 @@ from bfillings.sortmerna_v2 import (build_database_sortmerna,
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio import Alignment
-
 from biom.table import Table
 
 
