@@ -16,9 +16,13 @@ from os.path import join, isfile
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from bfillings.sortmerna_v2 import build_database_sortmerna
+from biom.table import Table
 
 from deblur.workflow import (dereplicate_seqs,
-                             remove_artifacts_seqs)
+                             remove_artifacts_seqs,
+                             parse_deblur_output,
+                             generate_biom_data,
+                             generate_biom_table)
 
 from deblur.workflow import trim_seqs
 
@@ -412,8 +416,78 @@ class workflowTests(TestCase):
     def test_remove_chimeras_denovo_from_seqs(self):
         pass
 
+    def test_parse_deblur_output(self):
+        """ Test parsing of deblur output into a dictionary
+        """
+        derep_clusters = {'s1_80': ['s1_80', 's1_81', 's1_82'],
+                          's1_0': ['s1_0', 's1_1'],
+                          's1_10': ['s1_10', 's1_12', 's1_13'],
+                          's1_118': ['s1_118', 's1_119']}
+        deblur_clusters_exp = {
+            'AGTCGTACGTGCATGCA': ['s1_80', 's1_81', 's1_82'],
+            'TGTGTAGCTGTGCTGAT': ['s1_0', 's1_1'],
+            'CGGGTGCATGTCGTGAC': ['s1_10', 's1_12', 's1_13'],
+            'TGGCTAGTGCTAGCTCC': ['s1_118', 's1_119']}
+        seqs = [("s1_80;size=3;", "AGTCGTACGTGCATGCA"),
+                ("s1_0;size=2;", "TGTGTAGCTGTGCTGAT"),
+                ("s1_10;size=3;", "CGGGTGCATGTCGTGAC"),
+                ("s1_118;size=2;", "TGGCTAGTGCTAGCTCC")]
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+        deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
+        self.assertDictEqual(deblur_clusters, deblur_clusters_exp)
+
+    def test_generate_biom_data(self):
+        """ Test generating BIOM table data for deblur output
+        """
+        data_exp = {(3, 0): 3, (2, 0): 2, (1, 0): 2, (0, 0): 3}
+        deblur_clusters = {
+            'AGTCGTACGTGCATGCA': ['s1_80', 's1_81', 's1_82'],
+            'TGTGTAGCTGTGCTGAT': ['s1_0', 's1_1'],
+            'CGGGTGCATGTCGTGAC': ['s1_10', 's1_12', 's1_13'],
+            'TGGCTAGTGCTAGCTCC': ['s1_118', 's1_119']}
+        otu_ids_exp = ['AGTCGTACGTGCATGCA', 'TGTGTAGCTGTGCTGAT',
+                       'CGGGTGCATGTCGTGAC', 'TGGCTAGTGCTAGCTCC']
+        sample_ids_exp = ['s1']
+        data, otu_ids, sample_ids = generate_biom_data(deblur_clusters)
+        self.assertDictEqual(data, data_exp)
+        self.assertItemsEqual(otu_ids, otu_ids_exp)
+        self.assertItemsEqual(sample_ids, sample_ids_exp)
+
     def test_generate_biom_table(self):
-        pass
+        """ Test generating BIOM table
+        """
+        seqs = [("s1_80;size=3;", "AGTCGTACGTGCATGCA"),
+                ("s1_0;size=3;", "TGTGTAGCTGTGCTGAT"),
+                ("s1_10;size=3;", "CGGGTGCATGTCGTGAC")]
+        uc_output = """S    0   100 *   *   *   *   *   s1_80   *
+H   0   100 100.0   *   0   0   *   s1_81   s1_80
+H   0   100 100.0   *   0   0   *   s1_82   s1_80
+S   1   100 *   *   *   *   *   s1_0    *
+H   1   100 100.0   *   0   0   *   s1_1    s1_0
+H   1   100 100.0   *   0   0   *   s1_60    s1_0
+S   2   100 *   *   *   *   *   s1_10   *
+H   2   100 100.0   *   0   0   *   s1_12   s1_10
+H   2   100 100.0   *   0   0   *   s1_13   s1_10
+"""
+        data = {(2, 0): 3, (1, 0): 3, (0, 0): 3}
+        otu_ids = ['CGGGTGCATGTCGTGAC', 'TGTGTAGCTGTGCTGAT',
+                   'AGTCGTACGTGCATGCA']
+        sample_ids = ['s1']
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+        # temporary file for .uc output
+        uc_output_fp = join(self.working_dir, "derep.uc")
+        with open(uc_output_fp, 'w') as uc_output_f:
+            uc_output_f.write(uc_output)
+        output_biom_fp = join(self.working_dir, "seqs.biom")
+        table_exp = Table(data, otu_ids, sample_ids, sample_metadata=None)
+        table = generate_biom_table(seqs_fp, uc_output_fp, output_biom_fp)
+        self.assertEqual(table, table_exp)
 
     def test_launch_workflow(self):
         pass

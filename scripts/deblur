@@ -11,7 +11,7 @@
 import click
 
 from skbio.parse.sequences import parse_fasta
-from biom.util import biom_open
+from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
@@ -90,7 +90,10 @@ def trim(seqs_fp, output_fp, trim_length):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-def dereplicate(seqs_fp, output_fp, min_size):
+@click.option('--dereplication-map', required=False, type=bool, default=True,
+              show_default=True, help="Output dereplication map in "
+                                      " .uc format")
+def dereplicate(seqs_fp, output_fp, min_size, dereplication_map):
     """
     Dereplicate FASTA sequences.
 
@@ -99,7 +102,8 @@ def dereplicate(seqs_fp, output_fp, min_size):
     """
     dereplicate_seqs(seqs_fp=seqs_fp,
                      output_fp=output_fp,
-                     min_size=min_size)
+                     min_size=min_size,
+                     dereplication_map=dereplication_map)
 
 
 # ARTIFACT REMOVAL COMMAND
@@ -192,22 +196,38 @@ def remove_chimeras_denovo(seqs_fp, output_fp):
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_biom_fp', required=True,
+@click.argument('uc_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
+                                file_okay=True))
+@click.argument('output_biom_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
 @click.argument('output_rep_set_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-def build_biom_table(seqs_fp, output_biom_fp, output_rep_set_fp):
+@click.option('--delim', required=False, default='_', type=str,
+              show_default=True, help="Delimiter in FASTA labels to separate "
+                                      "sample ID from sequence ID")
+def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
     """Generate a BIOM table"""
-    rep_set, biom_table = generate_biom_table(seqs_fp)
-
-    with open(output_rep_set_fp, 'w') as f:
-        for s in rep_set:
-            f.write(s.to_fasta())
-
+    table = generate_biom_table(seqs_fp=seqs_fp,
+                                uc_fp=uc_fp,
+                                output_biom_fp=output_biom_fp,
+                                delim=delim)
+    # write BIOM table to file
+    if table.is_empty():
+        raise EmptyBIOMTableError(
+            "Attempting to write an empty BIOM table.")
     with biom_open(output_biom_fp, 'w') as f:
-        biom_table.to_hdf5(f, "deblur")
+        if HAVE_H5PY:
+            table.to_hdf5(f, "deblur")
+        else:
+            table.to_json(f, "deblur")
+
+    # write representative FASTA sequences to file
+    with open(output_rep_set_fp, 'w') as f:
+        for s in deblur_clusters:
+            f.write(">%s\n%s\n" % (deblur_clusters[s][0], s))
 
 
 # LAUNCH FULL DEBLUR PIPELINE COMMAND
