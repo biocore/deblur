@@ -11,8 +11,8 @@ from datetime import datetime
 from os import makedirs, stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
-                               vsearch_chimera_filter_de_novo,
-                               parse_uc_to_clusters)
+                               vsearch_chimera_filter_de_novo)
+from bfillings.uclust import clusters_from_uc_file
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from skbio.util import remove_files
@@ -202,7 +202,7 @@ def parse_deblur_output(seqs_fp, derep_clusters):
     (from derep_clusters) to create entries in a new dictionary where the keys
     are actual sequences (not the labels). Note not all sequences
     in derep_clusters will be in seqs_fp since they could have been removed in
-    the artifact filtering step. 
+    the artifact filtering step.
 
     Parameters
     ----------
@@ -283,24 +283,25 @@ def generate_biom_table(seqs_fp,
     seqs_fp: string
         file path to deblurred sequences
     uc_fp: string
-        file path to dereplicated sequences map (.uc format) 
+        file path to dereplicated sequences map (.uc format)
     output_biom_fp: string
         file path to output BIOM table
     delim: string, optional
         delimiter for splitting sample and sequence IDs in sequence label
     """
     # parse clusters in dereplicated sequences map (.uc format)
-    derep_clusters = parse_uc_to_clusters(uc_fp)
+    with open(uc_fp, 'U') as uc_f:
+        derep_clusters, failures, seeds = clusters_from_uc_file(uc_f)
     # parse clusters in deblur file, set observation ID to be the sequence
     deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
     # create sparse dictionary of observation and sample ID counts
     data, otu_ids, sample_ids = generate_biom_data(deblur_clusters, delim)
     # build BIOM table
     return Table(data, otu_ids, sample_ids,
-                   observation_metadata=None, 
-                   sample_metadata=None, table_id=None,
-                   generated_by="deblur",
-                   create_date=datetime.now().isoformat())
+                 observation_metadata=None,
+                 sample_metadata=None, table_id=None,
+                 generated_by="deblur",
+                 create_date=datetime.now().isoformat())
 
 
 def launch_workflow(seqs_fp, mapping_fp):

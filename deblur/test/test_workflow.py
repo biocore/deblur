@@ -508,15 +508,15 @@ class workflowTests(TestCase):
         seqs = [("s1_80;size=3;", "AGTCGTACGTGCATGCA"),
                 ("s1_0;size=3;", "TGTGTAGCTGTGCTGAT"),
                 ("s1_10;size=3;", "CGGGTGCATGTCGTGAC")]
-        uc_output = """S    0   100 *   *   *   *   *   s1_80   *
-H   0   100 100.0   *   0   0   *   s1_81   s1_80
-H   0   100 100.0   *   0   0   *   s1_82   s1_80
-S   1   100 *   *   *   *   *   s1_0    *
-H   1   100 100.0   *   0   0   *   s1_1    s1_0
-H   1   100 100.0   *   0   0   *   s1_60    s1_0
-S   2   100 *   *   *   *   *   s1_10   *
-H   2   100 100.0   *   0   0   *   s1_12   s1_10
-H   2   100 100.0   *   0   0   *   s1_13   s1_10
+        uc_output = """S\t0\t100\t*\t*\t*\t*\t*\ts1_80\t*
+H\t0\t100\t100.0\t*\t0\t0\t*\ts1_81\ts1_80
+H\t0\t100\t100.0\t*\t0\t0\t*\ts1_82\ts1_80
+S\t1\t100\t*\t*\t*\t*\t*\ts1_0\t*
+H\t1\t100\t100.0\t*\t0\t0\t*\ts1_1\ts1_0
+H\t1\t100\t100.0\t*\t0\t0\t*\ts1_60\ts1_0
+S\t2\t100\t*\t*\t*\t*\t*\ts1_10\t*
+H\t2\t100\t100.0\t*\t0\t0\t*\ts1_12\ts1_10
+H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
 """
         data = {(2, 0): 3, (1, 0): 3, (0, 0): 3}
         otu_ids = ['CGGGTGCATGTCGTGAC', 'TGTGTAGCTGTGCTGAT',
