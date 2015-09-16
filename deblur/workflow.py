@@ -44,7 +44,7 @@ def trim_seqs(input_seqs, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2,
-                     dereplication_map=True):
+                     uc_output=True):
     """Dereplicate FASTA sequences and remove singletons using VSEARCH
 
     Parameters
@@ -56,7 +56,7 @@ def dereplicate_seqs(seqs_fp,
     min_size : integer
         discard sequences with an abundance value smaller
         than integer
-    dereplication_map: boolean
+    uc_output: boolean
         output the dereplication map in .uc format
     """
     log_name = "%s.log" % splitext(output_fp)[0]
@@ -64,7 +64,7 @@ def dereplicate_seqs(seqs_fp,
     vsearch_dereplicate_exact_seqs(
         fasta_filepath=seqs_fp,
         output_filepath=output_fp,
-        output_uc=dereplication_map,
+        output_uc=uc_output,
         minuniquesize=min_size,
         log_name=log_name)
 

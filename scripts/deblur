@@ -90,7 +90,7 @@ def trim(seqs_fp, output_fp, trim_length):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-@click.option('--dereplication-map', required=False, type=bool, default=True,
+@click.option('--uc-output', required=False, type=bool, default=True,
               show_default=True, help="Output dereplication map in "
                                       " .uc format")
 def dereplicate(seqs_fp, output_fp, min_size, dereplication_map):
@@ -103,7 +103,7 @@ def dereplicate(seqs_fp, output_fp, min_size, dereplication_map):
     dereplicate_seqs(seqs_fp=seqs_fp,
                      output_fp=output_fp,
                      min_size=min_size,
-                     dereplication_map=dereplication_map)
+                     uc_output=uc_output)
 
 
 # ARTIFACT REMOVAL COMMAND
