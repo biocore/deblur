@@ -530,9 +530,9 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         uc_output_fp = join(self.working_dir, "derep.uc")
         with open(uc_output_fp, 'w') as uc_output_f:
             uc_output_f.write(uc_output)
-        output_biom_fp = join(self.working_dir, "seqs.biom")
         table_exp = Table(data, otu_ids, sample_ids, sample_metadata=None)
-        table = generate_biom_table(seqs_fp, uc_output_fp, output_biom_fp)
+        clusters, table = generate_biom_table(seqs_fp,
+                                              uc_output_fp)
         self.assertEqual(table, table_exp)
 
     def test_launch_workflow(self):

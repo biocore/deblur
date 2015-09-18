@@ -93,7 +93,7 @@ def trim(seqs_fp, output_fp, trim_length):
 @click.option('--uc-output', required=False, type=bool, default=True,
               show_default=True, help="Output dereplication map in "
                                       " .uc format")
-def dereplicate(seqs_fp, output_fp, min_size, dereplication_map):
+def dereplicate(seqs_fp, output_fp, min_size, uc_output):
     """
     Dereplicate FASTA sequences.
 
@@ -124,9 +124,9 @@ def dereplicate(seqs_fp, output_fp, min_size, dereplication_map):
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
               help="Keep all sequences aligning to this indexed "
-                    "database. For multiple databases, the order "
-                    "must follow that of --ref-fp, for example, "
-                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+                   "database. For multiple databases, the order "
+                   "must follow that of --ref-fp, for example, "
+                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
 @click.option('--negate', '-n', required=False, default=False,
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
@@ -206,13 +206,13 @@ def remove_chimeras_denovo(seqs_fp, output_fp):
                                       "sample ID from sequence ID")
 def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
     """Generate a BIOM table"""
-    table = generate_biom_table(seqs_fp=seqs_fp,
-                                uc_fp=uc_fp,
-                                output_biom_fp=output_biom_fp,
-                                delim=delim)
+    deblur_clrs, table = generate_biom_table(seqs_fp=seqs_fp,
+                                             uc_fp=uc_fp,
+                                             output_biom_fp=output_biom_fp,
+                                             delim=delim)
     # write BIOM table to file
     if table.is_empty():
-        raise EmptyBIOMTableError(
+        raise ValueError(
             "Attempting to write an empty BIOM table.")
     with biom_open(output_biom_fp, 'w') as f:
         if HAVE_H5PY:
@@ -222,8 +222,8 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 
     # write representative FASTA sequences to file
     with open(output_rep_set_fp, 'w') as f:
-        for s in deblur_clusters:
-            f.write(">%s\n%s\n" % (deblur_clusters[s][0], s))
+        for s in deblur_clrs:
+            f.write(">%s\n%s\n" % (deblur_clrs[s][0], s))
 
 
 # LAUNCH FULL DEBLUR PIPELINE COMMAND

@@ -53,10 +53,10 @@ def dereplicate_seqs(seqs_fp,
         filepath to FASTA sequence file
     output_fp : string
         file path to dereplicated sequences (FASTA format)
-    min_size : integer
+    min_size : integer, optional
         discard sequences with an abundance value smaller
         than integer
-    uc_output: boolean
+    uc_output: boolean, optional
         output the dereplication map in .uc format
     """
     log_name = "%s.log" % splitext(output_fp)[0]
@@ -195,14 +195,7 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
 
 
 def parse_deblur_output(seqs_fp, derep_clusters):
-    """ Parse deblur output file into an OTU map
-
-    For each deblurred sequence in seqs_fp, use the sequence label to
-    obtain all dereplicated sequence labels belonging to it
-    (from derep_clusters) to create entries in a new dictionary where the keys
-    are actual sequences (not the labels). Note not all sequences
-    in derep_clusters will be in seqs_fp since they could have been removed in
-    the artifact filtering step.
+    """ Parse deblur output file into an OTU map.
 
     Parameters
     ----------
@@ -215,6 +208,15 @@ def parse_deblur_output(seqs_fp, derep_clusters):
     -------
     clusters: dictionary
         dictionary of clusters including dereplicated sequence labels
+
+    Notes
+    -----
+    For each deblurred sequence in seqs_fp, use the sequence label to
+    obtain all dereplicated sequence labels belonging to it
+    (from derep_clusters) to create entries in a new dictionary where the keys
+    are actual sequences (not the labels). Note not all sequences
+    in derep_clusters will be in seqs_fp since they could have been removed in
+    the artifact filtering step.
     """
     clusters = {}
     # Replace representative sequence name with actual sequence in cluster
@@ -233,8 +235,7 @@ def parse_deblur_output(seqs_fp, derep_clusters):
 
 
 def generate_biom_data(clusters, delim='_'):
-    """ Parse OTU map dictionary into a sparse dictionary
-    {(cluster_idx,sample_idx):count}
+    """ Parse OTU map dictionary into a sparse dictionary.
 
     Parameters
     ----------
@@ -242,6 +243,7 @@ def generate_biom_data(clusters, delim='_'):
         OTU map as dictionary
     delim: string, optional
         delimiter for splitting sample and sequence IDs in sequence label
+        default: '_'
 
     Returns
     -------
@@ -251,6 +253,10 @@ def generate_biom_data(clusters, delim='_'):
         list of cluster IDs
     sample_ids: list
         list of sample IDs
+
+    Notes
+    -----
+    Sparse dictionary format is {(cluster_idx,sample_idx):count}
     """
     sample_ids = []
     sample_id_idx = {}
@@ -274,7 +280,6 @@ def generate_biom_data(clusters, delim='_'):
 
 def generate_biom_table(seqs_fp,
                         uc_fp,
-                        output_biom_fp,
                         delim='_'):
     """Generate BIOM table and representative FASTA set
 
@@ -284,10 +289,9 @@ def generate_biom_table(seqs_fp,
         file path to deblurred sequences
     uc_fp: string
         file path to dereplicated sequences map (.uc format)
-    output_biom_fp: string
-        file path to output BIOM table
     delim: string, optional
         delimiter for splitting sample and sequence IDs in sequence label
+        default: '_'
     """
     # parse clusters in dereplicated sequences map (.uc format)
     with open(uc_fp, 'U') as uc_f:
@@ -297,11 +301,11 @@ def generate_biom_table(seqs_fp,
     # create sparse dictionary of observation and sample ID counts
     data, otu_ids, sample_ids = generate_biom_data(deblur_clusters, delim)
     # build BIOM table
-    return Table(data, otu_ids, sample_ids,
-                 observation_metadata=None,
-                 sample_metadata=None, table_id=None,
-                 generated_by="deblur",
-                 create_date=datetime.now().isoformat())
+    return deblur_clusters, Table(data, otu_ids, sample_ids,
+                                  observation_metadata=None,
+                                  sample_metadata=None, table_id=None,
+                                  generated_by="deblur",
+                                  create_date=datetime.now().isoformat())
 
 
 def launch_workflow(seqs_fp, mapping_fp):
