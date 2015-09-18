@@ -6,14 +6,19 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 from os.path import splitext, dirname, join, exists, basename
+from collections import defaultdict
+from datetime import datetime
 from os import makedirs, stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
+from bfillings.uclust import clusters_from_uc_file
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
+from skbio import Alignment
+from biom.table import Table
 
 
 def trim_seqs(input_seqs, trim_len):
@@ -38,7 +43,8 @@ def trim_seqs(input_seqs, trim_len):
 
 def dereplicate_seqs(seqs_fp,
                      output_fp,
-                     min_size=2):
+                     min_size=2,
+                     uc_output=True):
     """Dereplicate FASTA sequences and remove singletons using VSEARCH
 
     Parameters
@@ -46,16 +52,19 @@ def dereplicate_seqs(seqs_fp,
     seqs_fp : string
         filepath to FASTA sequence file
     output_fp : string
-        filepath to dereplicated FASTA file
-    min_size : integer
+        file path to dereplicated sequences (FASTA format)
+    min_size : integer, optional
         discard sequences with an abundance value smaller
         than integer
+    uc_output: boolean, optional
+        output the dereplication map in .uc format
     """
     log_name = "%s.log" % splitext(output_fp)[0]
 
     vsearch_dereplicate_exact_seqs(
         fasta_filepath=seqs_fp,
         output_filepath=output_fp,
+        output_uc=uc_output,
         minuniquesize=min_size,
         log_name=log_name)
 
@@ -185,9 +194,127 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
     rename(output_non_chimera_filepath, output_fp)
 
 
-def generate_biom_table(seqs_fp):
-    """Generate BIOM table and representative FASTA set"""
-    pass
+def parse_deblur_output(seqs_fp, derep_clusters):
+    """ Parse deblur output file into an OTU map.
+
+    Parameters
+    ----------
+    seqs_fp: string
+        file path to deblurred sequences
+    derep_clusters: dictionary
+        dictionary of dereplicated sequences map
+
+    Returns
+    -------
+    clusters: dictionary
+        dictionary of clusters including dereplicated sequence labels
+
+    Notes
+    -----
+    For each deblurred sequence in seqs_fp, use the sequence label to
+    obtain all dereplicated sequence labels belonging to it
+    (from derep_clusters) to create entries in a new dictionary where the keys
+    are actual sequences (not the labels). Note not all sequences
+    in derep_clusters will be in seqs_fp since they could have been removed in
+    the artifact filtering step.
+    """
+    clusters = {}
+    # Replace representative sequence name with actual sequence in cluster
+    msa_fa = Alignment.read(seqs_fp, format='fasta')
+    for label, seq in Alignment.iteritems(msa_fa):
+        cluster_id = label.split(';')[0]
+        seq2 = str(seq.degap())
+        if seq2 not in clusters:
+            clusters[seq2] = []
+        if cluster_id not in derep_clusters:
+            raise ValueError(
+                'Seed ID %s does not exist in .uc file' % cluster_id)
+        else:
+            clusters[seq2].extend(derep_clusters[cluster_id])
+    return clusters
+
+
+def generate_biom_data(clusters, delim='_'):
+    """ Parse OTU map dictionary into a sparse dictionary.
+
+    Parameters
+    ----------
+    clusters: dictionary
+        OTU map as dictionary
+    delim: string, optional
+        delimiter for splitting sample and sequence IDs in sequence label
+        default: '_'
+
+    Returns
+    -------
+    data: dictionary
+        sprase dictionary {(otu_idx,sample_idx):count}
+    cluster_ids: list
+        list of cluster IDs
+    sample_ids: list
+        list of sample IDs
+
+    Notes
+    -----
+    Sparse dictionary format is {(cluster_idx,sample_idx):count}.
+    This function is based on QIIME's parse_otu_map() function found at
+    https://github.com/biocore/qiime/blob/master/qiime/parse.py
+    """
+    sample_ids = []
+    sample_id_idx = {}
+    data = defaultdict(int)
+    sample_count = 0
+    for cluster_idx, otu in enumerate(clusters):
+        for seq_id in clusters[otu]:
+            seq_id_sample = seq_id.split(delim)[0]
+            try:
+                sample_idx = sample_id_idx[seq_id_sample]
+            except KeyError:
+                sample_idx = sample_count
+                sample_id_idx[seq_id_sample] = sample_idx
+                sample_ids.append(seq_id_sample)
+                sample_count += 1
+            data[(cluster_idx, sample_idx)] += 1
+    cluster_ids = clusters.keys()
+
+    return data, cluster_ids, sample_ids
+
+
+def generate_biom_table(seqs_fp,
+                        uc_fp,
+                        delim='_'):
+    """Generate BIOM table and representative FASTA set
+
+    Parameters
+    ----------
+    seqs_fp: string
+        file path to deblurred sequences
+    uc_fp: string
+        file path to dereplicated sequences map (.uc format)
+    delim: string, optional
+        delimiter for splitting sample and sequence IDs in sequence label
+        default: '_'
+
+    Returns
+    -------
+    deblur_clusters: dictionary
+        dictionary of clusters including dereplicated sequence labels
+    Table: biom.table
+        an instance of a BIOM table
+    """
+    # parse clusters in dereplicated sequences map (.uc format)
+    with open(uc_fp, 'U') as uc_f:
+        derep_clusters, failures, seeds = clusters_from_uc_file(uc_f)
+    # parse clusters in deblur file, set observation ID to be the sequence
+    deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
+    # create sparse dictionary of observation and sample ID counts
+    data, otu_ids, sample_ids = generate_biom_data(deblur_clusters, delim)
+    # build BIOM table
+    return deblur_clusters, Table(data, otu_ids, sample_ids,
+                                  observation_metadata=None,
+                                  sample_metadata=None, table_id=None,
+                                  generated_by="deblur",
+                                  create_date=datetime.now().isoformat())
 
 
 def launch_workflow(seqs_fp, mapping_fp):
