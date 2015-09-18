@@ -11,7 +11,4 @@ Code Development Note
 
 Some of the code in the package deblur has been derived from [QIIME](http://qiime.org).
 The contributors to these specific QIIME modules have granted permission
-(see PR [#20](https://github.com/biocore/deblur/pull/20) for this porting
-to take place and put under the BSD license. The contributors are: Greg Caporaso (@gregcaporaso),
-Jai Ram Rideout (@jairideout), Jose Antonio Navas Molina (@josenavas),
-Kyle Bittinger (@kylebittinger) and Daniel McDonald (@wasade).
+for this porting to take place and put under the BSD license.

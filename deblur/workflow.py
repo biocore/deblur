@@ -256,7 +256,9 @@ def generate_biom_data(clusters, delim='_'):
 
     Notes
     -----
-    Sparse dictionary format is {(cluster_idx,sample_idx):count}
+    Sparse dictionary format is {(cluster_idx,sample_idx):count}.
+    This function is based on QIIME's parse_otu_map() function found at
+    https://github.com/biocore/qiime/blob/master/qiime/parse.py
     """
     sample_ids = []
     sample_id_idx = {}
@@ -292,6 +294,13 @@ def generate_biom_table(seqs_fp,
     delim: string, optional
         delimiter for splitting sample and sequence IDs in sequence label
         default: '_'
+
+    Returns
+    -------
+    deblur_clusters: dictionary
+        dictionary of clusters including dereplicated sequence labels
+    Table: biom.table
+        an instance of a BIOM table
     """
     # parse clusters in dereplicated sequences map (.uc format)
     with open(uc_fp, 'U') as uc_f:
