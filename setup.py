@@ -245,6 +245,41 @@ def build_SortMeRNA():
         chdir(cwd)
 
 
+def build_MAFFT():
+    """Download and build MAFFT then copy it to the scripts directory"""
+    status("Building MAFFT...")
+
+    cwd = getcwd()
+    scripts = join(cwd, 'scripts')
+
+    try:
+        tempdir = mkdtemp()
+        if download_file(
+            'http://mafft.cbrc.jp/alignment/software/mafft-7.245-with'
+                '-extensions-src.tgz', tempdir,
+                'mafft-7.245-with-extensions-src.tgz'):
+            status("Could not download MAFFT, so cannot install it.\n")
+            return
+
+        chdir(tempdir)
+
+        if not system_call('tar xzf mafft-7.245-with-extensions-src.tgz',
+                           'extract MAFFT archive'):
+            return
+
+        chdir('mafft-7.245-with-extensions/core')
+
+        if not system_call('make', 'build MAFFT'):
+            return
+
+        copy('mafft-7.245-with-extensions/binaries', scripts)
+        status("MAFFT built.\n")
+    finally:
+        # remove the source
+        rmtree(tempdir)
+        chdir(cwd)
+
+
 def catch_install_errors(install_function, name):
     try:
         install_function()
