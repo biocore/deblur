@@ -10,13 +10,14 @@
 from setuptools import setup
 from stat import S_IEXEC
 from glob import glob
-from os.path import join
+from os.path import join, dirname, abspath
 from os import (chmod, rename, stat, devnull, getcwd, environ, chdir)
 import sys
+import re
 from urllib import FancyURLopener
 from subprocess import call, Popen, PIPE
 from tempfile import mkdtemp
-from shutil import rmtree, copy
+from shutil import rmtree, copy, move
 
 
 __version__ = "0.0.1-dev"
@@ -269,10 +270,27 @@ def build_MAFFT():
 
         chdir('mafft-7.245-with-extensions/core')
 
+        # Denable multithreading for systems other than Linux
+        if sys.platform.lower() not in ['linux', 'linux2']:
+            # source
+            makefile_sp = join(dirname(abspath(__file__)), 'Makefile')
+            # destination
+            makefile_dp = join(dirname(abspath(__file__)), 'Makefile2')
+            with open(makefile_dp, 'w') as makefile_d:
+                with open(makefile_sp, 'U') as makefile_s:
+                    for line in makefile_s:
+                        line = re.sub(
+                            r'ENABLE_MULTITHREAD = -Denablemultithread',
+                            r'#ENABLE_MULTITHREAD = -Denablemultithread',
+                            line)
+                        makefile_d.write(line)
+            # overwrite old Makefile
+            move(makefile_dp, makefile_sp)
+
         if not system_call('make', 'build MAFFT'):
             return
 
-        copy('mafft-7.245-with-extensions/binaries', scripts)
+        copy('mafft', scripts)
         status("MAFFT built.\n")
     finally:
         # remove the source
@@ -297,6 +315,7 @@ def catch_install_errors(install_function, name):
 if all([e not in sys.argv for e in 'egg_info', 'sdist', 'register']):
     catch_install_errors(download_VSEARCH, 'VSEARCH')
     catch_install_errors(build_SortMeRNA, 'SortMeRNA')
+    catch_install_errors(build_MAFFT, 'MAFFT')
 
 classes = """
     Development Status :: 2 - Pre-Alpha

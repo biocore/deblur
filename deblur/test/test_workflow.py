@@ -413,9 +413,6 @@ class workflowTests(TestCase):
                           negate=False,
                           threads=1)
 
-    def test_multiple_sequence_alignment(self):
-        pass
-
     def test_remove_chimeras_denovo_from_seqs(self):
         """ Test remove_chimeras_denovo_from_seqs() method functionality.
             Remove chimeric sequences from a FASTA file using the UCHIME
