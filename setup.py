@@ -246,58 +246,6 @@ def build_SortMeRNA():
         chdir(cwd)
 
 
-def build_MAFFT():
-    """Download and build MAFFT then copy it to the scripts directory"""
-    status("Building MAFFT...")
-
-    cwd = getcwd()
-    scripts = join(cwd, 'scripts')
-
-    try:
-        tempdir = mkdtemp()
-        if download_file(
-            'http://mafft.cbrc.jp/alignment/software/mafft-7.245-with'
-                '-extensions-src.tgz', tempdir,
-                'mafft-7.245-with-extensions-src.tgz'):
-            status("Could not download MAFFT, so cannot install it.\n")
-            return
-
-        chdir(tempdir)
-
-        if not system_call('tar xzf mafft-7.245-with-extensions-src.tgz',
-                           'extract MAFFT archive'):
-            return
-
-        chdir('mafft-7.245-with-extensions/core')
-
-        # Denable multithreading for systems other than Linux
-        if sys.platform.lower() not in ['linux', 'linux2']:
-            # source
-            makefile_sp = join(dirname(abspath(__file__)), 'Makefile')
-            # destination
-            makefile_dp = join(dirname(abspath(__file__)), 'Makefile2')
-            with open(makefile_dp, 'w') as makefile_d:
-                with open(makefile_sp, 'U') as makefile_s:
-                    for line in makefile_s:
-                        line = re.sub(
-                            r'ENABLE_MULTITHREAD = -Denablemultithread',
-                            r'#ENABLE_MULTITHREAD = -Denablemultithread',
-                            line)
-                        makefile_d.write(line)
-            # overwrite old Makefile
-            move(makefile_dp, makefile_sp)
-
-        if not system_call('make', 'build MAFFT'):
-            return
-
-        copy('mafft', scripts)
-        status("MAFFT built.\n")
-    finally:
-        # remove the source
-        rmtree(tempdir)
-        chdir(cwd)
-
-
 def catch_install_errors(install_function, name):
     try:
         install_function()
