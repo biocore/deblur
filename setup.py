@@ -8,10 +8,9 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 from setuptools import setup
-from stat import S_IEXEC
 from glob import glob
 from os.path import join
-from os import (chmod, rename, stat, devnull, getcwd, environ, chdir)
+from os import (rename, devnull, getcwd, environ, chdir)
 import sys
 from urllib import FancyURLopener
 from subprocess import call, Popen, PIPE
