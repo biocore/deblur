@@ -11,6 +11,7 @@ before_install:
 install:
   - conda create --yes -n env_name python=$PYTHON_VERSION pip numpy scipy nose flake8
   - source activate env_name
+  - conda install --yes -c https://conda.anaconda.org/biocore VSEARCH
   - pip install coveralls
   - pip install --process-dependency-links .
 script:

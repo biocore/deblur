@@ -8,10 +8,9 @@
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
 from setuptools import setup
-from stat import S_IEXEC
 from glob import glob
 from os.path import join
-from os import (chmod, rename, stat, devnull, getcwd, environ, chdir)
+from os import (rename, devnull, getcwd, environ, chdir)
 import sys
 from urllib import FancyURLopener
 from subprocess import call, Popen, PIPE
@@ -157,32 +156,6 @@ def system_call(cmd, error_msg):
     return success
 
 
-def download_VSEARCH():
-    """ Download the VSEARCH executable and set it
-        to the scripts directory
-    """
-    status("Installing VSEARCH...")
-
-    if sys.platform in ['darwin', 'macos']:
-        URL = ('https://github.com/torognes/vsearch/releases/download/'
-               'v1.1.1/vsearch-1.1.1-osx-x86_64')
-    elif sys.platform in ['linux', 'linux2']:
-        URL = ('https://github.com/torognes/vsearch/releases/download/'
-               'v1.1.1/vsearch-1.1.1-linux-x86_64')
-    else:
-        status("Platform %r not supported by VSEARCH.\n" % sys.platform)
-        return
-
-    return_value = download_file(URL, 'scripts/', 'vsearch')
-
-    # make the file an executable file
-    if not return_value:
-        chmod('scripts/vsearch', stat('scripts/vsearch').st_mode | S_IEXEC)
-        status("VSEARCH installed.\n")
-    else:
-        status("VSEARCH could not be installed.\n")
-
-
 def build_SortMeRNA():
     """Download and build SortMeRNA then copy it to the scripts directory"""
     status("Building SortMeRNA...")
@@ -260,7 +233,6 @@ def catch_install_errors(install_function, name):
 # don't build any of the non-Python dependencies if the following modes are
 # invoked
 if all([e not in sys.argv for e in 'egg_info', 'sdist', 'register']):
-    catch_install_errors(download_VSEARCH, 'VSEARCH')
     catch_install_errors(build_SortMeRNA, 'SortMeRNA')
 
 classes = """
