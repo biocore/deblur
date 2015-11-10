@@ -15,6 +15,8 @@ from os.path import join, isfile
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
+from skbio.alignment import SequenceCollection
+from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
 from biom.table import Table
 
@@ -24,7 +26,8 @@ from deblur.workflow import (dereplicate_seqs,
                              parse_deblur_output,
                              generate_biom_data,
                              generate_biom_table,
-                             trim_seqs)
+                             trim_seqs,
+                             multiple_sequence_alignment)
 
 
 class workflowTests(TestCase):
@@ -410,9 +413,6 @@ class workflowTests(TestCase):
                           negate=False,
                           threads=1)
 
-    def test_multiple_sequence_alignment(self):
-        pass
-
     def test_remove_chimeras_denovo_from_seqs(self):
         """ Test remove_chimeras_denovo_from_seqs() method functionality.
             Remove chimeric sequences from a FASTA file using the UCHIME
@@ -534,6 +534,31 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         clusters, table = generate_biom_table(seqs_fp,
                                               uc_output_fp)
         self.assertEqual(table, table_exp)
+
+    def test_multiple_sequence_alignment(self):
+        """Test multiple sequence alignment.
+        """
+        seqs = [DNA('caccggcggcccggtggtggccattattattgggtctaaag', id='seq_1'),
+                DNA('caccggcggcccgagtggtggccattattattgggtcaagg', id='seq_2'),
+                DNA('caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
+                DNA('aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
+                DNA('caccgggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
+        seqs_col = SequenceCollection(seqs)
+        seqs_fp = join(self.working_dir, "seqs.fna")
+        with open(seqs_fp, 'w') as o:
+            o.write(seqs_col.to_fasta())
+        alignment = multiple_sequence_alignment(seqs_fp)
+        align_exp = [DNA(
+            'caccggcggcccg-gtggtggccattattattgggtctaaag', id='seq_1'),
+                     DNA(
+            'caccggcggcccgagtggtggccattattattgggtcaagg-', id='seq_2'),
+                     DNA(
+            'caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
+                     DNA(
+            'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
+                     DNA(
+            'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
+        self.assertItemsEqual(alignment, align_exp)
 
     def test_launch_workflow(self):
         pass

@@ -163,15 +163,14 @@ def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
 def multiple_seq_alignment(seqs_fp, output_fp):
     """Multiple sequence alignment"""
-    seqs = multiple_sequence_alignment(seqs_fp)
+    alignment = multiple_sequence_alignment(seqs_fp)
 
     with open(output_fp, 'w') as f:
-        for s in seqs:
-            f.write(s.to_fasta())
+        f.write(alignment.to_fasta())
 
 
 # DE NOVO CHIMERA REMOVAL COMMAND

@@ -15,6 +15,7 @@ from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
 from bfillings.uclust import clusters_from_uc_file
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
+from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio import Alignment
@@ -75,7 +76,7 @@ def remove_artifacts_seqs(seqs_fp,
                           ref_db_fp=None,
                           negate=False,
                           threads=1):
-    """Remove artifacts from FASTA file using SortMeRNA
+    """Remove artifacts from FASTA file using SortMeRNA.
 
     Parameters
     ----------
@@ -161,9 +162,23 @@ def remove_artifacts_seqs(seqs_fp,
 
 
 def multiple_sequence_alignment(seqs_fp):
-    """Perform multiple sequence alignment on FASTA
-       file using MAFFT"""
-    pass
+    """Perform multiple sequence alignment on FASTA file using MAFFT
+
+    Parameters
+    ----------
+    seqs_fp: string
+        filepath to FASTA file for multiple sequence alignment
+
+    Returns
+    -------
+    Alignment object
+        The aligned sequences.
+
+    See Also
+    --------
+    skbio.Alignment
+    """
+    return align_unaligned_seqs(seqs_fp)
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
