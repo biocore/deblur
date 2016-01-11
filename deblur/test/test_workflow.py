@@ -11,7 +11,7 @@ from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
 from os import close
 from types import GeneratorType
-from os.path import join, isfile
+from os.path import join, isfile, basename
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
@@ -19,6 +19,7 @@ from skbio.alignment import SequenceCollection
 from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
 from biom.table import Table
+from biom import load_table
 
 from deblur.workflow import (dereplicate_seqs,
                              remove_chimeras_denovo_from_seqs,
@@ -27,7 +28,8 @@ from deblur.workflow import (dereplicate_seqs,
                              generate_biom_data,
                              generate_biom_table,
                              trim_seqs,
-                             multiple_sequence_alignment)
+                             multiple_sequence_alignment,
+                             launch_workflow)
 
 
 class workflowTests(TestCase):
@@ -548,20 +550,73 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         with open(seqs_fp, 'w') as o:
             o.write(seqs_col.to_fasta())
         alignment = multiple_sequence_alignment(seqs_fp)
-        align_exp = [DNA(
-            'caccggcggcccg-gtggtggccattattattgggtctaaag', id='seq_1'),
-                     DNA(
-            'caccggcggcccgagtggtggccattattattgggtcaagg-', id='seq_2'),
-                     DNA(
-            'caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
-                     DNA(
-            'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
-                     DNA(
-            'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
+        align_exp = [
+            DNA(
+                'caccggcggcccg-gtggtggccattattattgggtctaaag', id='seq_1'),
+            DNA(
+                'caccggcggcccgagtggtggccattattattgggtcaagg-', id='seq_2'),
+            DNA(
+                'caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
+            DNA(
+                'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
+            DNA(
+                'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
         self.assertItemsEqual(alignment, align_exp)
 
     def test_launch_workflow(self):
-        pass
+        """Test launching complete workflow using simulated sequences 1.
+        """
+        seqs_fp = self.seqs_s1_fp
+        output_fp = join(self.working_dir, "%s.biom" % basename(seqs_fp))
+        read_error = 0.05
+        mean_error = 0.05
+        error_dist = None
+        indel_prob = 0.01
+        indel_max = 3
+        trim_length = 100
+        min_size = 2
+        ref_fp = join(self.working_dir, "db.fasta")
+        with open(ref_fp, 'w') as ref_f:
+            ref_f.write(database_16S)
+        ref_db_fp = None
+        negate = False
+        threads = 1
+        delim = '_'
+        launch_workflow(seqs_fp, output_fp, read_error, mean_error,
+                        error_dist, indel_prob, indel_max, trim_length,
+                        min_size, tuple([ref_fp]), ref_db_fp, negate,
+                        threads, delim)
+        data = {(0, 0): 9, (1, 0): 9, (2, 0): 10, (3, 0): 8, (4, 0): 2,
+                (5, 0): 2, (6, 0): 8, (7, 0): 2, (8, 0): 8, (9, 0): 9,
+                (10, 0): 7, (11, 0): 9}
+        otu_ids = ["TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAAAACGTTCGTAGCCGG"
+                   "TTTGATAAATCCTTGGGTAAATCGGGAAGCTTAACTTTCCGATTC",
+                   "CACCGGCGGCCCGAGTGGTGGCCATTATTATTGGGTCTAAAGGGTCCGTAGCCGG"
+                   "TTTGATCAGTCTTCCGGGAAATCTGACAGCTCAACTGTTAGGTCT",
+                   "CACCAGCAGCCCAAGTGGTGGCCGGGTTTATTGGGCCTAAAGCGCTCGTAGCCGG"
+                   "ACTGGTAAGTCCCTTGTGAAATCGGTCGGCTCAACCGTTCGGTGC",
+                   "TACCAGCCCCGCGAGTGGTCAGGACGATTATTAAGCCTAAGGCGTCCGTAGCCGG"
+                   "CCTTGTAAGTTCTCCCTTAAATGGTATGGCTCAACCATACCGTGG",
+                   "TTCCGGTCCCAAGCCGAACAGTTTCCGCCGGACGCCCATCCGTTGAGCGGATGGA"
+                   "TTTCCCGACAGACTTGTTCGGCCAGCTACGGACGCTTTAGGCCCA",
+                   "GTGCCAGCCGCCGCGGTAATACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGC"
+                   "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGG",
+                   "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCGTAGCCGG"
+                   "CTTAGTGAGTCTTTCGTTAAATCCGGCGACTTAATCGTCGTTTGC",
+                   "CGCCCGGTCCCAAGCTTTGCAGTCTCCCCAGAAATCGGATCGTTAAGCGACCCGA"
+                   "TTTACCCAGGGATTTACAAAGCCGACTACGGACGTTTTAGGCTCA",
+                   "TACCGGCAGCTCGAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCGTAGCTGG"
+                   "CCGAACAAGTCTGTCGGGAAATCCATCCGCTCAACGGATGGGTCC",
+                   "TACCAGCTCTCCGAGTGGTGGGGACGATTATTGGGCTTAAAGCGTTCGTAGCCGG"
+                   "CTCAACAAGTCTCCCGTTAAATCCAGCGATCTAATCGTTGGATGC",
+                   "TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAAAGCATCCGTAGCTGG"
+                   "CTAGGTTAGTCCCCTGTTAAATCCACCGAATTAATCGTTGGATGC",
+                   "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGG"
+                   "CTTTGTAAATCCCTGGGTAAATCGGGTCGCTTAACGATCCGATTC"]
+        sample_ids = ["s1"]
+        table_exp = Table(data, otu_ids, sample_ids, sample_metadata=None)
+        table_obs = load_table(output_fp)
+        self.assertEqual(table_obs, table_exp)
 
 
 # 2 samples, each representing 10 species, 8/10 species
@@ -1311,6 +1366,280 @@ GTCAACGTTATATCTTGATAGTTTGACGGTTAATGCTGGTAATGGTGGTTTTCTTCATTGCATTCAGA
 >s2_239 gi|304442482|gb|HM753704.1|-31-2
 ACTTTTTTTCTGATAAGCTGGTTCTCACTTCTGTTACTCCAGCTTCTTCGGCACCTGTTTTACAGACACCTAAAGCTACATC
 GTCAACGTTATATCTTGATAGTTTGACGGTTAATGCTGGTAATGGTGGTTTTCTTCATTGCATTCAGA
+"""
+
+database_16S = """>Unc00pqt count=1; cluster_weight=1; cluster=Unc00pqt; \
+cluster_score=1.000000; cluster_center=True;
+gagtttgatcctggctcagaacgaacgctggcggcgtggataagacatgcaagtcgaacgagaactttcgctgt\
+agcaatacagtggaagttttagtggcgaacgggtgcgtaacacgtggacaatctgccttaaagtgggggatagc\
+tcggcgaaagccgaattaataccgcatgtgatcagccaaaacattttggcgaaattaaagacggcgcaagctgt\
+cgctttttgaggagtccgcggcctatcagctagttggtgaggtaacggctcaccaaggctttgacgggtagctg\
+gtctgagaggacgaccagccacactggaactgagacacggtccagacacctacgggtggcagcagtcgagaatt\
+tttctcaatgggggaaaccctgaaggagcgacgccgcgtggaggatgaaggtcttcgggttgtaaactcctgtc\
+atttgggaacaagtcgtacgtagtaactatacgtgcgttgatagtaccagaagaggaagagacggctaactctg\
+tgccagcagccgcggtaacacgtagggaccaagcgttgtccggatttattgggcgtaaagcgctcgtaggcggt\
+tcggtaagtcgggtgtgaaacccctgggctcaacccggggacgccacccgatactgctgtgactcgagttcggt\
+aggggagcggggaattcccggtgtagcggtgaaatgcgtagatatcgggaggaacaccgttggcgaaggcgact\
+ttctgggctgctactgacgctgaagcgcgaaagccaggggagcgaacaggattagataccctggtagtcctggc\
+cgtaaacgttggacactaggtgttggaggcatcgacccctccagtgccgcagccaacgcattaagtgtcccgcc\
+tggggagtacgaccgcaaggttgaaactcaaaggaattgacgggggcccgcacaagcggtggagcatgtggttt\
+aattcgacgcaacgcgaagaaccctaccggggtttgacatgcacgggacaggtgtggaaacacaccctcccttc\
+ggggtccgtgcacaggtgctgcatggctgtcgtcagctcgtgtcgtgagatgttgggttaagtcccgcaacgag\
+cgcaacccttgtcgctagttgccagcgagtaatgtcgggcactctagcgagactgccggtggtaagccggagga\
+aggtggggatgacgtcaagtcctcatggcccttacatcccgggctacacacgtgctacaatggccggtacaaag\
+ggttccgatatcgcgagatggaggcaatcccaaaaagccggtctcagttcggattgcagtctgcaactcgactg\
+catgaaggtggaatcgctagtaatcgcaaatcagcaggttgcggtgaatacgttcccgggccttgtacacac
+>Unc40897 count=1; cluster_weight=3; cluster=Unc40897; cluster_score=1.000\
+000; cluster_center=True;
+gatgaacgctagcgagacgcttaacacatgcaagtcgaatgctgatttatcagcatggcagacgggtgagtaac\
+acgtgcttaatttgccccggagtgggggacaacatcggaaacggtgataatcccgcatacgttccataaaatga\
+aaatatatggaagaaagatttatcgctctgggaggagggcgcgcctgactagttagttggtgaggtaatggctc\
+accaagacgatgatcagtagctggtctgagaggacgaacagccacaatgggactgagacaaggcccatacccct\
+acggggggcagcagtggggaatcttgcgcaatggacgaaagtctgacgcagcgatctcgcgtgaaggatgaagc\
+tttgcggagtgtaaacttcttttctgggagaaaacgactgatggtatctcaggaataagggacggctaactacg\
+tgccagcagccgcggtaatacgtaggtcccaagcgttatccggatttactgggcgtaaagcgtccgtagccggc\
+tttgtaagtccgctttcaaaacccgaagctcaacttcggtccgggagtagatactgcaaagctagagaaagata\
+gaggtatgtagaatttccggtggaggggtgaaatccgttgatatcggaaggaataccaaaagcgaaggcagcat\
+gctatatcttttctgacggtcagggacgaaagtatggggagcgaacgggattagataccccggtagtccatacc\
+gtaaatgatgcccgctaggtgtgcatctcgctttgcgagatatgtgccgtaagctaacgcgttaagcgggtcgc\
+ctgagtagtatagtcgcaaggctgaaactcaaagggataggcgggggaacacacaagcagaggattgtctcgat\
+taattggataataagccaagaatcttaccccggtttgacatccttcaaattctgcagaaacgtagaagtgctcg\
+gttcgccgagaatgaagtgacaggtgctgcatggccgtcgtcagctcgtgccgcaaggtgtctggttaagtcca\
+ggaacgagcgcaaccctcatcgttagttagaatgtctaacgagactgcctcggtaacgaggaggaaggagagga\
+tgacgtcaggtcattatggcccttatgccgggggcgtcagagacaatacaatgggtggtacagcaggtagcaat\
+gcagcgatgcggagccaatccctaaaaccatcctcagttcggattgtagtctggaactcgactacatgaagttg\
+gatttgctagtaatggtgggtcagccacaccaccgtgaatatgtccctgttcctt
+>Unc03ol6 count=1; cluster_weight=177; cluster=Unc03ol6; cluster_score=1.0\
+00000; cluster_center=True;
+gatgaacgctagcgacaggcctaacacatgcaagtcgaggggtaacattggtgcttgcaccagatgacgaccgg\
+cgcacgggtgagtaacgcgtatgcaacctgccttatactgggggatagcccgaggaaactcggattaataccgc\
+ataatgatttgatttcgcatgagattaaatttaaaactccggtggtataagatgggcatgcgtaacattagcta\
+gttggtgaggtaacggctcaccaaggcgatgatgtttagggggtctgagaggatagtcccccacactggtactg\
+agacacggaccagactcctacgggaggcagcagtgaggaatattggtcaatggacgcaagtctgaaccagccat\
+gtcgcgtgcaggaagactgccctatgggttgtaaactgcttttatataggaataatggtaattacgtgtagtta\
+tttgaatgtactatatgaataaggatcggctaactccgtgccagcagccgcggtaatacggaggattcgagcgt\
+tatccggatttattgggtttaaagggtccgtaggcgggctgataagtcagtggtgaaatctcacagctcaactg\
+tgaaactgccattgaaactgtcggtcttgaatttggttgaggtaggcggaatacgatatgtagcggtgaaatgc\
+atagatatatcgtagaacaccgattgcgaaggcagcttactaaaccaacattgacgctgatggacgaaagcgtg\
+ggtagcgaacaggattagataccctggtagtccacgccgtaaacgatgattactcgttgtgcacgatacaatgt\
+gcgtgactgagcgaaagcattaagtaatccacctggggagtacgttggcaacaatgaaactcaaaggaattgac\
+gggggcccgcacaagcggaggaacatgtggtttaattcgatgatacgcgaggaaccttacctgggcttaaatgc\
+actttgacagtttgggaaaccgaatttctcttcggagcaaagtacaaggtgctgcatggttgtcgtcagctcgt\
+gccgtgaggtgtcgggttaagtcccataacgagcgcaacccctatcgttagttgctaacaggtaaagctgagga\
+ctctagcgagactgccaccgtaaggtgtgaggaaggtggggatgacgtcaaatcagcacggcccttacgtccag\
+ggctacacacgtgttacaatggccggtacaaagggcagctacctggtgacaggatgctaatctctaaagccggt\
+ctcagttcggatcggagtctgcaactcgactccgtgaagttggattcgctagtaatcgcatatcagcaacgatg\
+cggtgaatacgttcccgggcct
+>Unc94190 count=1; cluster_weight=3; cluster=Unc94190; cluster_score=1.000\
+000; cluster_center=True;
+agagtttgatcctggctcaggatgaacgctggcggcgtggctaaggcatgcaagtcgaacgaagacattggtgt\
+agcaatacattgatgtacttagtggcaaacgggagcgtaacacattggtaacgtacctcgatctcacgaataac\
+tcagggaaacttgagctaatacgcgatatggatggggggccgcaaggcattcccattgaaagatttatcggatc\
+gagagcgacctatgttccatcagctagttggcggggtaaaggcccaccaaggctatgacggataccaggcgcga\
+gagcgtgacctggctcactgggactgagacactgcccagacacctacgggtggctgcagtcgcgaatattccac\
+aatgcacgaaagtgtgatggagcgacgccgcgtgtcggaagaaggccttcgggtcgtaaacgacttttagcagg\
+gacgaaccatgacggtacctgcagaataagaggttgctaactctgtgccagcagcagcggtaatacagagacct\
+caagcgttatccggatttattgggcgtaaagcgttcgtaggcggctttgtaagtcatttgttaaatcctcaggc\
+ttaaccctgggggctgcgggtgatactgcaaggcttgagtgtgggagaggcaagcggaatgcccggtgtagcgg\
+taaaatgcgttaatatcgtggtagaacacccaaggcgaaggcagcttgctggaacacaactgacgctcagtgaa\
+cgaaagcgtggggagcgaaagggattagatacccctgtagtccacgctgtaaactatggctactagatttcggg\
+agtttcgaccctctcggagtcgacgaaacaagctaacgcgttaagtagcccgcctgggaagtacggtcgcaaga\
+ctaaaactcaaaggaatagacggggacccgcacaagcggtggatcatgcggtttaattcgatgcaacgcgagaa\
+acctcacctgggcttgaaatatagctgtgggcgattggaaacaaacgccgtcctcgagatcgctatgtaggtgc\
+tgcatggctgtcgtcagctcgtgccgtgaggtgtacccttaagtggggtaacgagcgcaacccctgttgtgcgt\
+tatactttcgcacaagactgccctcgcaagagggaggaaggaggggacgacgtcaagtcagcatggcccttacg\
+tccagggcaacacgcatgatacaatggtcggtataatgggacgccaaagcgcaagctggagcaaatccctcaaa\
+accgatcccagttcggatcggggtctgcaattcgaccccgtgaagccggaatcgctagtaaaggcggatcatca\
+cgccgccttgaatacgttctcgggtcttgtacacaccgcccgtc
+>Unc02sd5 count=1; cluster_weight=1; cluster=Unc02sd5; cluster_score=1.000\
+000; cluster_center=True;
+gattcgtggcaaacgggtgagtaacacgtgcttaatctgccctggagtggggaatacctgtcgaaaggcaacta\
+attccccatacgttccggtaaatgagaaacaaccggaagaaagatttatcgctccaggaggagggcgcggccta\
+ttagctagttggtgaggtaacggctcaccaaggcgatgatgggtagctggtctgagaggatgatcagccacaat\
+gggactgagatacggcccatacccctacggggggcagcagtggggaatattgcgcaatggacgaaagtctgacg\
+cagcgatctcgcgtggaggatgaagcattaaggtgtgtaaactccttttctggaggaagacgactgacggtact\
+ccaggaataagggacggctaactacgtgccagcagccgcggtaatacgtaggtctcaagcgttatccggattta\
+ctgggcgtaaagcgtccgtagccggctttgtaagtctgcattcaaataccggagctcaacttcggagagggtgt\
+agatactgcattgctagagaaaaacaggggttagtagaatttccggtggaggggtgaaatccgttgatatcgga\
+aggaataccaaaagcgaaggcagctaactatgttttttctgacggtaagggacgaaagcttgggtagcaaacag\
+gattagataccctggtagtccacgccctaaacgatgctcactcgatatgcgatccgtaggattgcgtgtccaag\
+tgaaagcgttaagtgagccacctggggagtacgtcggcaacgatgaaactcaaaggaattgacgggggtccgca\
+caagcggtggagcatgtggtttaattcgatgatacgcgaggaaccttacctgggctagaatgcgagtgaccggc\
+cctgaaaggggcttttccttcgggacacaaagcaaggtgctgcatggctgtcgtcagctcgtgccgtgaggtgt\
+tgggttaagtcccgcaacgagcgcaacccttgtccttagttgccagcacttcgggtggggactctaaggagact\
+gccggcgcaagccgcgaggaaggtggggatgacgtcaagtcatcatggcctttatgcccagggctacacacgtg\
+ctacaatggccagtacagagggtagcgaagccgcgaggtgaagccaatcccagaaagctggtcccagttcggat\
+tggagtctggaactcgactccatgaaggtggaatcgctagtaatcgcgcatcagccatggtgcggtgaatacgt\
+tcccggaccttgtacacaccgcccgtcaaaccatgggagccgggggtgcctgaaggtggtggcc
+>LynMarte count=1; cluster_weight=2; cluster=LynMarte; cluster_score=1.000\
+000; cluster_center=True;
+cttaagaatggggacaacagagggaaactgctgctaatacccgatgtgccggaaggtgaaagatttattgcctg\
+aagatgagctcgcgtccgattagctagttggtagggtaaaagcctaccaaggcgacgatcggtagctggtctga\
+gaggatgaccagccacactgggactgagacacggcccagactcctacgggaggcagcagtggggaattttccgc\
+aatgggcgaaagcctgacggagcaagaccgcgtgagggaggaaggctcttgggttgtaaacctcttttctctgg\
+gaagaagctctgacggtaccagaggaatcagcatcggctaactccgtgccagcagccgcggtaatacggaggat\
+gcaagcgttatccggaattattgggcgtaaagcgtccgtaggtggctgttcaagtctgccgttaaaaccagtgg\
+cttaaccactgaatagcggtggaaactgaatagctagagtgtggtaggggtagagggaattcccagtgtagcgg\
+tgaaatgcgtagagattgggaagaacaccggtggcgaaagcgctctgctggaccacaactgacactcacaggac\
+gaaagctaggggagcgaaagggattagatacccctgtagtcctagccgtaaacgatggatactaggtgttgtga\
+gtatcgaccctcacagtgccggagccaacgcgttaagtatcccgcctggggagtacgcacgcaagtgtgaaact\
+caaaggaattgacgggggcccgcacaagcggtggagtatgtggtttaattcgatgcaacgcgaagaaccttacc\
+agggcttgacatgtcgcgaatcctcttgaaagggaggagtgccttcgggagcgcgaacacaggtggtgcatggc\
+tgtcgtcagctcgtgtcgtgagatgttgggttaagtcccgcaacgagcgcaaccctcgtttttagttgccagca\
+ttcagttgggcactctaaagagactgccggtgacaaaccggaggaaggtggggatgacgtcaagtcagcatgcc\
+ccttacgtcctgggctacacacgtactacaatgcgacggacaaagagcagctaaacagcgatgtcttgctaatc\
+tcgtaaaccgtggctcagttcagattgtaggctgcaactcgcctacatgaaggcggaatcgctagtaatcccag\
+gtcagcatactggggtgaattcgttcccgggccttgtacacaccgcccgtcacaccatgggagttggccacgcc\
+cgaagtcgttatcctaacctgcaaaggaaggagatgccgaaggtggggctgatgactggggtgaagtcgtaaca\
+aggtagccgtaccggaaggtgtggctggatcacctccttttcagggagaccattccccaattgatgaccgaaaa\
+atagtaattaggtcacttttgaggtcatacccaggtcgaacgagattggaacaattggctttcaaactatgatt\
+aggttgggttaaatgggctattagctcaggtggttagagcgcacccctgataagggtgaggtccctggttcaag\
+tccaggatggccc
+>Unc03k80 count=1; cluster_weight=1; cluster=Unc03k80; cluster_score=1.000\
+000; cluster_center=True;
+agagtttgatcctggctcaggatgaacattggcggcgtggataaggcatgcaagtcgaacgggaacataatgtt\
+ttgcgtaagtaaaattgtatgttccagtggcgaacgggttagtaacgcgtagatacatcccatagagtttggca\
+tagcccatcgaaaggtgggataattccaaatagtccctgagagcaatcgaagggtaaaggagcaatccgctcta\
+tgattggtctgcgtcccatcagcttgttggtgaggtaatggctcaccaaggcaatgacgggtagggggtgtgag\
+agcacgacccccaacagggaaactgagacacggttcccactcccacgggaggcagcagtcgagaatcttcgaca\
+atgggcgaaagcctgatcgagcgacgccgcgtgcgggacgaaggtcttcggattgtaaaccgcttttctagagg\
+aagaaaccaatgtttacattggttgacggtactctaggaataagaggtgactaaactcgtgccagcagtagcgg\
+taatacgagtgcctcaaatgttatccggaattattgggcgtaaagcgtccgtaggcggctctgcaagtttcttg\
+ttaaaaactttggcttaaccaaagaattgcgaggaaaactgcagagcttgagggtgttagaggttggtggaact\
+cacggtgtaggggtgaaatccgttgataccgtggggaacaccgaaagcgaaagcagccaaccagggcattcctg\
+acgctgagggacgaaagcgtgggtagcgatacggattagatacccgtgtagtccacgccctaaacgatgctgac\
+tagctatttggagtgtcgacccttcaagtggcaaagctaacgcgttaagtcagccgcctgggaagtacggccgc\
+aaggctaaaactcaaaggaatagacgggggttcgcacaagcggtggatcacgtggcttaattcgacgacaagcg\
+aagaaccttaccagggcttgacatgccaaggtgtagtcttactgaaaggcaaggcgaccgttaattcggagctt\
+ggcacaggtgctgcatggttgtcgtcagcatgagtcttgagatgctcccttaaatggggtatcatgcgcaaccc\
+ttattgcttgttttacgtatcaagcgagactgcctgtgttttcacaggaggaaggaggggatgacgccaaatcc\
+gcatggccctcacgccctgggctgcacacgtgatacaatggccggtacaatgggtttgctaagcggtaacgcgg\
+agctaatcccaccaaaaccggtttcagttcggattgaggtctgcaacccgacctcatgaagctggaatcgctag\
+taatcgcggatcagccacgccgcggtgaatatgtccccgaaccttgtactcaccgcccgtcacaccagggaagt\
+cggcagtagtttaagtcccaacttagattgggcccaaactaaggtcgataaccaaggtgaagtcgtaacaaggt\
+aacc
+>UncLept4 count=1; cluster_weight=1; cluster=UncLept4; cluster_score=1.000\
+000; cluster_center=True;
+gagtttgatcatggctcaggatgaacgctggcggcgtgcttaacacatgcaagtcgaacgaaccttcgggttag\
+tggcggacgggtgagtaacgcgtgagaatctgccctcaggagggggataacagttggaaacgactgctaatacc\
+ccatatgccgagaggtgaaacgtattttgcctggggatgagctcgcgtctgattagcttgtaggtagggtaacg\
+gcctacctaggctacgatccgtagctggtctgagaggacgatcagccacactgggactgagacacggcccagac\
+tcctacgggaggcagcagtggggaattttccgcaatgggcgcaagcctgacggagcaacgccgcgtgagggatg\
+aaggcctttgggctgtaaacctcttttctcaaggaagaagacctgacggtacttgaggaataagccacggctaa\
+ttccgtgccagcagccgcggtaatacgggagtggcaagcgttatccggaattattgggcgtaaagcgtccgcag\
+gcggccgtttaagtctgttgttaaatcgtggagctcaactccatcacggcaatggaaactgttcggcttgagta\
+tggtaggggcagagggaatttccggtgtagcggtgaaatgcgtagatatcgggaagaacaccagtggcaaaagc\
+gctctgctgggccattactgacgctgaggcacgaaagcgtggggagcaaacaggattagataccctggtagtcc\
+acgccgtaaacgatggatgctcggtgttggccctcattgtggggtcagcgcccaagctaacgcgttaagcatcc\
+cacctggggagtacgctcgcaagagtgaaactcaaaggaattgacgggggcccgcacaagcggtggagcatgtg\
+gcttaattcgatgcaacgcgaagaacctcacccaggctcgaacgcggtcggacaggtcttgaaagggatcctcc\
+ttcgggtcgatcgcgagttggtgcatggctgtcgtcagttggtgtcgtgagatgttgggttaagtcccgcaacg\
+agcgcaacccctgtcactagttaccagcggatcatgccggggactctagtgaaaccgcctgcgcaagcagtgag\
+gaaggtggggacgacgtcaagtcatcatggcccttacgcctggggctgcacacgtgctacaatgggtgatacaa\
+cgggcagccacctcgcgagagggagccaatccataaaatcactccaagttcggattggagtgtgcaactcgact\
+ccatgaagccggaatcggtagtaatcgcgtatcagcaacgacgcggtgaatacgttcccgggccttgtacacac\
+cgcccgta
+>UncFi681 count=1; cluster_weight=2; cluster=UncFi681; cluster_score=1.000\
+000; cluster_center=True;
+agagtttgatcctggctcaggacgaacgctggcggcgtgcttaacacatgcaagttgtacgctccccatcggcc\
+aaaaccttccggttgcggctgatgatcggagagtagcggacgggtgagtaacgcgtaaagaatctgtcttaaag\
+tttgggataacctgacgaaagttgggctaatcctgaataagctaacagataggcatctatcagttagaaaagat\
+ggtgcaagccatcgctttatgaggactttgcgtcggattagcttgctggtagggtaatggcctaccagggcgac\
+gatccgtagttggtctgagaggacgatcaaccacactgggactgagacacggcccagactcctacgggaggctg\
+cagtggggaatcttccgcaatgggtgaaaacctgacggagcaacgtcgcgtgagtgaagaaggccttcgggttg\
+taaagctctgtccctggggacgaactggttgtacaggaaatggtacagctttgacggtacccggggaggaagcc\
+ctggctaactacgtgccagccgccgcggtaatacgtagagggcaagcgctgtccggaatcattgagcgtaaagg\
+gtacgcacgcggatatgcaagtcaaatgtgaaaggtactggcttaaccagtacagtgcatttgaaactgtatat\
+cttgagtacagcacaggagaacggaattcctggagtagcggtgaaatgcgtagatatcagaagaacaccagtgg\
+cgaaagcggttctctgggctgttactgacgctgaggtacgaaagctggggtagcgaacgggattagataccccg\
+gtagtcccagctgtaaacactggacactaggtgttgggggttcgattccttcagtgccgcagttaacgcattaa\
+gtgtcccgcctggggattacggtcgcaagactgaaactcaaaggaattgacgggggcccgcacaagcggtggag\
+catgtggtttaattcgatgcaacgcgaagaaccttaccgaggtttgacatcccgtgaccacctgtgagagcagg\
+atttggctttttagccacacggagacaggtggtgcatggctgtcgtcagctcgtgtcgtgagatgttgggttaa\
+gtcccgcaacgagcgcaacccttattcctagttgccagcacatagtggtggggactctagggatactgccgatg\
+aaagtcggaggaaggtggggatgacgtcaagtcctcatgccctttatgcctcgggctacacacgtgctacaatg\
+gctgatacagagggcagcgatatcgcgagataaagctaatccttcaaaatcagtcatagttcggattgcaggct\
+gcaattcgcctgcatgaagctggaatcgctagtaatcgcaggtcagcatactgcggtgaatacgttcccgggcc\
+ttgtacacaccgcccgtcacaccacccgagttggatgcaccagaagtcacctgagggtgccaaaggtgtgcccg\
+gtgaggggggtgaagtcgtaacaaggtagccg
+>UncR6785 count=1; cluster_weight=1; cluster=UncR6785; cluster_score=1.000\
+000; cluster_center=True;
+ttcggcggtaaaagatgagtatgcgtcctattagctagatggtaaggtaacggcttaccatggctacgataggt\
+aggggtcctgagagggagatcccccacactggtactgagacacggaccagactcctacgggaggcagcagtgag\
+gaatattggacaatgggcgaaagcctgatccagcaatgccgcgtgagtgatgaaggtcttcggattgtaaagct\
+ctttcgacggggaagataatgacggtacccgtagaagaagccccggctaacttcgtgtcagcagccgcggtaat\
+acgaagggggctagcgttgttcggatttactgggcgtaaagcgtgcgtaggcggcttgtcaagtcagaagtgaa\
+agcccggggctcaactccggaactgctttttgagactggccaggcttgagtttcgggaggaggggtaagtggga\
+atttcccagtgtagaaggtgaaaattcgtagatattgggaaagaaccaccgggtggcgaaaggcggctgcctgg\
+ccccgaaactgacgctgagggcacgaaagcgtgggggagcaaacaggatcagaataccctggtagtccacgccc\
+gtaaacgatgagtgctagacgtttggggcaatttaatggtccgccagtgtccgaaagcttaacgcgttcaagcc\
+actcccggccttgggggagttaccgggccgcaaaggttaaaaacctcaaagggaaattgtactgggggccccgc\
+actaagcgggtggagcatggtggtttaattcgaagccaaccgccgcagaaaccttacctagcccttgacatgga\
+cgttcgcggatcttcagagatgaagttttcggttcggccggaaccgtccacacaggtgctgtcatggctgtcgt\
+cagctcgtgtcgtgagatgttgggttaagtcccgcaacgagcgcaaccctcatccttagttgccatcagttcgg\
+ctgggcactctagggaaactgccggtgataagccggaggaaggtggggatgacgtcaagtcctcatggccctta\
+tgggctgggctacacacgtgctacaatggcgactacagtgggcagtgacatcgcgaggtgaagctaatatccaa\
+aagtcgtctcagttcggattgcactctgcaactcgagtgcatgaagttggaatcgatagtaatcgcggaacagc\
+atgccgcggtgaatacgttcccgggccttgtacacaccgcccgtcacaccatgggagttggttttacccgaagc\
+cggtgagctgacccgaaaggggggcagccgtccacggtaaggtcagcgactggggtgaagtggtaacaaggtaa\
+ccgta
+>UncCr944 count=1; cluster_weight=3; cluster=UncCr944; cluster_score=1.000\
+000; cluster_center=True;
+ccggttgatcctgccgggaccccactgctatcgggataggactaagacatgctagtcatgcgcttcctagccaa\
+tttgggagcgcggcacacagctcagtaacacgtggctaacctgcccttgggacaagaacacccccgggaaactg\
+gggctaattctcgataggtgaagaactctggaatgagtcttcgcttaaaagacgctgcgctatgcttgcaggcg\
+ccgcccaaggatggggccgcgaccgatcaggttgttggtgaggtaatggctcaccaagccttttaccggtgcgg\
+gccgtgagagcgggagcccggagatgggcactgagacaagggcccaggccctacggggcgcagcagtcgcgaaa\
+actttgcaataagcgaaagcttgacagggctatcccgagtgccatccgctgaggaaggcttttacccagtctag\
+aacgctgggggaataaggagagggcaagtctggtgtcagccgccgcggtaataccagctcttcgagtggtgtgg\
+atgtttattgggcctaaagcatccgtagctggctaggttagtcccctgttaaatccaccgaattaatcgttgga\
+ttgcgggggatactgcttggctaggggacgagagaggcagacggtatttccggggtaggggtgaaatcctataa\
+tcccgggaggaccaccagtggcgaaggctgtctgctagaacgcgcccgacggtgagggatgaaagctgggggag\
+cgaaccggattagatacccgggtagtcccagctgtaaacgatgcaggctaggtgtttggacggccacgtgccgt\
+tctagtgccgcagggaaactgttaagcctgccgcctggggagtacgatcgcaagattgaaacttaaaggaattg\
+gcgggggagcac
+>UncA1400 count=1; cluster_weight=5; cluster=UncA1400; cluster_score=1.000\
+000; cluster_center=True;
+ctggttgatcctgccggaggccactgctatcggtttccgactaagccatgcgagtcgggtgtcgcaagacgccg\
+gcgcacggctcggtaacacgcggattatctatcctctggtgggggataacctcgggaaactgaggctaataccc\
+cataagcatttgaagtttgaaaactcagatgctgaaggcgcgagcgccagagggtgagtctgcggcctatcagg\
+tagtaggtggtgtaacggaccacctagcctaagacgggtacgggccttgagagagggagcccggagatggattc\
+tgagacacgaatccaggccctacggggcgcagcaggcgcgaaaccttcacactgcgcgtaagcgcgatgagggg\
+agaccgagtgccttctctttacgggaaggcttttcacaagcctaaaaagcttgtggaataagggctgggcaaga\
+cgggtgccagccgccgcggtaatacccgcagctcaagtggtggtcgctattattgagcctaaaacgtccgtagt\
+cggctttgtaaatccctgggtaaatcgggtcgcttaacgatccgatttctggggagactgcaaagcttgggacc\
+gggcgaggttagaggtactctcggggtaggggtgaaatcctgtaatcccgaggggacgacctgtggcgaaagcg\
+tctaacttgaacggctccgacgatgagggacgaaggctaggggagcaaaccggattagatacccgggtagtcct\
+agctgtaaacactgcccgcttggtgtgacctgtcctccgggggcaggtcgtgccggagcgaaggtgttaagcgg\
+gctgcttggggagtacggccgcaaggttgaaacttaaaggaattggcgggggagcaccgcaacgggaggatgcg\
+tgcggtttaattggattcaacgccggaaaactcaccaggggagaccagtggatgtgagtcaagctgacgacttt\
+actcgaacaagagctggagaggtggtgcatggccatcgtcagctcgtaccgtagggcattcacttaagtgtgat\
+aacgagcgagacccccattcctagttgccaacctccttgaaaaagggggcgcactctaggaagaccgcttccgc\
+taaggaagaggaaggtggggtcgacggtaggtcagtatgccccgaatcccctgggctacacgcgcgctacaaag\
+gacaggacaatgagttccgaccccgaaaggggaaggtaatctcgaaacctgttcgtagtccggattgagggctg\
+taactcgccctcatgaaggtggattccgtagtaatcgcggatcaacagtccgcggtgaatatgcccctgctcct\
+tgcacacaccgcccgtc
+>UncA5959 count=1; cluster_weight=55; cluster=UncA5959; cluster_score=1.00\
+0000; cluster_center=True;
+actgctcagtaacacgtggagaacgtgcccttaagtggaggataatctcgggaaattgaggataatactccata\
+gatcatgggatctggaatgacccatggttgaaagttccggcgcttaaggatcgctctgcggcttatcaggttgt\
+agtgggtgtaacgtaccccctagccagtgacgagtatgggccttgagagagggagcccagagttggattctgag\
+acacgaatccaggccctacggggcgcagcagtcgcgaaaacttcacactgggggcaaccccgatgagggaattc\
+ctagtgctaggacatttgttctagcttttctctagcgtagataactagaggaataagggctgggtaagacgggt\
+gccagccgccgcggtaatacctgcagcccaagtggtggtcgattttattgagtctaaagcgttcgtagccggtt\
+tgataaatccttgggtaaatcgggaagcttaactttccgacttccgaggagactgtcaaacttgggaccgggag\
+aggctagaggtacttctggggtaggggtaaaatcctgtaatcctagaaggaccaccggtggcgaaggcgtctag\
+ctagaacggatccgacggtgagggacgaagccctgggtcgcaaacgggattagataccccggtagtccagggtg\
+taaacgctgccgacttggtgttggaggcccttcgggggcattcagtgccggagagaagttgttaagtcggccac\
+ttggggagtacgtccgcaaggatgaaacttaaaggaattggcgggggagcaccgcaacgggaggagcgtgcggt\
+ttaattggattcaacaccggaaaactcaccaagggcgactgttacatgaaagccaggctaatgaccttgcttga\
+ttttcagagaggtggtgcatggccgtcgtcagttcgtaccgtaaggcgttctcttaagtgagataacgaacgag\
+accctcactaataattgctacttcgatctccggatcggaggcacattattgggaccgctggcgctaagtcagag\
+gaaggagaggtcaacggtaggtcagtatgccccgaatctcttgggctacacgcgcgctacaaagggcgggacaa\
+tgggctccgacgccgagaggcgaaggtaatctcgaaacccgtccgtagttcggattgagggttgtaactcaccc\
+tcatgaagctggattccgtagtaatcgcgaatcaacaactcgcggtgaatatgcccctgctccttgcacacacc\
+gcccgtcaaaccatccgagttgggtttcagtgaggtcacctctaattagggtgttcgaactgagatttagcaag\
+gaaggttaagtcgtaacaaggtagccgt
 """
 
 if __name__ == '__main__':
