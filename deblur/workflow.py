@@ -9,7 +9,7 @@ from os.path import splitext, dirname, join, exists, basename
 from collections import defaultdict
 from datetime import datetime
 from os import makedirs, stat, rename
-import re
+from string import replace
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
@@ -408,7 +408,7 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
                       error_dist, indel_prob, indel_max)
         for s in seqs:
             # remove '-' from aligned sequences
-            s.sequence = re.sub('-', '', s.sequence)
+            s.sequence = s.sequence.replace('-', '')
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = join(
