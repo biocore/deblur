@@ -20,10 +20,13 @@ from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio import Alignment
 from biom.table import Table
+from biom.util import biom_open, HAVE_H5PY
+
+from deblur.deblurring import deblur
 
 
 def trim_seqs(input_seqs, trim_len):
-    """Trim FASTA sequences to specified length
+    """Trim FASTA sequences to specified length.
 
     Parameters
     ----------
@@ -46,7 +49,7 @@ def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2,
                      uc_output=True):
-    """Dereplicate FASTA sequences and remove singletons using VSEARCH
+    """Dereplicate FASTA sequences and remove singletons using VSEARCH.
 
     Parameters
     ----------
@@ -86,7 +89,7 @@ def remove_artifacts_seqs(seqs_fp,
         file path(s) to FASTA database file
     output_fp: string
         file path to store output results
-    ref_db_fp: string or tuple, optional
+    ref_db_fp: tuple, optional
         file path(s) to indexed FASTA database
     negate: boolean, optional
         if True, discard all input sequences aligning
@@ -162,7 +165,7 @@ def remove_artifacts_seqs(seqs_fp,
 
 
 def multiple_sequence_alignment(seqs_fp):
-    """Perform multiple sequence alignment on FASTA file using MAFFT
+    """Perform multiple sequence alignment on FASTA file using MAFFT.
 
     Parameters
     ----------
@@ -182,7 +185,7 @@ def multiple_sequence_alignment(seqs_fp):
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
-    """Remove chimeras de novo using UCHIME (VSEARCH implementation)
+    """Remove chimeras de novo using UCHIME (VSEARCH implementation).
 
     Parameters
     ----------
@@ -298,7 +301,7 @@ def generate_biom_data(clusters, delim='_'):
 def generate_biom_table(seqs_fp,
                         uc_fp,
                         delim='_'):
-    """Generate BIOM table and representative FASTA set
+    """Generate BIOM table and representative FASTA set.
 
     Parameters
     ----------
@@ -332,6 +335,94 @@ def generate_biom_table(seqs_fp,
                                   create_date=datetime.now().isoformat())
 
 
-def launch_workflow(seqs_fp, mapping_fp):
-    """Launch full deblur workflow"""
-    pass
+def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
+                    indel_prob, indel_max, trim_length, min_size, ref_fp,
+                    ref_db_fp, negate, threads, delim):
+    """Launch full deblur workflow.
+
+    Parameters
+    ----------
+    seqs_fp: string
+        post split library sequences for debluring
+    output_fp: string
+        filepath to output file
+    read_error: float
+        read error rate
+    mean_error: float
+        mean error for original sequence estimate
+    error_dist: list
+        list of error probabilities for each hamming distance
+    indel_prob: float
+        insertion/deletion (indel) probability
+    indel_max: integer
+        maximal indel number
+    trim_length: integer
+        sequence trim length
+    min_size: integer
+        upper limit on sequence abundance (discard sequences below limit)
+    ref_fp: tuple
+        filepath(s) to FASTA reference database for artifact removal
+    ref_db_fp: tuple
+        filepath(s) to SortMeRNA indexed database for artifact removal
+    negate: boolean
+        discard all sequences aligning to the ref_fp database
+    threads: integer
+        number of threads to use for SortMeRNA
+    delim: string
+        delimiter in FASTA labels to separate sample ID from sequence ID
+    """
+    # Step 1: Trim sequences to specified length
+    output_trim_fp = join(dirname(output_fp), "%s.trim" % basename(seqs_fp))
+    with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
+        for label, seq in trim_seqs(
+                input_seqs=parse_fasta(in_f), trim_len=trim_length):
+            out_f.write(">%s\n%s\n" % (label, seq))
+    # Step 2: Dereplicate sequences
+    output_derep_fp = join(dirname(output_fp),
+                           "%s.derep" % basename(output_trim_fp))
+    dereplicate_seqs(seqs_fp=output_trim_fp,
+                     output_fp=output_derep_fp,
+                     min_size=min_size,
+                     uc_output=True)
+    # Step 3: Remove artifacts
+    output_artif_fp = join(dirname(output_fp),
+                           "%s.no_artifacts" % basename(output_derep_fp))
+    remove_artifacts_seqs(seqs_fp=output_derep_fp,
+                          ref_fp=ref_fp,
+                          output_fp=output_artif_fp,
+                          ref_db_fp=ref_db_fp,
+                          negate=negate,
+                          threads=threads)
+    # Step 4: Multiple sequence alignment
+    output_msa_fp = join(dirname(output_fp),
+                         "%s.msa" % basename(output_artif_fp))
+    with open(output_msa_fp, 'w') as f:
+        alignment = multiple_sequence_alignment(output_artif_fp)
+        f.write(alignment.to_fasta())
+    # Step 5: Launch deblur
+    output_deblur_fp = join(dirname(output_fp),
+                            "%s.deblur" % basename(output_msa_fp))
+    with open(output_deblur_fp, 'w') as f:
+        seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
+                      error_dist, indel_prob, indel_max)
+        for s in seqs:
+            # remove '-' from aligned sequences
+            s.sequence = s.sequence.replace('-', '')
+            f.write(s.to_fasta())
+    # Step 6: Chimera removal
+    output_no_chimeras_fp = join(
+        dirname(output_fp), "%s.no_chimeras" % basename(output_deblur_fp))
+    remove_chimeras_denovo_from_seqs(output_deblur_fp, output_no_chimeras_fp)
+    # Step 7: Generate BIOM table
+    deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
+                                             uc_fp="%s.uc" % output_trim_fp,
+                                             delim=delim)
+    # Step 8: Write BIOM table to file
+    if table.is_empty():
+        raise ValueError(
+            "Attempting to write an empty BIOM table.")
+    with biom_open(output_fp, 'w') as f:
+        if HAVE_H5PY:
+            table.to_hdf5(h5grp=f, generated_by="deblur")
+        else:
+            table.to_json(direct_io=f, generated_by="deblur")
