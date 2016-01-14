@@ -9,7 +9,6 @@ from os.path import splitext, dirname, join, exists, basename
 from collections import defaultdict
 from datetime import datetime
 from os import makedirs, stat, rename
-from string import replace
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
