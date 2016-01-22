@@ -272,7 +272,7 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
-@click.option('--threads', '-t', required=False, type=int,
+@click.option('--threads', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use for SortMeRNA")
 @click.option('--delim', required=False, default='_', type=str,
