@@ -91,6 +91,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     is 10, sequences up to 10 - 1 = 9 hamming distance will be taken into
     account
     """
+
     # Get the sequences
     seqs = get_sequences(input_seqs)
 
@@ -148,7 +149,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             mask = (sub_seq_i != sub_seq_j)
             muttype = np.logical_or(sub_seq_i[mask] == 4, sub_seq_j[mask] == 4)
             num_indels = muttype.sum()
-            num_substitutions = len(muttype) - num_indels
+            num_substitutions = h_dist - num_indels
 
             correction_value = num_err[num_substitutions]
 
@@ -161,6 +162,6 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             # met all the criteria - so correct the frequency of the neighbor
             seq_j.frequency -= correction_value
 
-    result = [s for s in seqs if s.frequency > 0]
+    result = [s for s in seqs if round(s.frequency) > 0]
 
     return result
