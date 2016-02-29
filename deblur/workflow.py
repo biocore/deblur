@@ -1,10 +1,11 @@
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Copyright (c) 2015, The Deblur Development Team.
 #
 # Distributed under the terms of the BSD 3-clause License.
 #
 # The full license is in the file LICENSE, distributed with this software.
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 from os.path import splitext, dirname, join, exists, basename
 from collections import defaultdict
 from datetime import datetime
@@ -20,7 +21,9 @@ from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio import Alignment
 from biom.table import Table
+from biom import load_table
 from biom.util import biom_open, HAVE_H5PY
+from qiime.util import write_biom_table
 
 from deblur.deblurring import deblur
 
@@ -164,13 +167,15 @@ def remove_artifacts_seqs(seqs_fp,
                         out_f.write(">%s\n%s\n" % (label, seq))
 
 
-def multiple_sequence_alignment(seqs_fp):
+def multiple_sequence_alignment(seqs_fp, threads=1):
     """Perform multiple sequence alignment on FASTA file using MAFFT.
 
     Parameters
     ----------
     seqs_fp: string
         filepath to FASTA file for multiple sequence alignment
+    threads: integer, optional
+        number of threads to use
 
     Returns
     -------
@@ -181,7 +186,7 @@ def multiple_sequence_alignment(seqs_fp):
     --------
     skbio.Alignment
     """
-    return align_unaligned_seqs(seqs_fp)
+    return align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
@@ -334,8 +339,25 @@ def generate_biom_table(seqs_fp,
                                   generated_by="deblur",
                                   create_date=datetime.now().isoformat())
 
+def merge_otu_tables(output_fp, all_tables):
+    """Merge multiple BIOM tables into one.
 
-def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
+    Code taken from QIIME's merge_otu_tables.py
+
+    Parameters
+    ----------
+    output_fp: string
+        filepath to final BIOM table
+    all_tables: list
+        list of filepaths for BIOM tables to merge
+    """
+    master = load_table(all_tables[0])
+    for input_fp in all_tables[1:]:
+        master = master.merge(load_table(input_fp))
+    write_biom_table(master, output_fp)
+
+
+def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
                     ref_db_fp, negate, threads, delim):
     """Launch full deblur workflow.
@@ -344,8 +366,8 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
     ----------
     seqs_fp: string
         post split library sequences for debluring
-    output_fp: string
-        filepath to output file
+    output_dir: string
+        dirpath to output file
     read_error: float
         read error rate
     mean_error: float
@@ -370,22 +392,27 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
         number of threads to use for SortMeRNA
     delim: string
         delimiter in FASTA labels to separate sample ID from sequence ID
+
+    Return
+    ------
+    biom_fp: string
+        filepath to BIOM table
     """
     # Step 1: Trim sequences to specified length
-    output_trim_fp = join(dirname(output_fp), "%s.trim" % basename(seqs_fp))
+    output_trim_fp = join(output_dir, "%s.trim" % basename(seqs_fp))
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
                 input_seqs=parse_fasta(in_f), trim_len=trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
-    output_derep_fp = join(dirname(output_fp),
+    output_derep_fp = join(output_dir,
                            "%s.derep" % basename(output_trim_fp))
     dereplicate_seqs(seqs_fp=output_trim_fp,
                      output_fp=output_derep_fp,
                      min_size=min_size,
                      uc_output=True)
     # Step 3: Remove artifacts
-    output_artif_fp = join(dirname(output_fp),
+    output_artif_fp = join(output_dir,
                            "%s.no_artifacts" % basename(output_derep_fp))
     remove_artifacts_seqs(seqs_fp=output_derep_fp,
                           ref_fp=ref_fp,
@@ -394,13 +421,14 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
                           negate=negate,
                           threads=threads)
     # Step 4: Multiple sequence alignment
-    output_msa_fp = join(dirname(output_fp),
+    output_msa_fp = join(output_dir,
                          "%s.msa" % basename(output_artif_fp))
     with open(output_msa_fp, 'w') as f:
-        alignment = multiple_sequence_alignment(output_artif_fp)
+        alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+                                                threads=threads)
         f.write(alignment.to_fasta())
     # Step 5: Launch deblur
-    output_deblur_fp = join(dirname(output_fp),
+    output_deblur_fp = join(output_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
         seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
@@ -411,7 +439,7 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = join(
-        dirname(output_fp), "%s.no_chimeras" % basename(output_deblur_fp))
+        output_dir, "%s.no_chimeras" % basename(output_deblur_fp))
     remove_chimeras_denovo_from_seqs(output_deblur_fp, output_no_chimeras_fp)
     # Step 7: Generate BIOM table
     deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
@@ -421,8 +449,12 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
     if table.is_empty():
         raise ValueError(
             "Attempting to write an empty BIOM table.")
-    with biom_open(output_fp, 'w') as f:
+
+    biom_fp = join(output_dir, "%s.biom" % basename(seqs_fp))
+    with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
             table.to_hdf5(h5grp=f, generated_by="deblur")
         else:
             table.to_json(direct_io=f, generated_by="deblur")
+    return biom_fp
+
