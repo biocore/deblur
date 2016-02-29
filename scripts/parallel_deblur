@@ -128,6 +128,7 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
     params['ref_db_fp'] = ref_db_fp
     params['ref_fp'] = ref_fp
     params['jobs_to_start'] = jobs_to_start
+    params['file_type'] = file_type
     # Number of samples written
     samples_fp = [f for f in listdir(out_dir_split) if isfile(f)]
     parallel_runner = ParallelDeblur(

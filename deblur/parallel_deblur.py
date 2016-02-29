@@ -32,8 +32,6 @@ class ParallelDeblur(ParallelWrapper):
                           command_suffix='; exit'):
         """Split multiple sample FASTA files to multiple jobs
         """
-        print "params = ", params
-        print "working_dir = ", working_dir
         commands = []
         result_filepaths = []
         # construct ref-fp string
@@ -53,11 +51,12 @@ class ParallelDeblur(ParallelWrapper):
             rename_command, curr_result_fps = self._get_rename_command(
                 output_fns, working_dir_t, output_dir)
             result_filepaths += curr_result_fps
-            command = '%s %s --seqs-fp %s --output-fp %s %s %s %s %s' %\
+            command = '%s %s --seqs-fp %s --output-fp %s --file-type %s %s %s %s %s' %\
                 (command_prefix,
                  self._script_name,
                  input_fp,
                  join(working_dir_t, output_fns[0]),
+                 params['file_type'],
                  ref_fp_str,
                  ref_db_fp_str,
                  rename_command,
@@ -67,5 +66,4 @@ class ParallelDeblur(ParallelWrapper):
                                              params['jobs_to_start'],
                                              command_prefix=command_prefix,
                                              command_suffix=command_suffix)
-        print "commands = ", commands
         return commands, result_filepaths
