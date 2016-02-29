@@ -616,9 +616,9 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         foundall = True
         for cseq in otu_ids:
             if cseq not in outseqs:
-                foundall=False
+                foundall = False
         self.assertTrue(foundall)
-        self.assertTrue(len(outseqs)<1.5*len(otu_ids))
+        self.assertTrue(len(outseqs) < 1.5*len(otu_ids))
 
 
 # 2 samples, each representing 10 species, 8/10 species
