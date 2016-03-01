@@ -16,15 +16,7 @@ for this porting to take place and put under the BSD license.
 Dependencies
 ============
 
-QIIME 1.9.1
 burrito-fillings development version
-
-Install
-=======
-
-Once both QIIME 1.9.1 and the development version of burrito-fillings is installed,
-make sure your $PYTHONPATH is updated to have burrito-fillings appear before
-qiime.
 
 Example usage
 =============
@@ -33,11 +25,11 @@ The input to deblur workflow is a demultiplexed FASTA file. The deblur algorithm
 designed to work on individual samples.
 
 ```
-deblur workflow s1.fna db.fna output.biom
+deblur workflow all_samples.fna db.fna output.biom
 ```
 
 or
 
 ```
-parallel_deblur.py workflow all_samples.fna db.fna output.biom
+parallel_deblur workflow all_samples.fna db.fna output.biom
 ```

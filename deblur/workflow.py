@@ -402,7 +402,7 @@ def merge_otu_tables(output_fp, all_tables):
 
 def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads, delim):
+                    ref_db_fp, negate, threads=1, delim='_'):
     """Launch full deblur workflow.
 
     Parameters
@@ -431,9 +431,9 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
         filepath(s) to SortMeRNA indexed database for artifact removal
     negate: boolean
         discard all sequences aligning to the ref_fp database
-    threads: integer
+    threads: integer, optional
         number of threads to use for SortMeRNA
-    delim: string
+    delim: string, optional
         delimiter in FASTA labels to separate sample ID from sequence ID
 
     Return
