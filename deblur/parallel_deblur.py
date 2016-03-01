@@ -14,15 +14,45 @@ import subprocess
 from functools import partial
 
 
-def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, fps):
+def deblur_system_call(filetype, ref_fp_l, ref_db_fp_l, fps):
+    """Build deblur command for subprocess.
+
+    Parameters
+    ----------
+    filetype: string
+        file type FASTA or FASTQ
+    ref_fp_l: list
+        list containing filepaths to reference databases
+    ref_db_fp_l: list
+        list containing filepaths to SortMeRNA indexed reference databases
+    fps: tuple
+        tuple containing input and output filepaths
+
+    Returns
+    -------
+    stdout: string
+        process output directed to standard output
+    stderr: string
+        process output directed to standard error
+    return_value: integer
+        return code from process
+        
+    """
     input_fp, output_fp = fps
-    script_name = "deblur workflow_parallel"
+    script_name = "deblur"
+    script_subprogram = "workflow_parallel"
     command = [script_name,
-               '--seqs-fp %s' % input_fp,
-               '--output-fp %s' % output_fp,
-               '--file-type %s' % filetype,
-               ref_fp_str,
-               ref_db_fp_str]
+               script_subprogram,
+               '--seqs-fp', input_fp,
+               '--output-fp', '%s.biom' % output_fp,
+               '--file-type', filetype]
+    for ref_fp in ref_fp_l:
+        command.append('--ref-fp')
+        command.append(ref_fp)
+    for ref_dp_fp in ref_db_fp_l:
+        command.append('--ref-db-fp')
+        command.append(ref_dp_fp)
+
     return system_call(command)
 
 
@@ -32,13 +62,20 @@ def system_call(cmd):
     Parameters
     ----------
     cmd: iterable
-        A sequence of strings that are the tokens of the command.
+        A sequence of strings that are the tokens of the command
+
+    Returns
+    -------
+    stdout: string
+        process output directed to standard output
+    stderr: string
+        process output directed to standard error
+    return_value: integer
+        return code from process
     """
     proc = subprocess.Popen(cmd,
-                            shell=True,  # unfortunately needed for ease
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
 
@@ -66,8 +103,11 @@ def run_functor(functor, *args, **kwargs):
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 
-def parallel_deblur(inputs, output_dir, params, jobs_to_start=None):
+def parallel_deblur(inputs, output_dir, params, jobs_to_start=1):
     """Dispatch execution over a pool of processors
+
+    This code was adopted from the American Gut project:
+    https://github.com/biocore/American-Gut/blob/master/americangut/parallel.py
 
     Parameters
     ----------
@@ -80,34 +120,27 @@ def parallel_deblur(inputs, output_dir, params, jobs_to_start=None):
     jobs_to_start : int, optional
         The number of processors on the local system to use.
 
-    This code was adopted from the American Gut project:
-    https://github.com/biocore/American-Gut/blob/master/americangut/parallel.py
+    Returns
+    -------
+    all_result_paths : list
+        list of expected output files
     """
-    ref_fp_str = ""
-    for db in enumerate(params.get('ref_fp', [])):
-        ref_fp_str = "%s --ref-fp %s" % (ref_fp_str, db[1])
-
-    ref_db_fp_str = ""
-    for db in enumerate(params.get('ref_db_fp', [])):
-        ref_db_fp_str = "%s --ref-db-fp %s" % (ref_db_fp_str, db[1])
-
+    ref_fp_l = [db[1] for db in enumerate(params.get('ref_fp', []))]
+    ref_db_fp_l = [db[1] for db in enumerate(params.get('ref_db_fp', []))]
     args = []
     all_result_paths = []
     for in_ in inputs:
         filename = os.path.split(in_)[-1]
-        output = os.path.join(output_dir, filename)
+        output = os.path.join(output_dir, "%s.biom" % filename)
         all_result_paths.append(output)
         args.append((in_, output))
-
     filetype = params['file_type']
-    functor = partial(run_functor, deblur_system_call, filetype, ref_fp_str,
-                      ref_db_fp_str)
-
+    functor = partial(run_functor, deblur_system_call, filetype, ref_fp_l,
+                      ref_db_fp_l)
     pool = mp.Pool(processes=jobs_to_start)
     for stdout, stderr, es in pool.map(functor, args):
         if es != 0:
             raise RuntimeError("stdout: %s\nstderr: %s\nexit: %d" % (stdout,
                                                                      stderr,
                                                                      es))
-
     return all_result_paths

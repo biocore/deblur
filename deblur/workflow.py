@@ -18,7 +18,8 @@ from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.util import remove_files
-from skbio.parse.sequences import parse_fasta
+from skbio.parse.sequences import parse_fasta, parse_fastq
+from skbio.format.sequences.fastq import format_fastq_record
 from skbio import Alignment
 from biom.table import Table
 from biom import load_table
@@ -305,27 +306,34 @@ def generate_biom_data(clusters, delim='_'):
     return data, cluster_ids, sample_ids
 
 
-def split_sequence_file_on_sample_ids_to_files(seqs_f,
-                                               file_type,
-                                               out_dir_split):
+def split_sequence_file_on_sample_ids_to_files(seqs,
+                                               filetype,
+                                               outdir):
     """Split FASTA/Q file on sample IDs.
 
     Parameters
     ----------
-    seqs_f: file handler
+    seqs: file handler
         file handler to demultiplexed FASTA/Q file
-    file_type: string
+    filetype: string
         file type, FASTA or FASTQ
-    out_dir_split: string
+    outdir: string
         dirpath to output split FASTA/Q files
     """
+    if filetype == 'fasta':
+        parser = parse_fasta
+        formatter = lambda x, y: ">%s\n%s\n" % (x, y)
+        ext = '.fna'
+    else:
+        parser = parse_fastq
+        formatter = format_fastq_record
+        ext = '.fq'
     outputs = {}
-    for id_, seq in parse_fasta(seqs_f):
-        sample = id_.split('_', 1)[0]
+    for bits in parser(seqs):
+        sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
-            outputs[sample] = open(
-                join(out_dir_split, "%s.fna " % sample, 'w'))
-        outputs[sample].write(">%s\n%s\n" % (id_, seq))
+            outputs[sample] = open(join(outdir, sample + ext))
+        outputs[sample].write(formatter(*bits))
 
 
 def generate_biom_table(seqs_fp,
@@ -375,6 +383,7 @@ def write_biom_table(table, biom_fp):
     biom_fp: string
         filepath to output BIOM table
     """
+    print "[write_biom_table] biom_fp = ", biom_fp
     with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
             table.to_hdf5(h5grp=f, generated_by="deblur")

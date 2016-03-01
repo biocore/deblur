@@ -285,10 +285,6 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-@click.option('--buffer-size', required=False, type=int, default=500,
-              show_default=True, help="The number of sequences to read into "
-              "memory before writing to file (for splitting input file by "
-              "sample)")
 def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
              error_dist, indel_prob, indel_max, trim_length, min_size,
              ref_fp, ref_db_fp, negate, threads, delim, buffer_size):
@@ -310,9 +306,12 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
     for fn in listdir(out_dir):
         if isfile(fn):
             biom_fp = launch_workflow(
-                seqs_fp, out_dir, read_error, mean_error,
-                error_dist, indel_prob, indel_max, trim_length,
-                min_size, ref_fp, ref_db_fp, negate, threads, delim)
+                seqs_fp=seqs_fp, output_dir=out_dir, read_error=read_error,
+                mean_error=mean_error, error_dist=error_dist,
+                indel_prob=indel_prob, indel_max=indel_max,
+                trim_length=trim_length, min_size=min_size, ref_fp=ref_fp,
+                ref_db_fp=ref_db_fp, negate=negate, threads=threads,
+                delim=delim)
             all_bioms.append(biom_fp)
     # Merge OTU tables
     merge_otu_tables(output_fp, all_bioms)
@@ -374,21 +373,20 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-@click.option('--buffer-size', required=False, type=int, default=500,
-              show_default=True, help="The number of sequences to read into "
-              "memory before writing to file (for splitting input file by "
-              "sample)")
 def workflow_parallel(seqs_fp, output_fp, file_type, read_error, mean_error,
                       error_dist, indel_prob, indel_max, trim_length, min_size,
-                      ref_fp, ref_db_fp, negate, delim, buffer_size):
+                      ref_fp, ref_db_fp, negate, delim):
     """Launch deblur workflow in parallel"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    out_dir = dirname(output_fp)   
-    launch_workflow(seqs_fp, out_dir, read_error, mean_error,
-                    error_dist, indel_prob, indel_max, trim_length,
-                    min_size, ref_fp, ref_db_fp, negate, delim)
+    out_dir = dirname(output_fp)
+    launch_workflow(seqs_fp=seqs_fp, output_dir=out_dir,
+                    read_error=read_error, mean_error=mean_error,
+                    error_dist=error_dist, indel_prob=indel_prob,
+                    indel_max=indel_max, trim_length=trim_length,
+                    min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
+                    negate=negate, delim=delim)
 
 
 if __name__ == '__main__':
