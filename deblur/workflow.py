@@ -23,7 +23,6 @@ from skbio import Alignment
 from biom.table import Table
 from biom import load_table
 from biom.util import biom_open, HAVE_H5PY
-from qiime.util import write_biom_table
 
 from deblur.deblurring import deblur
 
@@ -281,7 +280,10 @@ def generate_biom_data(clusters, delim='_'):
     -----
     Sparse dictionary format is {(cluster_idx,sample_idx):count}.
     This function is based on QIIME's parse_otu_map() function found at
-    https://github.com/biocore/qiime/blob/master/qiime/parse.py
+    https://github.com/biocore/qiime/blob/master/qiime/parse.py.
+
+    QIIME is a GPL project, but we obtained permission from the authors of this
+    function to port it to deblur (and keep it under deblur's BSD license).
     """
     sample_ids = []
     sample_id_idx = {}
@@ -338,6 +340,7 @@ def generate_biom_table(seqs_fp,
                                   sample_metadata=None, table_id=None,
                                   generated_by="deblur",
                                   create_date=datetime.now().isoformat())
+
 
 def merge_otu_tables(output_fp, all_tables):
     """Merge multiple BIOM tables into one.
@@ -451,10 +454,15 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
             "Attempting to write an empty BIOM table.")
 
     biom_fp = join(output_dir, "%s.biom" % basename(seqs_fp))
+
+    write_biom_table(table, biom_fp)
+
+    return biom_fp
+
+
+def write_biom_table(table, biom_fp):
     with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
             table.to_hdf5(h5grp=f, generated_by="deblur")
         else:
             table.to_json(direct_io=f, generated_by="deblur")
-    return biom_fp
-
