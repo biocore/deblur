@@ -7,63 +7,111 @@
 # ----------------------------------------------------------------------------
 from __future__ import division
 
-from os.path import basename, join, split, splitext
-from os import mkdir
-
-from bfillings.sortmerna_v2 import build_database_sortmerna
-from skbio.parse.sequences import parse_fasta
-
-from qiime.parallel.util import ParallelWrapper
+import multiprocessing as mp
+import traceback
+import sys
+import subprocess
+from functools import partial
 
 
-class ParallelDeblur(ParallelWrapper):
-    _script_name = "deblur workflow_parallel"
-    _job_prefix = 'PDeblur'
-    _input_splitter = ParallelWrapper._input_existing_filepaths
+def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, input_fp,
+                       output_fp):
+
+    script_name = "deblur workflow_parallel"
+    command = ' '.join([script_name,
+                        '--seqs-fp %s' % input_fp,
+                        '--output-fp %s' % output_fp,
+                        '--file-type %s' % filetype,
+                        ref_fp_str,
+                        ref_db_fp_str])
+    #return system_call(command)
+    return command
 
 
-    def _get_job_commands(self,
-                          input_fps,
-                          output_dir,
-                          params,
-                          job_prefix,
-                          working_dir,
-                          command_prefix='/bin/bash; ',
-                          command_suffix='; exit'):
-        """Split multiple sample FASTA files to multiple jobs
-        """
-        commands = []
-        result_filepaths = []
-        # construct ref-fp string
-        ref_fp_str = ""
-        for db in enumerate(params['ref_fp']):
-            ref_fp_str = "%s --ref-fp %s" % (ref_fp_str, db[1])
-        # construct ref-dp-fp string
-        ref_db_fp_str = ""
-        for db in enumerate(params['ref_db_fp']):
-            ref_db_fp_str = "%s --ref-db-fp %s" % (ref_db_fp_str, db[1])
-        for i, input_fp in enumerate(input_fps):
-            working_dir_t = join(working_dir, "%d" % i)
-            mkdir(working_dir_t)
-            input_path, input_fn = split(input_fp)
-            input_basename, input_ext = splitext(input_fn)
-            output_fns = ['%s.biom' % (input_basename)]
-            rename_command, curr_result_fps = self._get_rename_command(
-                output_fns, working_dir_t, output_dir)
-            result_filepaths += curr_result_fps
-            command = '%s %s --seqs-fp %s --output-fp %s --file-type %s %s %s %s %s' %\
-                (command_prefix,
-                 self._script_name,
-                 input_fp,
-                 join(working_dir_t, output_fns[0]),
-                 params['file_type'],
-                 ref_fp_str,
-                 ref_db_fp_str,
-                 rename_command,
-                 command_suffix)
-            commands.append(command)
-        commands = self._merge_to_n_commands(commands,
-                                             params['jobs_to_start'],
-                                             command_prefix=command_prefix,
-                                             command_suffix=command_suffix)
-        return commands, result_filepaths
+def system_call(cmd):
+    """Call cmd and return (stdout, stderr, return_value).
+    Parameters
+    ----------
+    cmd: str
+        Can be either a string containing the command to be run, or a sequence
+        of strings that are the tokens of the command.
+
+    Notes
+    -----
+    This function is ported from QIIME (http://www.qiime.org), previously
+    named qiime_system_call. QIIME is a GPL project, but we obtained permission
+    from the authors of this function to port it to deblur (and keep it under
+    deblur's BSD license).
+    """
+    proc = subprocess.Popen(cmd,
+                            universal_newlines=True,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    # communicate pulls all stdout/stderr from the PIPEs to
+    # avoid blocking -- don't remove this line!
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+
+    if return_value != 0:
+        raise ValueError("Failed to execute: %s\nstdout: %s\nstderr: %s" %
+                         (cmd, stdout, stderr))
+
+    return stdout, stderr, return_value
+
+
+def run_functor(functor, *args, **kwargs):
+    """
+    Given a functor, run it and return its result. We can use this with
+    multiprocessing.map and map it over a list of job functors to do them.
+
+    Handles getting more than multiprocessing's pitiful exception output
+
+    This function was derived from:
+    http://stackoverflow.com/a/16618842/19741
+
+    This code was adopted from the American Gut project:
+    https://github.com/biocore/American-Gut/blob/master/americangut/parallel.py
+    """
+    try:
+        # This is where you do your actual work
+        return functor(*args, **kwargs)
+    except:
+        # Put all exception text into an exception and raise that
+        raise Exception("".join(traceback.format_exception(*sys.exc_info())))
+
+
+def parallel_deblur(inputs, outputs, params, jobs_to_start=None):
+    """Dispatch execution over a pool of processors
+
+    Parameters
+    ----------
+    inputs : iterable of str
+        File paths to input per-sample sequence files
+    outputs : iterable of str
+        File paths to outputs
+    params : dict
+        A dict of parameters invariant to per-sample calls
+    jobs_to_start : int, optional
+        The number of processors on the local system to use.
+
+    This code was adopted from the American Gut project:
+    https://github.com/biocore/American-Gut/blob/master/americangut/parallel.py
+    """
+    ref_fp_str = ""
+    for db in enumerate(params.get('ref_fp', [])):
+        ref_fp_str = "%s --ref-fp %s" % (ref_fp_str, db[1])
+
+    ref_db_fp_str = ""
+    for db in enumerate(params.get('ref_db_fp', [])):
+        ref_db_fp_str = "%s --ref-db-fp %s" % (ref_db_fp_str, db[1])
+
+    filetype = params['file_type']
+
+    functor = partial(run_functor, deblur_system_call, filetype, ref_fp_str,
+                      ref_db_fp_str)
+
+    args = list(zip(inputs, outputs, params))
+    pool = mp.Pool(processes=jobs_to_start)
+    for result in pool.map(functor, args):
+        print(result)
