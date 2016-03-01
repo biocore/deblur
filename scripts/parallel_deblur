@@ -9,21 +9,36 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os import listdir
-from os.path import dirname, join, isfile, exists
+from os.path import dirname, join, exists
 from glob import glob
 
-from skbio.parse.sequences import parse_fasta
-from biom.util import biom_open, HAVE_H5PY
-from qiime.util import split_sequence_file_on_sample_ids_to_files
+from deblur.parallel_deblur import parallel_deblur
+from deblur.workflow import merge_otu_tables
 
-from deblur.deblurring import deblur
-from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
-                             remove_artifacts_seqs,
-                             multiple_sequence_alignment,
-                             remove_chimeras_denovo_from_seqs,
-                             generate_biom_table)
-from deblur.parallel_deblur import ParallelDeblur
+### should probably be put in util or something
+from skbio import parse_fasta, parse_fastq
+from skbio.format.sequences.fastq import format_fastq_record
+
+
+def split_sequence_file_on_sample_ids_to_files(seqs, filetype, outdir):
+    if filetype == 'fasta':
+        parser = parse_fasta
+        formatter = lambda x, y: ">%s\n%s\n" % (x, y)
+        ext = '.fna'
+    else:
+        parser = parse_fastq
+        formatter = format_fastq_record
+        ext = '.fq'
+
+    outputs = {}
+    for bits in parser(seqs):
+        sample = bits[0].split('_', 1)[0]
+        
+        if sample not in outputs:
+            outputs[sample] = open(join(outdir, sample + ext))
+
+        outputs[sample].write(formatter(*bits))
+
 
 @click.group()
 def deblur_cmds():
@@ -33,12 +48,12 @@ def deblur_cmds():
 # LAUNCH FULL DEBLUR PIPELINE COMMAND
 @deblur_cmds.command()
 @click.option('--seqs-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True),
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
 @click.option('--output-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True),
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              file_okay=True),
               help="Filepath to output BIOM table")
 @click.option('--ref-fp', required=True, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -129,18 +144,9 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
     params['ref_fp'] = ref_fp
     params['jobs_to_start'] = jobs_to_start
     params['file_type'] = file_type
-    # Number of samples written
-    samples_fp = [f for f in listdir(out_dir_split) if isfile(f)]
-    parallel_runner = ParallelDeblur(
-        jobs_to_start=jobs_to_start,
-        retain_temp_files=retain_temp_files,
-        suppress_polling=suppress_polling)
-    parallel_runner(
-        input_fp=input_fps,
-        output_dir=out_dir,
-        params=params)
+    
     # Merge OTU tables
-    all_bioms = glob('%s/*.biom' % out_dir)
+    all_bioms = parallel_deblur(input_fps, out_dir, params, jobs_to_start)
     merge_otu_tables(output_fp, all_bioms)
 
 

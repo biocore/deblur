@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import division
 
+import os
 import multiprocessing as mp
 import traceback
 import sys
@@ -14,8 +15,8 @@ import subprocess
 from functools import partial
 
 
-def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, input_fp,
-                       output_fp):
+def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, fps):
+    input_fp, output_fp = fps
 
     script_name = "deblur workflow_parallel"
     command = ' '.join([script_name,
@@ -24,8 +25,7 @@ def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, input_fp,
                         '--file-type %s' % filetype,
                         ref_fp_str,
                         ref_db_fp_str])
-    #return system_call(command)
-    return command
+    return system_call(command)
 
 
 def system_call(cmd):
@@ -81,15 +81,15 @@ def run_functor(functor, *args, **kwargs):
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 
-def parallel_deblur(inputs, outputs, params, jobs_to_start=None):
+def parallel_deblur(inputs, output_dir, params, jobs_to_start=None):
     """Dispatch execution over a pool of processors
 
     Parameters
     ----------
     inputs : iterable of str
         File paths to input per-sample sequence files
-    outputs : iterable of str
-        File paths to outputs
+    output_dir : filepath
+        Output directory
     params : dict
         A dict of parameters invariant to per-sample calls
     jobs_to_start : int, optional
@@ -106,12 +106,23 @@ def parallel_deblur(inputs, outputs, params, jobs_to_start=None):
     for db in enumerate(params.get('ref_db_fp', [])):
         ref_db_fp_str = "%s --ref-db-fp %s" % (ref_db_fp_str, db[1])
 
-    filetype = params['file_type']
+    args = []
+    all_result_paths = []
+    for in_ in inputs:
+        filename = os.path.split(in_)[-1]
+        output = os.path.join(output_dir, filename)
+        all_result_paths.append(output)
+        args.append((in_, output))
 
+    filetype = params['file_type']
     functor = partial(run_functor, deblur_system_call, filetype, ref_fp_str,
                       ref_db_fp_str)
 
-    args = list(zip(inputs, outputs, params))
     pool = mp.Pool(processes=jobs_to_start)
-    for result in pool.map(functor, args):
-        print(result)
+    for stdout, stderr, es in pool.map(functor, args):
+        if es != 0:
+            raise RuntimeError("stdout: %s\nstderr: %s\nexit: %d" % (stdout,
+                                                                     stderr,
+                                                                     es))
+
+    return all_result_paths
