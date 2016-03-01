@@ -19,43 +19,30 @@ def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, fps):
     input_fp, output_fp = fps
 
     script_name = "deblur workflow_parallel"
-    command = ' '.join([script_name,
-                        '--seqs-fp %s' % input_fp,
-                        '--output-fp %s' % output_fp,
-                        '--file-type %s' % filetype,
-                        ref_fp_str,
-                        ref_db_fp_str])
+    command = [script_name,
+               '--seqs-fp %s' % input_fp,
+               '--output-fp %s' % output_fp,
+               '--file-type %s' % filetype,
+               ref_fp_str,
+               ref_db_fp_str]
     return system_call(command)
 
 
 def system_call(cmd):
     """Call cmd and return (stdout, stderr, return_value).
+
     Parameters
     ----------
-    cmd: str
-        Can be either a string containing the command to be run, or a sequence
-        of strings that are the tokens of the command.
-
-    Notes
-    -----
-    This function is ported from QIIME (http://www.qiime.org), previously
-    named qiime_system_call. QIIME is a GPL project, but we obtained permission
-    from the authors of this function to port it to deblur (and keep it under
-    deblur's BSD license).
+    cmd: iterable
+        A sequence of strings that are the tokens of the command.
     """
     proc = subprocess.Popen(cmd,
-                            universal_newlines=True,
-                            shell=True,
+                            shell=True,  # unfortunately needed for ease
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    # communicate pulls all stdout/stderr from the PIPEs to
-    # avoid blocking -- don't remove this line!
+
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
-
-    if return_value != 0:
-        raise ValueError("Failed to execute: %s\nstdout: %s\nstderr: %s" %
-                         (cmd, stdout, stderr))
 
     return stdout, stderr, return_value
 
