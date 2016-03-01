@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from __future__ import division
-
 import multiprocessing as mp
 import traceback
 import sys
@@ -16,7 +15,8 @@ from functools import partial
 
 def deblur_system_call(filetype, ref_fp_str, ref_db_fp_str, input_fp,
                        output_fp):
-
+    """
+    """
     script_name = "deblur workflow_parallel"
     command = ' '.join([script_name,
                         '--seqs-fp %s' % input_fp,

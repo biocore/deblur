@@ -305,6 +305,29 @@ def generate_biom_data(clusters, delim='_'):
     return data, cluster_ids, sample_ids
 
 
+def split_sequence_file_on_sample_ids_to_files(seqs_f,
+                                               file_type,
+                                               out_dir_split):
+    """Split FASTA/Q file on sample IDs.
+
+    Parameters
+    ----------
+    seqs_f: file handler
+        file handler to demultiplexed FASTA/Q file
+    file_type: string
+        file type, FASTA or FASTQ
+    out_dir_split: string
+        dirpath to output split FASTA/Q files
+    """
+    outputs = {}
+    for id_, seq in parse_fasta(seqs_f):
+        sample = id_.split('_', 1)[0]
+        if sample not in outputs:
+            outputs[sample] = open(
+                join(out_dir_split, "%s.fna " % sample, 'w'))
+        outputs[sample].write(">%s\n%s\n" % (id_, seq))
+
+
 def generate_biom_table(seqs_fp,
                         uc_fp,
                         delim='_'):
@@ -340,6 +363,23 @@ def generate_biom_table(seqs_fp,
                                   sample_metadata=None, table_id=None,
                                   generated_by="deblur",
                                   create_date=datetime.now().isoformat())
+
+
+def write_biom_table(table, biom_fp):
+    """Write BIOM table to file.
+
+    Parameters
+    ----------
+    table: biom.table
+        an instance of a BIOM table
+    biom_fp: string
+        filepath to output BIOM table
+    """
+    with biom_open(biom_fp, 'w') as f:
+        if HAVE_H5PY:
+            table.to_hdf5(h5grp=f, generated_by="deblur")
+        else:
+            table.to_json(direct_io=f, generated_by="deblur")
 
 
 def merge_otu_tables(output_fp, all_tables):
@@ -460,9 +500,4 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     return biom_fp
 
 
-def write_biom_table(table, biom_fp):
-    with biom_open(biom_fp, 'w') as f:
-        if HAVE_H5PY:
-            table.to_hdf5(h5grp=f, generated_by="deblur")
-        else:
-            table.to_json(direct_io=f, generated_by="deblur")
+

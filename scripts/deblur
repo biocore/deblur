@@ -14,14 +14,14 @@ from os.path import dirname, join, isfile, exists
 
 from skbio.parse.sequences import parse_fasta
 from biom.util import biom_open, HAVE_H5PY
-from qiime.util import split_sequence_file_on_sample_ids_to_files
 
 from deblur.deblurring import deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
                              multiple_sequence_alignment,
                              remove_chimeras_denovo_from_seqs,
-                             generate_biom_table)
+                             generate_biom_table,
+                             split_sequence_file_on_sample_ids_to_files)
 
 @click.group()
 def deblur_cmds():
@@ -304,8 +304,7 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
             split_sequence_file_on_sample_ids_to_files(
                 seqs_f,
                 file_type,
-                out_dir_split,
-                buffer_size)
+                out_dir_split)
     all_bioms = []
     # Create OTU table per sample
     for fn in listdir(out_dir):
@@ -317,6 +316,7 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
             all_bioms.append(biom_fp)
     # Merge OTU tables
     merge_otu_tables(output_fp, all_bioms)
+
 
 # LAUNCH FULL DEBLUR PIPELINE IN PARALLEL COMMAND
 @deblur_cmds.command()
