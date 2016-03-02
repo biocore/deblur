@@ -112,6 +112,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
     # Run deblur in parallel
     params = {}
     input_fps = glob('%s/*' % out_dir_split)
+    params['output-dir'] = output_dir
     params['ref-db-fp'] = ref_db_fp
     params['ref-fp'] = ref_fp
     params['file-type'] = file_type
@@ -124,7 +125,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
     params['min-size'] = min_size
     params['negate'] = negate
     params['delim'] = delim
-    all_bioms = parallel_deblur(input_fps, output_dir, params, jobs_to_start)
+    all_bioms = parallel_deblur(input_fps, params, jobs_to_start)
     # Merge OTU tables
     output_fp = join(output_dir, "final.biom")
     merge_otu_tables(output_fp, all_bioms)

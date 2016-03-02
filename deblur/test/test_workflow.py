@@ -34,8 +34,7 @@ from deblur.workflow import (dereplicate_seqs,
 
 
 class workflowTests(TestCase):
-    """ Test deblur pipeline and individual methods
-        functionality """
+    """ Test deblur pipeline and individual methods functionality """
 
     def setUp(self):
         """ Create working directory and two FASTA input
