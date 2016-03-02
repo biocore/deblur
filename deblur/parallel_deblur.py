@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import division
 import os
+from os.path import join
 import multiprocessing as mp
 import traceback
 import sys
@@ -14,17 +15,13 @@ import subprocess
 from functools import partial
 
 
-def deblur_system_call(filetype, ref_fp_l, ref_db_fp_l, fps):
+def deblur_system_call(params, fps):
     """Build deblur command for subprocess.
 
     Parameters
     ----------
-    filetype: string
-        file type FASTA or FASTQ
-    ref_fp_l: list
-        list containing filepaths to reference databases
-    ref_db_fp_l: list
-        list containing filepaths to SortMeRNA indexed reference databases
+    params: dict
+        parameter settings to pass to deblur
     fps: tuple
         tuple containing input and output filepaths
 
@@ -36,22 +33,35 @@ def deblur_system_call(filetype, ref_fp_l, ref_db_fp_l, fps):
         process output directed to standard error
     return_value: integer
         return code from process
-        
+
     """
     input_fp, output_fp = fps
     script_name = "deblur"
     script_subprogram = "workflow_parallel"
+    # construct command
     command = [script_name,
                script_subprogram,
                '--seqs-fp', input_fp,
-               '--output-fp', '%s.biom' % output_fp,
-               '--file-type', filetype]
+               '--output-fp', '%s.biom' % output_fp]
+    # add reference databases to command
+    ref_fp_l = [db[1] for db in enumerate(params.get('ref-fp', []))]
     for ref_fp in ref_fp_l:
         command.append('--ref-fp')
         command.append(ref_fp)
+    # add reference database indexes to command
+    ref_db_fp_l = [db[1] for db in enumerate(params.get('ref-db-fp', []))]
     for ref_dp_fp in ref_db_fp_l:
         command.append('--ref-db-fp')
         command.append(ref_dp_fp)
+    cmd_list = []
+    # add the remainder of the parameters
+    for key, value in params.iteritems():
+        if (key != 'ref-fp' and key != 'ref-db-fp' and value != None):
+            cmd_list.append("--%s" % key)
+            cmd_list.append("%s" % value)
+    command.extend(cmd_list)
+
+    print "[deblur_system_call] command = ", command
 
     return system_call(command)
 
@@ -125,18 +135,17 @@ def parallel_deblur(inputs, output_dir, params, jobs_to_start=1):
     all_result_paths : list
         list of expected output files
     """
-    ref_fp_l = [db[1] for db in enumerate(params.get('ref_fp', []))]
-    ref_db_fp_l = [db[1] for db in enumerate(params.get('ref_db_fp', []))]
+    # Create working directory
+    working_dir = join(output_dir, "deblur_working_dir")
+    os.mkdir(working_dir)
     args = []
     all_result_paths = []
     for in_ in inputs:
         filename = os.path.split(in_)[-1]
-        output = os.path.join(output_dir, "%s.biom" % filename)
+        output = os.path.join(working_dir, "%s.biom" % filename)
         all_result_paths.append(output)
         args.append((in_, output))
-    filetype = params['file_type']
-    functor = partial(run_functor, deblur_system_call, filetype, ref_fp_l,
-                      ref_db_fp_l)
+    functor = partial(run_functor, deblur_system_call, params)
     pool = mp.Pool(processes=jobs_to_start)
     for stdout, stderr, es in pool.map(functor, args):
         if es != 0:

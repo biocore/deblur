@@ -9,8 +9,9 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os import listdir
+from os import listdir, makedirs, mkdir
 from os.path import dirname, join, isfile, exists
+from shutil import rmtree
 
 from skbio.parse.sequences import parse_fasta
 from biom.util import biom_open, HAVE_H5PY
@@ -21,7 +22,8 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              multiple_sequence_alignment,
                              remove_chimeras_denovo_from_seqs,
                              generate_biom_table,
-                             split_sequence_file_on_sample_ids_to_files)
+                             split_sequence_file_on_sample_ids_to_files,
+                             merge_otu_tables)
 
 @click.group()
 def deblur_cmds():
@@ -232,10 +234,10 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
-@click.option('--output-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True),
-              help="Filepath to output BIOM table")
+@click.option('--output-dir', required=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              dir_okay=True),
+              help="Directory path to store output including BIOM table")
 @click.option('--ref-fp', required=True, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
@@ -249,6 +251,8 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+@click.option('--overwrite', '-w', required=False, type=bool, default=False,
+              show_default=True, help="Overwrite output directory if exists.")
 @click.option('--file-type', required=False,
               type=click.Choice(['fasta', 'fastq']), default=['fasta'],
               show_default=True, help="Type of file")
@@ -285,28 +289,37 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
-             error_dist, indel_prob, indel_max, trim_length, min_size,
-             ref_fp, ref_db_fp, negate, threads, delim, buffer_size):
+def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
+             read_error, mean_error, error_dist, indel_prob, indel_max,
+             trim_length, min_size, negate, threads, delim):
     """Launch deblur workflow"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    out_dir = dirname(output_fp)
+    # Create output directory
+    if exists(output_dir):
+        if overwrite:
+            rmtree(output_dir)
+        else:
+            raise OSError("Output directory already exists. Choose a "
+                          "different directory or use option --overwrite True"
+                          "(-w True)")
+    makedirs(output_dir)
     # Split demultiplexed FASTA on sample IDs
-    out_dir_split = join(out_dir, "split")
-    if not exists(out_dir_split):
-        with open(seqs_fp, 'U') as seqs_f:
-            split_sequence_file_on_sample_ids_to_files(
-                seqs_f,
-                file_type,
-                out_dir_split)
+    out_dir_split = join(output_dir, "split")
+    mkdir(out_dir_split)
+    with open(seqs_fp, 'U') as seqs_f:
+        split_sequence_file_on_sample_ids_to_files(
+            seqs_f,
+            file_type,
+            out_dir_split)
     all_bioms = []
     # Create OTU table per sample
-    for fn in listdir(out_dir):
-        if isfile(fn):
+    for fn in listdir(out_dir_split):
+        input_fp = join(out_dir_split, fn)
+        if isfile(input_fp):
             biom_fp = launch_workflow(
-                seqs_fp=seqs_fp, output_dir=out_dir, read_error=read_error,
+                seqs_fp=input_fp, output_dir=output_dir, read_error=read_error,
                 mean_error=mean_error, error_dist=error_dist,
                 indel_prob=indel_prob, indel_max=indel_max,
                 trim_length=trim_length, min_size=min_size, ref_fp=ref_fp,
@@ -314,6 +327,7 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
                 delim=delim)
             all_bioms.append(biom_fp)
     # Merge OTU tables
+    output_fp = join(output_dir, "final.biom")
     merge_otu_tables(output_fp, all_bioms)
 
 
@@ -323,10 +337,10 @@ def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
-@click.option('--output-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True),
-              help="Filepath to output BIOM table")
+@click.option('--output-dir', required=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              dir_okay=True),
+              help="Directory path to store output including BIOM table")
 @click.option('--ref-fp', required=True, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
@@ -380,8 +394,7 @@ def workflow_parallel(seqs_fp, output_fp, file_type, read_error, mean_error,
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    out_dir = dirname(output_fp)
-    launch_workflow(seqs_fp=seqs_fp, output_dir=out_dir,
+    launch_workflow(seqs_fp=seqs_fp, output_dir=output_dir,
                     read_error=read_error, mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,

@@ -9,12 +9,12 @@
 from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
-from os import close
+from os import close, mkdir, listdir
 from types import GeneratorType
-from os.path import join, isfile, basename
+from os.path import join, isfile, basename, splitext
 
 from skbio.util import remove_files
-from skbio.parse.sequences import parse_fasta
+from skbio.parse.sequences import parse_fasta, parse_fastq
 from skbio.alignment import SequenceCollection
 from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
@@ -29,7 +29,8 @@ from deblur.workflow import (dereplicate_seqs,
                              generate_biom_table,
                              trim_seqs,
                              multiple_sequence_alignment,
-                             launch_workflow)
+                             launch_workflow,
+                             split_sequence_file_on_sample_ids_to_files)
 
 
 class workflowTests(TestCase):
@@ -567,7 +568,7 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         """Test launching complete workflow using simulated sequences 1.
         """
         seqs_fp = self.seqs_s1_fp
-        output_fp = join(self.working_dir, "%s.biom" % basename(seqs_fp))
+        output_dir = self.working_dir
         read_error = 0.05
         mean_error = 0.05
         error_dist = None
@@ -582,10 +583,11 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         negate = False
         threads = 1
         delim = '_'
-        launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                        error_dist, indel_prob, indel_max, trim_length,
-                        min_size, tuple([ref_fp]), ref_db_fp, negate,
-                        threads, delim)
+        output_fp = launch_workflow(seqs_fp, output_dir, read_error,
+                                    mean_error, error_dist, indel_prob,
+                                    indel_max, trim_length, 
+                                    min_size, tuple([ref_fp]), ref_db_fp,
+                                    negate, threads, delim)
         data = {(0, 0): 9, (1, 0): 9, (2, 0): 10, (3, 0): 8, (4, 0): 2,
                 (5, 0): 2, (6, 0): 8, (7, 0): 2, (8, 0): 8, (9, 0): 9,
                 (10, 0): 7, (11, 0): 9}
@@ -617,6 +619,105 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         table_exp = Table(data, otu_ids, sample_ids, sample_metadata=None)
         table_obs = load_table(output_fp)
         self.assertEqual(table_obs, table_exp)
+
+    def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
+        """Parse output of split_sequence_file_on_sample_ids_to_files()
+
+        Parameters
+        ----------
+        output_dir: string
+            output directory path storing FASTA files
+
+        Returns
+        -------
+        seqs_act: dict
+            dictionary with keys being sample IDs and values list of
+            sequences belonging to sample ID
+        """
+        seqs_act = {}
+        for fn in listdir(output_dir):
+            input_fp = join(output_dir, fn)
+            sample_file = splitext(fn)[0]
+            with open(input_fp, 'U') as input_f:
+                for label, seq in parse_fasta(input_f):
+                    sample = label.split('_')[0]
+                    self.assertEqual(sample_file, sample)
+                    if sample not in seqs_act:
+                        seqs_act[sample] = [(label, seq)]
+                    else:
+                        seqs_act[sample].append((label, seq))
+        return seqs_act
+
+    def test_split_sequence_file_on_sample_ids_to_files(self):
+        """Test functionality of split_sequence_file_on_sample_ids_to_files()
+        """
+        seqs_fasta = {"s1": [("s1_seq1",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                       ("s1_seq2",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG")],
+                      "s2": [("s2_seq3",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                       ("s2_seq4",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT")],
+                      "s3": [("s3_seq5",
+                        "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG"),
+                       ("s3_seq6",
+                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")],
+                      "s4": [("s4_seq7",
+                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]}
+        seqs_fastq = {"s1": [
+                       ("s1_seq1",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                        "ZZ[P[]^^PHGOLZ]_^^^N\^^^^TR\^\]^^^^^^^Z^^^[^BBBB"),
+                       ("s1_seq2",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                        "^__eceee^WYecgghhhhHbfhhU^afhgfgfhhW`_eghgghfheg")],
+                      "s2": [
+                       ("s2_seq3",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                        "___eeVccceeeefhdcghhfhhhhgfhhegfhihiicgh]ffiihii"),
+                       ("s2_seq4",
+                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT",
+                        "^^^cYacc\JQbZddhhhhbeJbeddWbcdhhhhhcYcchhhX`_`cc")],
+                       "s3": [
+                       ("s3_seq5",
+                        "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG",
+                        "___VacaceSbeehfhhhhYbghhhhfhhhhhhgh^ecadfhaghhhh"),
+                       ("s3_seq6",
+                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
+                        "__beeeeeecegghihhfhhhiiiifgfhfgiifihfgfh`fdhif]c")],
+                       "s4": [
+                       ("s4_seq7",
+                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
+                        "aaaeceeeeggggiiiiiihfhiiidghhegfhfihihhihhiiiige")]}
+        # Test FASTA file split on sample IDs to multiple FASTA files
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for sample in seqs_fasta:
+                for seq in seqs_fasta[sample]:
+                    seqs_f.write(">%s\n%s\n" % seq)
+        output_dir = mkdtemp()
+        with open(seqs_fp, 'U') as seqs_f:
+            split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
+                                                       filetype='fasta',
+                                                       outdir=output_dir)
+        seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
+            output_dir=output_dir)
+        self.assertDictEqual(seqs_fasta, seqs_act)
+        # Test FASTQ file split on multiple sample IDs to multiple FASTA files
+        seqs_fp = join(self.working_dir, "seqs.fastq")
+        with open(seqs_fp, 'w') as seqs_f:
+            for sample in seqs_fastq:
+                for seq in seqs_fastq[sample]:
+                    seqs_f.write("@%s\n%s\n+\n%s\n" % seq)
+        output_dir = mkdtemp()
+        with open(seqs_fp, 'U') as seqs_f:
+            split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
+                                                       filetype='fastq',
+                                                       outdir=output_dir)
+        seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
+            output_dir=output_dir)
+        self.assertDictEqual(seqs_fasta, seqs_act)
 
 
 # 2 samples, each representing 10 species, 8/10 species

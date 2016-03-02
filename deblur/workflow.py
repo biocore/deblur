@@ -9,7 +9,7 @@
 from os.path import splitext, dirname, join, exists, basename
 from collections import defaultdict
 from datetime import datetime
-from os import makedirs, stat, rename
+from os import makedirs, mkdir, stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
@@ -19,7 +19,6 @@ from bfillings.sortmerna_v2 import (build_database_sortmerna,
 from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta, parse_fastq
-from skbio.format.sequences.fastq import format_fastq_record
 from skbio import Alignment
 from biom.table import Table
 from biom import load_table
@@ -81,7 +80,8 @@ def remove_artifacts_seqs(seqs_fp,
                           output_fp,
                           ref_db_fp=None,
                           negate=False,
-                          threads=1):
+                          threads=1,
+                          verbose=False):
     """Remove artifacts from FASTA file using SortMeRNA.
 
     Parameters
@@ -99,6 +99,8 @@ def remove_artifacts_seqs(seqs_fp,
         to reference database
     threads: integer, optional
         number of threads to use for SortMeRNA
+    verbose: boolean, optional
+        If true, output SortMeRNA errors
     """
     working_dir = join(dirname(output_fp), "working_dir")
     if not exists(working_dir):
@@ -137,9 +139,10 @@ def remove_artifacts_seqs(seqs_fp,
         # Print SortMeRNA errors
         stderr_fp = app_result['StdErr'].name
         if stat(stderr_fp).st_size != 0:
-            with open(stderr_fp, 'U') as stderr_f:
-                for line in stderr_f:
-                    print line
+            if verbose:
+                with open(stderr_fp, 'U') as stderr_f:
+                    for line in stderr_f:
+                        print line
             raise ValueError("Could not run SortMeRNA.")
 
         for line in app_result['BlastAlignments']:
@@ -318,22 +321,20 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
     filetype: string
         file type, FASTA or FASTQ
     outdir: string
-        dirpath to output split FASTA/Q files
+        dirpath to output split FASTA files
     """
     if filetype == 'fasta':
         parser = parse_fasta
-        formatter = lambda x, y: ">%s\n%s\n" % (x, y)
         ext = '.fna'
     else:
         parser = parse_fastq
-        formatter = format_fastq_record
         ext = '.fq'
     outputs = {}
     for bits in parser(seqs):
         sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
-            outputs[sample] = open(join(outdir, sample + ext))
-        outputs[sample].write(formatter(*bits))
+            outputs[sample] = open(join(outdir, sample + ext), 'w')
+        outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
 
 
 def generate_biom_table(seqs_fp,
@@ -383,7 +384,6 @@ def write_biom_table(table, biom_fp):
     biom_fp: string
         filepath to output BIOM table
     """
-    print "[write_biom_table] biom_fp = ", biom_fp
     with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
             table.to_hdf5(h5grp=f, generated_by="deblur")
@@ -450,21 +450,25 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     biom_fp: string
         filepath to BIOM table
     """
+    # Create working directory
+    working_dir = join(output_dir, "deblur_working_dir")
+    if not exists(working_dir):
+        mkdir(working_dir)
     # Step 1: Trim sequences to specified length
-    output_trim_fp = join(output_dir, "%s.trim" % basename(seqs_fp))
+    output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
                 input_seqs=parse_fasta(in_f), trim_len=trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
-    output_derep_fp = join(output_dir,
+    output_derep_fp = join(working_dir,
                            "%s.derep" % basename(output_trim_fp))
     dereplicate_seqs(seqs_fp=output_trim_fp,
                      output_fp=output_derep_fp,
                      min_size=min_size,
                      uc_output=True)
     # Step 3: Remove artifacts
-    output_artif_fp = join(output_dir,
+    output_artif_fp = join(working_dir,
                            "%s.no_artifacts" % basename(output_derep_fp))
     remove_artifacts_seqs(seqs_fp=output_derep_fp,
                           ref_fp=ref_fp,
@@ -473,14 +477,14 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
                           negate=negate,
                           threads=threads)
     # Step 4: Multiple sequence alignment
-    output_msa_fp = join(output_dir,
+    output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
     with open(output_msa_fp, 'w') as f:
         alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
                                                 threads=threads)
         f.write(alignment.to_fasta())
     # Step 5: Launch deblur
-    output_deblur_fp = join(output_dir,
+    output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
         seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
@@ -491,7 +495,7 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = join(
-        output_dir, "%s.no_chimeras" % basename(output_deblur_fp))
+        working_dir, "%s.no_chimeras" % basename(output_deblur_fp))
     remove_chimeras_denovo_from_seqs(output_deblur_fp, output_no_chimeras_fp)
     # Step 7: Generate BIOM table
     deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
@@ -501,9 +505,7 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     if table.is_empty():
         raise ValueError(
             "Attempting to write an empty BIOM table.")
-
-    biom_fp = join(output_dir, "%s.biom" % basename(seqs_fp))
-
+    biom_fp = join(working_dir, "%s.biom" % basename(seqs_fp))
     write_biom_table(table, biom_fp)
 
     return biom_fp

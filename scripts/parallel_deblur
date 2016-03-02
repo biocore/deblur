@@ -10,7 +10,9 @@
 
 import click
 from os.path import dirname, join, exists
+from os import makedirs
 from glob import glob
+from shutil import rmtree
 
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (merge_otu_tables,
@@ -28,10 +30,10 @@ def parallel_deblur_cmds():
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
-@click.option('--output-fp', required=True,
+@click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
-                              file_okay=True),
-              help="Filepath to output BIOM table")
+                              dir_okay=True),
+              help="Directory path to store output including BIOM table")
 @click.option('--ref-fp', required=True, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
@@ -78,38 +80,51 @@ def parallel_deblur_cmds():
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-@click.option('--buffer-size', required=False, type=int, default=500,
-              show_default=True, help="The number of sequences to read into "
-              "memory before writing to file (for splitting input file by "
-              "sample)")
 @click.option('--jobs-to-start', '-O', required=False, type=int, default=1,
               show_default=True,
               help="Number of jobs to start (if to run in parallel)")
-def workflow(seqs_fp, output_fp, file_type, read_error, mean_error,
+def workflow(seqs_fp, output_dir, file_type, read_error, mean_error,
              error_dist, indel_prob, indel_max, trim_length, min_size,
-             ref_fp, ref_db_fp, negate, delim, buffer_size, jobs_to_start):
+             ref_fp, ref_db_fp, negate, delim, jobs_to_start):
     """Launch deblur workflow in parallel"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    out_dir = dirname(output_fp)
+    # Create output directory
+    if exists(output_dir):
+        if overwrite:
+            rmtree(output_dir)
+        else:
+            raise OSError("Output directory already exists. Choose a "
+                          "different directory or use option --overwrite True"
+                          "(-w True)")
+    makedirs(output_dir)
     # Split demultiplexed FASTA on sample IDs
-    out_dir_split = join(out_dir, "split")
-    if not exists(out_dir_split):
-        with open(seqs_fp, 'U') as seqs_f:
-            split_sequence_file_on_sample_ids_to_files(
-                seqs_f,
-                file_type,
-                out_dir_split)
+    out_dir_split = join(output_dir, "split")
+    mkdir(out_dir_split)
+    with open(seqs_fp, 'U') as seqs_f:
+        split_sequence_file_on_sample_ids_to_files(
+            seqs_f,
+            file_type,
+            out_dir_split)
     # Run deblur in parallel
     params = {}
     input_fps = glob('%s/*' % out_dir_split)
-    params['ref_db_fp'] = ref_db_fp
-    params['ref_fp'] = ref_fp
-    params['jobs_to_start'] = jobs_to_start
-    params['file_type'] = file_type
-    all_bioms = parallel_deblur(input_fps, out_dir, params, jobs_to_start)
+    params['ref-db-fp'] = ref_db_fp
+    params['ref-fp'] = ref_fp
+    params['file-type'] = file_type
+    params['read-error'] = read_error
+    params['mean-error'] = mean_error
+    params['error-dist'] = error_dist
+    params['indel-prob'] = indel_prob
+    params['indel-max'] = indel_max
+    params['trim-length'] = trim_length
+    params['min-size'] = min_size
+    params['negate'] = negate
+    params['delim'] = delim
+    all_bioms = parallel_deblur(input_fps, output_dir, params, jobs_to_start)
     # Merge OTU tables
+    output_fp = join(output_dir, "final.biom")
     merge_otu_tables(output_fp, all_bioms)
 
 
