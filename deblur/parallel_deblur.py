@@ -56,7 +56,9 @@ def deblur_system_call(params, fps):
     cmd_list = []
     # add the remainder of the parameters
     for key, value in params.iteritems():
-        if (key != 'ref-fp' and key != 'ref-db-fp' and value != None):
+        if (key is not 'ref-fp' and
+                key is not 'ref-db-fp' and
+                value is not None):
             cmd_list.append("--%s" % key)
             cmd_list.append("%s" % value)
     command.extend(cmd_list)

@@ -509,6 +509,3 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     write_biom_table(table, biom_fp)
 
     return biom_fp
-
-
-

@@ -10,7 +10,7 @@
 
 import click
 from os import listdir, makedirs, mkdir
-from os.path import dirname, join, isfile, exists
+from os.path import join, isfile, exists
 from shutil import rmtree
 
 from skbio.parse.sequences import parse_fasta
@@ -24,6 +24,7 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              generate_biom_table,
                              split_sequence_file_on_sample_ids_to_files,
                              merge_otu_tables)
+
 
 @click.group()
 def deblur_cmds():
@@ -231,8 +232,8 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 # LAUNCH FULL DEBLUR PIPELINE COMMAND
 @deblur_cmds.command()
 @click.option('--seqs-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True),
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -334,8 +335,8 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
 # LAUNCH FULL DEBLUR PIPELINE IN PARALLEL COMMAND
 @deblur_cmds.command()
 @click.option('--seqs-fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True),
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
               help="Demultiplexed FASTA/Q file including all samples")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -387,7 +388,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-def workflow_parallel(seqs_fp, output_fp, file_type, read_error, mean_error,
+def workflow_parallel(seqs_fp, output_dir, file_type, read_error, mean_error,
                       error_dist, indel_prob, indel_max, trim_length, min_size,
                       ref_fp, ref_db_fp, negate, delim):
     """Launch deblur workflow in parallel"""

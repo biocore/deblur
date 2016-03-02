@@ -9,8 +9,8 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os.path import dirname, join, exists
-from os import makedirs
+from os.path import join, exists
+from os import makedirs, mkdir
 from glob import glob
 from shutil import rmtree
 
@@ -47,6 +47,8 @@ def parallel_deblur_cmds():
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+@click.option('--overwrite', '-w', required=False, type=bool, default=False,
+              show_default=True, help="Overwrite output directory if exists.")
 @click.option('--file-type', required=False,
               type=click.Choice(['fasta', 'fastq']), default=['fasta'],
               show_default=True, help="Type of file")
@@ -83,9 +85,9 @@ def parallel_deblur_cmds():
 @click.option('--jobs-to-start', '-O', required=False, type=int, default=1,
               show_default=True,
               help="Number of jobs to start (if to run in parallel)")
-def workflow(seqs_fp, output_dir, file_type, read_error, mean_error,
-             error_dist, indel_prob, indel_max, trim_length, min_size,
-             ref_fp, ref_db_fp, negate, delim, jobs_to_start):
+def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
+             read_error, mean_error, error_dist, indel_prob, indel_max,
+             trim_length, min_size, negate, delim, jobs_to_start):
     """Launch deblur workflow in parallel"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:

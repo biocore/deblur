@@ -9,12 +9,12 @@
 from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
-from os import close, mkdir, listdir
+from os import close, listdir
 from types import GeneratorType
-from os.path import join, isfile, basename, splitext
+from os.path import join, isfile, splitext
 
 from skbio.util import remove_files
-from skbio.parse.sequences import parse_fasta, parse_fastq
+from skbio.parse.sequences import parse_fasta
 from skbio.alignment import SequenceCollection
 from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
@@ -585,7 +585,7 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         delim = '_'
         output_fp = launch_workflow(seqs_fp, output_dir, read_error,
                                     mean_error, error_dist, indel_prob,
-                                    indel_max, trim_length, 
+                                    indel_max, trim_length,
                                     min_size, tuple([ref_fp]), ref_db_fp,
                                     negate, threads, delim)
         data = {(0, 0): 9, (1, 0): 9, (2, 0): 10, (3, 0): 8, (4, 0): 2,
@@ -651,45 +651,49 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
     def test_split_sequence_file_on_sample_ids_to_files(self):
         """Test functionality of split_sequence_file_on_sample_ids_to_files()
         """
-        seqs_fasta = {"s1": [("s1_seq1",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
-                       ("s1_seq2",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG")],
-                      "s2": [("s2_seq3",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
-                       ("s2_seq4",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT")],
-                      "s3": [("s3_seq5",
-                        "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG"),
-                       ("s3_seq6",
-                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")],
-                      "s4": [("s4_seq7",
-                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]}
-        seqs_fastq = {"s1": [
-                       ("s1_seq1",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                        "ZZ[P[]^^PHGOLZ]_^^^N\^^^^TR\^\]^^^^^^^Z^^^[^BBBB"),
-                       ("s1_seq2",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                        "^__eceee^WYecgghhhhHbfhhU^afhgfgfhhW`_eghgghfheg")],
+        seqs_fasta = {"s1": [
+                      ("s1_seq1",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                      ("s1_seq2",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG")],
                       "s2": [
-                       ("s2_seq3",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                        "___eeVccceeeefhdcghhfhhhhgfhhegfhihiicgh]ffiihii"),
-                       ("s2_seq4",
-                        "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT",
-                        "^^^cYacc\JQbZddhhhhbeJbeddWbcdhhhhhcYcchhhX`_`cc")],
-                       "s3": [
-                       ("s3_seq5",
-                        "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG",
-                        "___VacaceSbeehfhhhhYbghhhhfhhhhhhgh^ecadfhaghhhh"),
-                       ("s3_seq6",
-                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
-                        "__beeeeeecegghihhfhhhiiiifgfhfgiifihfgfh`fdhif]c")],
-                       "s4": [
-                       ("s4_seq7",
-                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
-                        "aaaeceeeeggggiiiiiihfhiiidghhegfhfihihhihhiiiige")]}
+                      ("s2_seq3",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                      ("s2_seq4",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT")],
+                      "s3": [
+                      ("s3_seq5",
+                       "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG"),
+                      ("s3_seq6",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")],
+                      "s4": [
+                      ("s4_seq7",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]}
+        seqs_fastq = {"s1": [
+                      ("s1_seq1",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                       "ZZ[P[]^^PHGOLZ]_^^^N\^^^^TR\^\]^^^^^^^Z^^^[^BBBB"),
+                      ("s1_seq2",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                       "^__eceee^WYecgghhhhHbfhhU^afhgfgfhhW`_eghgghfheg")],
+                      "s2": [
+                      ("s2_seq3",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
+                       "___eeVccceeeefhdcghhfhhhhgfhhegfhihiicgh]ffiihii"),
+                      ("s2_seq4",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT",
+                       "^^^cYacc\JQbZddhhhhbeJbeddWbcdhhhhhcYcchhhX`_`cc")],
+                      "s3": [
+                      ("s3_seq5",
+                       "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG",
+                       "___VacaceSbeehfhhhhYbghhhhfhhhhhhgh^ecadfhaghhhh"),
+                      ("s3_seq6",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
+                       "__beeeeeecegghihhfhhhiiiifgfhfgiifihfgfh`fdhif]c")],
+                      "s4": [
+                      ("s4_seq7",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
+                       "aaaeceeeeggggiiiiiihfhiiidghhegfhfihihhihhiiiige")]}
         # Test FASTA file split on sample IDs to multiple FASTA files
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
