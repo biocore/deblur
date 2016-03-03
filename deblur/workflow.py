@@ -453,11 +453,14 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     if not exists(working_dir):
         mkdir(working_dir)
     # Step 1: Trim sequences to specified length
+    print "[launch_workflow] begin trim"
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
                 input_seqs=parse_fasta(in_f), trim_len=trim_length):
+            print "[launch_workflow] IN LOOP"
             out_f.write(">%s\n%s\n" % (label, seq))
+    print "[launch_workflow] end trim"
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
                            "%s.derep" % basename(output_trim_fp))
