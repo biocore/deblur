@@ -455,7 +455,26 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     # Step 1: Trim sequences to specified length
     print "[launch_workflow] begin trim"
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
+    print "[launch_workflow] seqs_fp = ", seqs_fp
+    print "[launch_workflow] output_trim_fp = ", output_trim_fp
+    print "[launch_workflow] trim_length = ", trim_length
+    print "[launch_workflow] type(trim_length) = ", type(trim_length)
+    try:
+        in_f = open(seqs_fp, 'U')
+    except IOError:
+        print '[launch_workflow] cannot open', seqs_fp
+    else:
+        print '[launch_workflow]', seqs_fp, 'has', len(in_f.readlines()), 'lines'
+        in_f.close()
+    try:
+        out_f = open(output_trim_fp, 'U')
+    except IOError:
+        print '[launch_workflow] cannot open', output_trim_fp
+    else:
+        print '[launch_workflow]', output_trim_fp, 'has', len(out_f.readlines()), 'lines'
+        out_f.close()    
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
+        print "[launch_workflow] opened files"
         for label, seq in trim_seqs(
                 input_seqs=parse_fasta(in_f), trim_len=trim_length):
             print "[launch_workflow] IN LOOP"
