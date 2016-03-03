@@ -8,6 +8,7 @@
 from __future__ import division
 import os
 from os.path import join
+from tempfile import mkdtemp
 import multiprocessing as mp
 import traceback
 import sys
@@ -15,15 +16,15 @@ import subprocess
 from functools import partial
 
 
-def deblur_system_call(params, fp):
+def deblur_system_call(params, fps):
     """Build deblur command for subprocess.
 
     Parameters
     ----------
     params: dict
         parameter settings to pass to deblur
-    fp: string
-        input filepath
+    fps: tuple
+        input and output paths
 
     Returns
     -------
@@ -35,13 +36,14 @@ def deblur_system_call(params, fp):
         return code from process
 
     """
-    input_fp = fp
+    input_fp, output_dp = fps
     script_name = "deblur"
     script_subprogram = "workflow_parallel"
     # construct command
     command = [script_name,
                script_subprogram,
-               '--seqs-fp', input_fp]
+               '--seqs-fp', input_fp,
+               '--output-dir', output_dp]
     # add reference databases to command
     ref_fp_l = [db[1] for db in enumerate(params.get('ref-fp', []))]
     for ref_fp in ref_fp_l:
@@ -55,12 +57,13 @@ def deblur_system_call(params, fp):
     cmd_list = []
     # add the remainder of the parameters
     for key, value in params.iteritems():
-        if (key != 'ref-fp' and key != 'ref-db-fp' and value is not None):
+        if (key != 'ref-fp' and
+                key != 'ref-db-fp' and
+                key != 'output-dir' and
+                value is not None):
             cmd_list.append("--%s" % key)
             cmd_list.append("%s" % value)
     command.extend(cmd_list)
-
-    print "[deblur_system_call] command = ", command
 
     return system_call(command)
 
@@ -136,17 +139,16 @@ def parallel_deblur(inputs, params, jobs_to_start=1):
     all_result_paths : list
         list of expected output files
     """
-    # Create working directory
-    output_dir = params['output-dir']
-    working_dir = join(output_dir, "deblur_working_dir")
-    os.mkdir(working_dir)
     args = []
     all_result_paths = []
+    output_dir = params['output-dir']
     for in_ in inputs:
         filename = os.path.split(in_)[-1]
-        output = os.path.join(working_dir, "%s.biom" % filename)
+        # create output directory for each process
+        process_output_dir = mkdtemp(prefix=filename, dir=output_dir)
+        output = os.path.join(process_output_dir, "%s.biom" % filename)
         all_result_paths.append(output)
-        args.append(in_)
+        args.append((in_, process_output_dir))
     functor = partial(run_functor, deblur_system_call, params)
     pool = mp.Pool(processes=jobs_to_start)
     for stdout, stderr, es in pool.map(functor, args):

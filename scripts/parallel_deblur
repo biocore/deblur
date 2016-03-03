@@ -9,10 +9,12 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os.path import join, exists
+from os.path import join, exists, split
 from os import makedirs, mkdir
 from glob import glob
 from shutil import rmtree
+
+from skbio.util import remove_files
 
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (merge_otu_tables,
@@ -85,9 +87,13 @@ def parallel_deblur_cmds():
 @click.option('--jobs-to-start', '-O', required=False, type=int, default=1,
               show_default=True,
               help="Number of jobs to start (if to run in parallel)")
+@click.option('--keep-tmp-files', required=False, type=bool, default=False,
+              show_default=True,
+              help="Keep temporary files (useful for debugging)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, delim, jobs_to_start):
+             trim_length, min_size, negate, delim, jobs_to_start,
+             keep_tmp_files):
     """Launch deblur workflow in parallel"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
@@ -100,7 +106,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
             raise OSError("Output directory already exists. Choose a "
                           "different directory or use option --overwrite True"
                           "(-w True)")
-    makedirs(output_dir)
+    mkdir(output_dir)
     # Split demultiplexed FASTA on sample IDs
     out_dir_split = join(output_dir, "split")
     mkdir(out_dir_split)
@@ -109,6 +115,14 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
             seqs_f,
             file_type,
             out_dir_split)
+    # Build SortMeRNA indexes
+    files_to_remove = []
+    if not ref_db_fp:
+        index_dir = join(output_dir, "index")
+        mkdir(index_dir)
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fp,
+            working_dir=index_dir)
     # Run deblur in parallel
     params = {}
     input_fps = glob('%s/*' % out_dir_split)
@@ -129,6 +143,12 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
     # Merge OTU tables
     output_fp = join(output_dir, "final.biom")
     merge_otu_tables(output_fp, all_bioms)
+    # Clean up
+    if not keep_tmp_files:
+        remove_files(files_to_remove, error_on_missing=False)
+        for f in all_bioms:
+            tmp_dir = split(f)[0]
+            rmtree(tmp_dir)
 
 
 if __name__ == '__main__':

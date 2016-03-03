@@ -14,6 +14,7 @@ from os.path import join, isfile, exists
 from shutil import rmtree
 
 from skbio.parse.sequences import parse_fasta
+from skbio.util import remove_files
 from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
@@ -23,7 +24,8 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_chimeras_denovo_from_seqs,
                              generate_biom_table,
                              split_sequence_file_on_sample_ids_to_files,
-                             merge_otu_tables)
+                             merge_otu_tables,
+                             build_index_sortmerna)
 
 
 @click.group()
@@ -290,9 +292,12 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
+@click.option('--keep-tmp-files', required=False, type=bool, default=False,
+              show_default=True,
+              help="Keep temporary files (useful for debugging)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, threads, delim):
+             trim_length, min_size, negate, threads, delim, keep_tmp_files):
     """Launch deblur workflow"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
@@ -305,7 +310,8 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
             raise OSError("Output directory already exists. Choose a "
                           "different directory or use option --overwrite True"
                           "(-w True)")
-    makedirs(output_dir)
+    working_dir = join(output_dir, "deblur_working_dir")
+    makedirs(working_dir)
     # Split demultiplexed FASTA on sample IDs
     out_dir_split = join(output_dir, "split")
     mkdir(out_dir_split)
@@ -314,26 +320,36 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
             seqs_f,
             file_type,
             out_dir_split)
+    # Build SortMeRNA indexes
+    files_to_remove = []
+    if not ref_db_fp:
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fp,
+            working_dir=working_dir)
     all_bioms = []
     # Create OTU table per sample
     for fn in listdir(out_dir_split):
         input_fp = join(out_dir_split, fn)
         if isfile(input_fp):
             biom_fp = launch_workflow(
-                seqs_fp=input_fp, output_dir=output_dir, read_error=read_error,
-                mean_error=mean_error, error_dist=error_dist,
-                indel_prob=indel_prob, indel_max=indel_max,
-                trim_length=trim_length, min_size=min_size, ref_fp=ref_fp,
-                ref_db_fp=ref_db_fp, negate=negate, threads=threads,
-                delim=delim)
+                seqs_fp=input_fp, working_dir=working_dir,
+                read_error=read_error, mean_error=mean_error,
+                error_dist=error_dist, indel_prob=indel_prob,
+                indel_max=indel_max, trim_length=trim_length,
+                min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
+                negate=negate, threads=threads, delim=delim)
             all_bioms.append(biom_fp)
     # Merge OTU tables
     output_fp = join(output_dir, "final.biom")
     merge_otu_tables(output_fp, all_bioms)
+    # Clean up
+    if not keep_tmp_files:
+        remove_files(files_to_remove, error_on_missing=False)
+        rmtree(working_dir)
 
 
-# LAUNCH FULL DEBLUR PIPELINE IN PARALLEL COMMAND
-@deblur_cmds.command()
+# DEBLUR PIPELINE IN PARALLEL COMMAND
+@deblur_cmds.command(hidden=True)
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
@@ -395,7 +411,7 @@ def workflow_parallel(seqs_fp, output_dir, file_type, read_error, mean_error,
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    launch_workflow(seqs_fp=seqs_fp, output_dir=output_dir,
+    launch_workflow(seqs_fp=seqs_fp, working_dir=output_dir,
                     read_error=read_error, mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,

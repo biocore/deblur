@@ -6,10 +6,11 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os.path import splitext, dirname, join, exists, basename
+from os.path import splitext, dirname, join, exists, basename, isdir
+import errno
 from collections import defaultdict
 from datetime import datetime
-from os import mkdir, stat, rename
+from os import stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
@@ -75,10 +76,41 @@ def dereplicate_seqs(seqs_fp,
         log_name=log_name)
 
 
+def build_index_sortmerna(ref_fp, working_dir):
+    """Build a SortMeRNA index for all reference databases.
+
+    Parameters
+    ----------
+    ref_fp: tuple
+        filepaths to FASTA reference databases
+    working_dir: string
+        working directory path
+
+    Returns
+    -------
+    all_db: tuple
+        filepaths to SortMeRNA indexed reference databases
+    all_file_to_remove: list
+        index files to remove
+    """
+    all_db = []
+    all_files_to_remove = []
+    for db in ref_fp:
+        # build index
+        sortmerna_db, files_to_remove = \
+            build_database_sortmerna(
+                fasta_path=db,
+                max_pos=10000,
+                output_dir=working_dir)
+        all_db.append(sortmerna_db)
+        all_files_to_remove.extend(files_to_remove)
+    return tuple(all_db), all_files_to_remove
+
+
 def remove_artifacts_seqs(seqs_fp,
                           ref_fp,
                           working_dir,
-                          ref_db_fp=None,
+                          ref_db_fp,
                           negate=False,
                           threads=1,
                           verbose=False):
@@ -92,7 +124,7 @@ def remove_artifacts_seqs(seqs_fp,
         file path(s) to FASTA database file
     working_dir: string
         working directory path
-    ref_db_fp: tuple, optional
+    ref_db_fp: tuple
         file path(s) to indexed FASTA database
     negate: boolean, optional
         if True, discard all input sequences aligning
@@ -105,35 +137,18 @@ def remove_artifacts_seqs(seqs_fp,
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
     aligned_seq_ids = set()
-    files_to_remove = []
-
     for i, db in enumerate(ref_fp):
         # create working directory for each
         # reference database
-        db_dir_base = splitext(basename(db))[0]
-        db_dir = join(working_dir, db_dir_base)
-        if not exists(db_dir):
-            mkdir(db_dir)
-
-        if ref_db_fp:
-            sortmerna_db = ref_db_fp[i]
-        else:
-            # build index
-            sortmerna_db, files_to_remove = \
-                build_database_sortmerna(
-                    fasta_path=db,
-                    max_pos=10000,
-                    output_dir=db_dir)
-
+        sortmerna_db = ref_db_fp[i]
         # run SortMeRNA
         app_result = sortmerna_map(
             seq_path=seqs_fp,
-            output_dir=db_dir,
+            output_dir=working_dir,
             refseqs_fp=db,
             sortmerna_db=sortmerna_db,
             threads=threads,
             best=1)
-
         # Print SortMeRNA errors
         stderr_fp = app_result['StdErr'].name
         if stat(stderr_fp).st_size != 0:
@@ -149,9 +164,6 @@ def remove_artifacts_seqs(seqs_fp,
                 continue
             else:
                 aligned_seq_ids.add(line[0])
-
-        # remove indexed database files
-        remove_files(files_to_remove, error_on_missing=False)
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -407,7 +419,7 @@ def merge_otu_tables(output_fp, all_tables):
     write_biom_table(master, output_fp)
 
 
-def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
+def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
                     ref_db_fp, negate, threads=1, delim='_'):
     """Launch full deblur workflow.
@@ -416,8 +428,8 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     ----------
     seqs_fp: string
         post split library sequences for debluring
-    output_dir: string
-        dirpath to output file
+    working_dir: string
+        working directory path
     read_error: float
         read error rate
     mean_error: float
@@ -448,38 +460,12 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
     biom_fp: string
         filepath to BIOM table
     """
-    # Create working directory
-    working_dir = join(output_dir, "deblur_working_dir")
-    if not exists(working_dir):
-        mkdir(working_dir)
     # Step 1: Trim sequences to specified length
-    print "[launch_workflow] begin trim"
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
-    print "[launch_workflow] seqs_fp = ", seqs_fp
-    print "[launch_workflow] output_trim_fp = ", output_trim_fp
-    print "[launch_workflow] trim_length = ", trim_length
-    print "[launch_workflow] type(trim_length) = ", type(trim_length)
-    try:
-        in_f = open(seqs_fp, 'U')
-    except IOError:
-        print '[launch_workflow] cannot open', seqs_fp
-    else:
-        print '[launch_workflow]', seqs_fp, 'has', len(in_f.readlines()), 'lines'
-        in_f.close()
-    try:
-        out_f = open(output_trim_fp, 'U')
-    except IOError:
-        print '[launch_workflow] cannot open', output_trim_fp
-    else:
-        print '[launch_workflow]', output_trim_fp, 'has', len(out_f.readlines()), 'lines'
-        out_f.close()    
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
-        print "[launch_workflow] opened files"
         for label, seq in trim_seqs(
                 input_seqs=parse_fasta(in_f), trim_len=trim_length):
-            print "[launch_workflow] IN LOOP"
             out_f.write(">%s\n%s\n" % (label, seq))
-    print "[launch_workflow] end trim"
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
                            "%s.derep" % basename(output_trim_fp))
@@ -489,11 +475,11 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
                      uc_output=True)
     # Step 3: Remove artifacts
     output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
-                          ref_fp=ref_fp,
-                          working_dir=working_dir,
-                          ref_db_fp=ref_db_fp,
-                          negate=negate,
-                          threads=threads)
+                                            ref_fp=ref_fp,
+                                            working_dir=working_dir,
+                                            ref_db_fp=ref_db_fp,
+                                            negate=negate,
+                                            threads=threads)
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))

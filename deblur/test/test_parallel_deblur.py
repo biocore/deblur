@@ -20,10 +20,19 @@ from deblur.parallel_deblur import parallel_deblur
 class parallelDeblurTests(TestCase):
     """Test parallel deblur methods functionality.
     """
+
+    def setUp(self):
+        # test output can be written to this directory
+        self.working_dir = mkdtemp()
+        print "self.working_dir = ", self.working_dir
+
+    def tearDown(self):
+        #rmtree(self.working_dir)
+        pass
+
     def test_parallel_deblur(self):
         """Test parallel_deblur() functionality.
         """
-        working_dir = mkdtemp()
         seqs = {"s1": [
                 ("s1_seq1",
                  "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
@@ -54,7 +63,6 @@ class parallelDeblurTests(TestCase):
                  "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]}
         outputs = {}
         split_dir = mkdtemp()
-        print "split_dir = ", split_dir
         for sample in seqs:
             if sample not in outputs:
                 outputs[sample] = open(join(split_dir, sample + ".fa"), 'w')
@@ -73,7 +81,7 @@ class parallelDeblurTests(TestCase):
                         "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
                         "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-        ref_fp = join(working_dir, "ref.fasta")
+        ref_fp = join(self.working_dir, "ref.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
@@ -82,9 +90,9 @@ class parallelDeblurTests(TestCase):
             build_database_sortmerna(
                 fasta_path=ref_fp,
                 max_pos=10000,
-                output_dir=working_dir)
+                output_dir=self.working_dir)
         params = {}
-        params['output-dir'] = working_dir
+        params['output-dir'] = self.working_dir
         params['ref-db-fp'] = tuple([ref_db_fp])
         params['ref-fp'] = tuple([ref_fp])
         params['file-type'] = 'fasta'
@@ -100,7 +108,6 @@ class parallelDeblurTests(TestCase):
         all_result_paths = parallel_deblur(inputs=inputs,
                                            params=params,
                                            jobs_to_start=1)
-        rmtree(working_dir)
 
 
 if __name__ == '__main__':
