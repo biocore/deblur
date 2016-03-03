@@ -200,10 +200,13 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),
                                           working_dir=self.working_dir,
-                                          ref_db_fp=None,
+                                          ref_db_fp=ref_db_fp,
                                           negate=False,
                                           threads=1)
         obs_seqs = []
@@ -303,14 +306,16 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),
                                           working_dir=self.working_dir,
-                                          ref_db_fp=None,
+                                          ref_db_fp=ref_db_fp,
                                           negate=True,
                                           threads=1)
-
         obs_seqs = []
         with open(output_fp, 'U') as output_f:
             for label, seq in parse_fasta(output_f):
