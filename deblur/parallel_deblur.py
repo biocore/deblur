@@ -41,8 +41,7 @@ def deblur_system_call(params, fp):
     # construct command
     command = [script_name,
                script_subprogram,
-               '--seqs-fp', input_fp,
-               '--output-dir', params['output-dir']]
+               '--seqs-fp', input_fp]
     # add reference databases to command
     ref_fp_l = [db[1] for db in enumerate(params.get('ref-fp', []))]
     for ref_fp in ref_fp_l:
@@ -60,6 +59,8 @@ def deblur_system_call(params, fp):
             cmd_list.append("--%s" % key)
             cmd_list.append("%s" % value)
     command.extend(cmd_list)
+
+    print "[deblur_system_call] command = ", command
 
     return system_call(command)
 
@@ -86,6 +87,10 @@ def system_call(cmd):
                             stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
+
+    print(stdout)
+    print(stderr)
+    print(return_value)
 
     return stdout, stderr, return_value
 

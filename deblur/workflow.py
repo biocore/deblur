@@ -9,7 +9,7 @@
 from os.path import splitext, dirname, join, exists, basename
 from collections import defaultdict
 from datetime import datetime
-from os import makedirs, mkdir, stat, rename
+from os import mkdir, stat, rename
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
@@ -77,7 +77,7 @@ def dereplicate_seqs(seqs_fp,
 
 def remove_artifacts_seqs(seqs_fp,
                           ref_fp,
-                          output_fp,
+                          working_dir,
                           ref_db_fp=None,
                           negate=False,
                           threads=1,
@@ -90,8 +90,8 @@ def remove_artifacts_seqs(seqs_fp,
         file path to FASTA input sequence file
     ref_fp: tuple
         file path(s) to FASTA database file
-    output_fp: string
-        file path to store output results
+    working_dir: string
+        working directory path
     ref_db_fp: tuple, optional
         file path(s) to indexed FASTA database
     negate: boolean, optional
@@ -102,10 +102,8 @@ def remove_artifacts_seqs(seqs_fp,
     verbose: boolean, optional
         If true, output SortMeRNA errors
     """
-    working_dir = join(dirname(output_fp), "working_dir")
-    if not exists(working_dir):
-        makedirs(working_dir)
-
+    output_fp = join(working_dir,
+                     "%s.no_artifacts" % basename(seqs_fp))
     aligned_seq_ids = set()
     files_to_remove = []
 
@@ -115,7 +113,7 @@ def remove_artifacts_seqs(seqs_fp,
         db_dir_base = splitext(basename(db))[0]
         db_dir = join(working_dir, db_dir_base)
         if not exists(db_dir):
-            makedirs(db_dir)
+            mkdir(db_dir)
 
         if ref_db_fp:
             sortmerna_db = ref_db_fp[i]
@@ -168,6 +166,7 @@ def remove_artifacts_seqs(seqs_fp,
                 label = label.split()[0]
                 if op(label):
                         out_f.write(">%s\n%s\n" % (label, seq))
+    return output_fp
 
 
 def multiple_sequence_alignment(seqs_fp, threads=1):
@@ -192,7 +191,7 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     return align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
 
 
-def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
+def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     """Remove chimeras de novo using UCHIME (VSEARCH implementation).
 
     Parameters
@@ -202,10 +201,8 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
     output_fp: string
         file path to store chimera-free results
     """
-    working_dir = join(dirname(output_fp), "working_dir")
-    if not exists(working_dir):
-        makedirs(working_dir)
-
+    output_fp = join(
+        working_dir, "%s.no_chimeras" % basename(seqs_fp))
     output_chimera_filepath, output_non_chimera_filepath,\
         output_alns_filepath, output_tabular_filepath, log_filepath =\
         vsearch_chimera_filter_de_novo(
@@ -218,6 +215,7 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, output_fp):
             log_name="vsearch_uchime_de_novo_chimera_filtering.log")
 
     rename(output_non_chimera_filepath, output_fp)
+    return output_fp
 
 
 def parse_deblur_output(seqs_fp, derep_clusters):
@@ -468,11 +466,9 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
                      min_size=min_size,
                      uc_output=True)
     # Step 3: Remove artifacts
-    output_artif_fp = join(working_dir,
-                           "%s.no_artifacts" % basename(output_derep_fp))
-    remove_artifacts_seqs(seqs_fp=output_derep_fp,
+    output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
                           ref_fp=ref_fp,
-                          output_fp=output_artif_fp,
+                          working_dir=working_dir,
                           ref_db_fp=ref_db_fp,
                           negate=negate,
                           threads=threads)
@@ -494,9 +490,8 @@ def launch_workflow(seqs_fp, output_dir, read_error, mean_error, error_dist,
             s.sequence = s.sequence.replace('-', '')
             f.write(s.to_fasta())
     # Step 6: Chimera removal
-    output_no_chimeras_fp = join(
-        working_dir, "%s.no_chimeras" % basename(output_deblur_fp))
-    remove_chimeras_denovo_from_seqs(output_deblur_fp, output_no_chimeras_fp)
+    output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
+        output_deblur_fp, working_dir)
     # Step 7: Generate BIOM table
     deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
                                              uc_fp="%s.uc" % output_trim_fp,

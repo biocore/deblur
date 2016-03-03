@@ -99,7 +99,7 @@ class parallelDeblurTests(TestCase):
         params['delim'] = '_'
         all_result_paths = parallel_deblur(inputs=inputs,
                                            params=params,
-                                           jobs_to_start=2)
+                                           jobs_to_start=1)
         rmtree(working_dir)
 
 
