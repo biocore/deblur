@@ -6,8 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os.path import splitext, dirname, join, exists, basename, isdir
-import errno
+from os.path import splitext, join, basename
 from collections import defaultdict
 from datetime import datetime
 from os import stat, rename
@@ -18,7 +17,6 @@ from bfillings.uclust import clusters_from_uc_file
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from bfillings.mafft_v7 import align_unaligned_seqs
-from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta, parse_fastq
 from skbio import Alignment
 from biom.table import Table
@@ -138,15 +136,12 @@ def remove_artifacts_seqs(seqs_fp,
                      "%s.no_artifacts" % basename(seqs_fp))
     aligned_seq_ids = set()
     for i, db in enumerate(ref_fp):
-        # create working directory for each
-        # reference database
-        sortmerna_db = ref_db_fp[i]
         # run SortMeRNA
         app_result = sortmerna_map(
             seq_path=seqs_fp,
             output_dir=working_dir,
             refseqs_fp=db,
-            sortmerna_db=sortmerna_db,
+            sortmerna_db=ref_db_fp[i],
             threads=threads,
             best=1)
         # Print SortMeRNA errors

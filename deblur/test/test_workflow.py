@@ -11,7 +11,7 @@ from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
 from os import close, listdir
 from types import GeneratorType
-from os.path import join, isfile, splitext
+from os.path import join, isfile, splitext, basename
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
@@ -30,7 +30,8 @@ from deblur.workflow import (dereplicate_seqs,
                              trim_seqs,
                              multiple_sequence_alignment,
                              launch_workflow,
-                             split_sequence_file_on_sample_ids_to_files)
+                             split_sequence_file_on_sample_ids_to_files,
+                             build_index_sortmerna)
 
 
 class workflowTests(TestCase):
@@ -524,6 +525,52 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
                 'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
         self.assertItemsEqual(alignment, align_exp)
 
+    def test_build_index_sortmerna(self):
+        """Test functionality of build_index_sortmerna()
+        """
+        ref1 = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                 "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref2 = [("ref1", "GTCGTAGCTAGCTGCCCACGATCGTAGCTAGCTAGCTACGTAGCTCATCAC"
+                 "TCGCCGACCCACGTCCCACTGATGCTGTGGG"),
+                ("ref2", "GCGGCGCCCAAAAATGTCGTGTAAAATTTTCTCGTACCCACTTGCTACCCA"
+                 "TGGCCGCCATGCTGCTAACGCAATATATATA"),
+                ("ref3", "TGTGAAAGCGCGCGAGAGAGTCGTATATATGGGCGCGGCGCGATGCTGCCC"
+                 "GTCGATGCTGATCCCCCACGTACGTAGCCCC"),
+                ("ref4", "GTGTGCTCGCGTAGCTAGCTTATATATCGGCGCGTAGTGCTAGCCCCAAAA"
+                 "GTGTCCCCCCCCTCCTTTTTTATATATGCAA"),
+                ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref1_fp = join(self.working_dir, "ref1.fasta")
+        with open(ref1_fp, 'w') as ref_f:
+            for seq in ref1:
+                ref_f.write(">%s\n%s\n" % seq)
+        ref2_fp = join(self.working_dir, "ref2.fasta")
+        with open(ref2_fp, 'w') as ref_f:
+            for seq in ref2:
+                ref_f.write(">%s\n%s\n" % seq)
+        ref_fps = tuple([ref1_fp, ref2_fp])
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fps,
+            working_dir=self.working_dir)
+        files_to_remove_exp = ['ref1.stats', 'ref1.pos_0.dat',
+                               'ref1.kmer_0.dat', 'ref1.bursttrie_0.dat',
+                               'ref2.stats', 'ref2.pos_0.dat',
+                               'ref2.kmer_0.dat', 'ref2.bursttrie_0.dat']
+        files_to_remove_act = [basename(f) for f in files_to_remove]
+        self.assertListEqual(files_to_remove_exp, files_to_remove_act)
+
     def test_launch_workflow(self):
         """Test launching complete workflow using simulated sequences 1.
         """
@@ -539,7 +586,9 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         ref_fp = join(self.working_dir, "db.fasta")
         with open(ref_fp, 'w') as ref_f:
             ref_f.write(database_16S)
-        ref_db_fp = None
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=tuple([ref_fp]),
+            working_dir=output_dir)
         negate = False
         threads = 1
         delim = '_'
