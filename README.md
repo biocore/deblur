@@ -13,10 +13,13 @@ Some of the code in the package deblur has been derived from [QIIME](http://qiim
 The contributors to these specific QIIME modules have granted permission
 for this porting to take place and put under the BSD license.
 
-Dependencies
-============
+Install
+=======
 
-burrito-fillings development version
+```
+python setup.py install
+```
+
 
 Example usage
 =============
