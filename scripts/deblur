@@ -236,7 +236,7 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
-              help="Demultiplexed FASTA/Q file including all samples")
+              help="Demultiplexed FASTA file including all samples")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
@@ -256,9 +256,6 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               show_default=True, help="Overwrite output directory if exists.")
-@click.option('--file-type', required=False,
-              type=click.Choice(['fasta', 'fastq']), default=['fasta'],
-              show_default=True, help="Type of file")
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
               show_default=True, help="Read error rate")
 @click.option('--mean-error', '-m', required=False, type=float, default=None,
@@ -295,7 +292,7 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
-def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
+def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_size, negate, threads, delim, keep_tmp_files):
     """Launch deblur workflow"""
@@ -318,7 +315,6 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite, file_type,
     with open(seqs_fp, 'U') as seqs_f:
         split_sequence_file_on_sample_ids_to_files(
             seqs_f,
-            file_type,
             out_dir_split)
     # Build SortMeRNA indexes
     files_to_remove = []

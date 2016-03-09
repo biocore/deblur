@@ -17,7 +17,7 @@ from bfillings.uclust import clusters_from_uc_file
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from bfillings.mafft_v7 import align_unaligned_seqs
-from skbio.parse.sequences import parse_fasta, parse_fastq
+from skbio.parse.sequences import parse_fasta
 from skbio import Alignment
 from biom.table import Table
 from biom import load_table
@@ -315,30 +315,21 @@ def generate_biom_data(clusters, delim='_'):
 
 
 def split_sequence_file_on_sample_ids_to_files(seqs,
-                                               filetype,
                                                outdir):
-    """Split FASTA/Q file on sample IDs.
+    """Split FASTA file on sample IDs.
 
     Parameters
     ----------
     seqs: file handler
-        file handler to demultiplexed FASTA/Q file
-    filetype: string
-        file type, FASTA or FASTQ
+        file handler to demultiplexed FASTA file
     outdir: string
         dirpath to output split FASTA files
     """
-    if filetype == 'fasta':
-        parser = parse_fasta
-        ext = '.fna'
-    else:
-        parser = parse_fastq
-        ext = '.fq'
     outputs = {}
-    for bits in parser(seqs):
+    for bits in parse_fasta(seqs):
         sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
-            outputs[sample] = open(join(outdir, sample + ext), 'w')
+            outputs[sample] = open(join(outdir, sample + '.fa'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
 
 

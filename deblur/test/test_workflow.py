@@ -683,31 +683,6 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
                       "s4": [
                       ("s4_seq7",
                        "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]}
-        seqs_fastq = {"s1": [
-                      ("s1_seq1",
-                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                       "ZZ[P[]^^PHGOLZ]_^^^N\^^^^TR\^\]^^^^^^^Z^^^[^BBBB"),
-                      ("s1_seq2",
-                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                       "^__eceee^WYecgghhhhHbfhhU^afhgfgfhhW`_eghgghfheg")],
-                      "s2": [
-                      ("s2_seq3",
-                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG",
-                       "___eeVccceeeefhdcghhfhhhhgfhhegfhihiicgh]ffiihii"),
-                      ("s2_seq4",
-                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT",
-                       "^^^cYacc\JQbZddhhhhbeJbeddWbcdhhhhhcYcchhhX`_`cc")],
-                      "s3": [
-                      ("s3_seq5",
-                       "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG",
-                       "___VacaceSbeehfhhhhYbghhhhfhhhhhhgh^ecadfhaghhhh"),
-                      ("s3_seq6",
-                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
-                       "__beeeeeecegghihhfhhhiiiifgfhfgiifihfgfh`fdhif]c")],
-                      "s4": [
-                      ("s4_seq7",
-                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT",
-                       "aaaeceeeeggggiiiiiihfhiiidghhegfhfihihhihhiiiige")]}
         # Test FASTA file split on sample IDs to multiple FASTA files
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
@@ -717,21 +692,6 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         output_dir = mkdtemp()
         with open(seqs_fp, 'U') as seqs_f:
             split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
-                                                       filetype='fasta',
-                                                       outdir=output_dir)
-        seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
-            output_dir=output_dir)
-        self.assertDictEqual(seqs_fasta, seqs_act)
-        # Test FASTQ file split on multiple sample IDs to multiple FASTA files
-        seqs_fp = join(self.working_dir, "seqs.fastq")
-        with open(seqs_fp, 'w') as seqs_f:
-            for sample in seqs_fastq:
-                for seq in seqs_fastq[sample]:
-                    seqs_f.write("@%s\n%s\n+\n%s\n" % seq)
-        output_dir = mkdtemp()
-        with open(seqs_fp, 'U') as seqs_f:
-            split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
-                                                       filetype='fastq',
                                                        outdir=output_dir)
         seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
             output_dir=output_dir)
