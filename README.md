@@ -12,21 +12,3 @@ Code Development Note
 Some of the code in the package deblur has been derived from [QIIME](http://qiime.org).
 The contributors to these specific QIIME modules have granted permission
 for this porting to take place and put under the BSD license.
-
-Install
-=======
-
-```
-python setup.py install
-```
-
-
-Example usage
-=============
-
-The input to deblur workflow is a demultiplexed FASTA file. The deblur algorithm is
-designed to work on individual samples.
-
-```
-deblur workflow all_samples.fna db.fna output.biom
-```
