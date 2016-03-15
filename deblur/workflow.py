@@ -150,7 +150,7 @@ def remove_artifacts_seqs(seqs_fp,
             if verbose:
                 with open(stderr_fp, 'U') as stderr_f:
                     for line in stderr_f:
-                        print line
+                        print(line)
             raise ValueError("Could not run SortMeRNA.")
 
         for line in app_result['BlastAlignments']:
@@ -331,6 +331,8 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fa'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
+    for sample in outputs:
+        outputs[sample].close()
 
 
 def generate_biom_table(seqs_fp,

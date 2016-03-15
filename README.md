@@ -30,9 +30,3 @@ designed to work on individual samples.
 ```
 deblur workflow all_samples.fna db.fna output.biom
 ```
-
-or
-
-```
-parallel_deblur workflow all_samples.fna db.fna output.biom
-```
