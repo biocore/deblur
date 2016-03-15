@@ -371,6 +371,7 @@ def launch_workflow(seqs_fp, output_fp, read_error, mean_error, error_dist,
     delim: string
         delimiter in FASTA labels to separate sample ID from sequence ID
     """
+
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(dirname(output_fp), "%s.trim" % basename(seqs_fp))
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:

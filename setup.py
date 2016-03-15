@@ -50,7 +50,7 @@ setup(name='deblur',
                         'scikit-bio >= 0.2.2, < 0.3.0',
                         'biom-format >= 2.1.3, < 2.2.0',
                         'burrito < 1.0.0',
-                        'burrito-fillings == 0.1.0-dev'],
+                        'burrito-fillings'],
       dependency_links=[('https://github.com/biocore/burrito-fillings/archive/'
                         'master.zip#egg=burrito-fillings-0.1.0-dev')],
       classifiers=classifiers
