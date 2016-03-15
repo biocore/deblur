@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Copyright (c) 2015, The Deblur Development Team.
 #
 # Distributed under the terms of the BSD 3-clause License.
 #
 # The full license is in the file LICENSE, distributed with this software.
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 import click
+from os import listdir, makedirs, mkdir
+from os.path import join, isfile, exists
+from shutil import rmtree
 
 from skbio.parse.sequences import parse_fasta
+from skbio.util import remove_files
 from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
@@ -18,7 +22,10 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
                              multiple_sequence_alignment,
                              remove_chimeras_denovo_from_seqs,
-                             generate_biom_table)
+                             generate_biom_table,
+                             split_sequence_file_on_sample_ids_to_files,
+                             merge_otu_tables,
+                             build_index_sortmerna)
 
 
 @click.group()
@@ -226,12 +233,29 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 
 # LAUNCH FULL DEBLUR PIPELINE COMMAND
 @deblur_cmds.command()
-@click.argument('seqs_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
-@click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True))
+@click.option('--seqs-fp', required=True,
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
+              help="Demultiplexed FASTA file including all samples")
+@click.option('--output-dir', required=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              dir_okay=True),
+              help="Directory path to store output including BIOM table")
+@click.option('--ref-fp', required=True, multiple=True,
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
+              help="Keep all sequences aligning to this FASTA database "
+                   "(for multiple databases, use "
+                   "--ref-fp db1.fa --ref-fp db2.fa ..)")
+@click.option('--ref-db-fp', required=False, multiple=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              file_okay=True),
+              help="Keep all sequences aligning to this indexed "
+                   "database. For multiple databases, the order "
+                   "must follow that of --ref-fp, for example, "
+                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+@click.option('--overwrite', '-w', required=False, type=bool, default=False,
+              show_default=True, help="Overwrite output directory if exists.")
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
               show_default=True, help="Read error rate")
 @click.option('--mean-error', '-m', required=False, type=float, default=None,
@@ -255,19 +279,6 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-@click.option('--ref-fp', required=True, multiple=True,
-              type=click.Path(resolve_path=True, readable=True, exists=True,
-                              file_okay=True),
-              help="Keep all sequences aligning to this FASTA database "
-                   "(for multiple databases, use "
-                   "--ref-fp db1.fa --ref-fp db2.fa ..)")
-@click.option('--ref-db-fp', required=False, multiple=True,
-              type=click.Path(resolve_path=True, readable=True, exists=False,
-                              file_okay=True),
-              help="Keep all sequences aligning to this indexed "
-                   "database. For multiple databases, the order "
-                   "must follow that of --ref-fp, for example, "
-                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
 @click.option('--negate', '-n', required=False, default=False,
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
@@ -275,20 +286,62 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--threads', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use for SortMeRNA")
-@click.option('--delim', required=False, default='_', type=str,
+@click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-def workflow(seqs_fp, output_fp, read_error, mean_error,
-             error_dist, indel_prob, indel_max, trim_length, min_size,
-             ref_fp, ref_db_fp, negate, threads, delim):
-    """Launch full deblur workflow"""
+@click.option('--keep-tmp-files', required=False, type=bool, default=False,
+              show_default=True,
+              help="Keep temporary files (useful for debugging)")
+def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
+             read_error, mean_error, error_dist, indel_prob, indel_max,
+             trim_length, min_size, negate, threads, delim, keep_tmp_files):
+    """Launch deblur workflow"""
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
-    launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                    error_dist, indel_prob, indel_max, trim_length,
-                    min_size, ref_fp, ref_db_fp, negate,
-                    threads, delim)
+    # Create output directory
+    if exists(output_dir):
+        if overwrite:
+            rmtree(output_dir)
+        else:
+            raise OSError("Output directory already exists. Choose a "
+                          "different directory or use option --overwrite True"
+                          "(-w True)")
+    working_dir = join(output_dir, "deblur_working_dir")
+    makedirs(working_dir)
+    # Split demultiplexed FASTA on sample IDs
+    out_dir_split = join(output_dir, "split")
+    mkdir(out_dir_split)
+    with open(seqs_fp, 'U') as seqs_f:
+        split_sequence_file_on_sample_ids_to_files(
+            seqs_f,
+            out_dir_split)
+    # Build SortMeRNA indexes
+    files_to_remove = []
+    if not ref_db_fp:
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fp,
+            working_dir=working_dir)
+    all_bioms = []
+    # Create OTU table per sample
+    for fn in listdir(out_dir_split):
+        input_fp = join(out_dir_split, fn)
+        if isfile(input_fp):
+            biom_fp = launch_workflow(
+                seqs_fp=input_fp, working_dir=working_dir,
+                read_error=read_error, mean_error=mean_error,
+                error_dist=error_dist, indel_prob=indel_prob,
+                indel_max=indel_max, trim_length=trim_length,
+                min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
+                negate=negate, threads=threads, delim=delim)
+            all_bioms.append(biom_fp)
+    # Merge OTU tables
+    output_fp = join(output_dir, "final.biom")
+    merge_otu_tables(output_fp, all_bioms)
+    # Clean up
+    if not keep_tmp_files:
+        remove_files(files_to_remove, error_on_missing=False)
+        rmtree(working_dir)
 
 
 if __name__ == '__main__':
