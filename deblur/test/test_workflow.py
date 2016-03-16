@@ -9,8 +9,9 @@
 from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkdtemp
+from os import listdir
 from types import GeneratorType
-from os.path import join, isfile, basename, abspath, dirname
+from os.path import join, isfile, basename, abspath, dirname, splitext
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
@@ -28,12 +29,13 @@ from deblur.workflow import (dereplicate_seqs,
                              generate_biom_table,
                              trim_seqs,
                              multiple_sequence_alignment,
-                             launch_workflow)
+                             launch_workflow,
+                             split_sequence_file_on_sample_ids_to_files,
+                             build_index_sortmerna)
 
 
 class workflowTests(TestCase):
-    """ Test deblur pipeline and individual methods
-        functionality """
+    """ Test deblur pipeline and individual methods functionality """
 
     def setUp(self):
         """ Create working directory and two FASTA input
@@ -170,14 +172,11 @@ class workflowTests(TestCase):
                 ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-
         exp_seqs = ["seq1", "seq2", "seq3", "seq4", "seq5", "seq6"]
-
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
-
         ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
                         "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
@@ -190,26 +189,23 @@ class workflowTests(TestCase):
                         "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
                         "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-
         ref_fp = join(self.working_dir, "ref2.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
-
-        output_fp = join(self.working_dir, "seqs_filtered.fasta")
-
-        remove_artifacts_seqs(seqs_fp=seqs_fp,
-                              ref_fp=(ref_fp,),
-                              output_fp=output_fp,
-                              ref_db_fp=None,
-                              negate=False,
-                              threads=1)
-
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
+        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                          ref_fp=(ref_fp,),
+                                          working_dir=self.working_dir,
+                                          ref_db_fp=ref_db_fp,
+                                          negate=False,
+                                          threads=1)
         obs_seqs = []
         with open(output_fp, 'U') as output_f:
             for label, seq in parse_fasta(output_f):
                 obs_seqs.append(label)
-
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_artifacts_seqs_index_prebuilt(self):
@@ -226,14 +222,11 @@ class workflowTests(TestCase):
                 ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-
         exp_seqs = ["seq1", "seq2", "seq3", "seq4", "seq5", "seq6"]
-
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
-
         ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
                         "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
@@ -246,35 +239,29 @@ class workflowTests(TestCase):
                         "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
                         "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-
         ref_fp = join(self.working_dir, "ref3.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
-
         # build index
         sortmerna_db, files_to_remove = \
             build_database_sortmerna(
                 fasta_path=ref_fp,
                 max_pos=10000,
                 output_dir=self.working_dir)
-
         self.files_to_remove.extend(files_to_remove)
-
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-
-        remove_artifacts_seqs(seqs_fp=seqs_fp,
-                              ref_fp=(ref_fp,),
-                              output_fp=output_fp,
-                              ref_db_fp=(sortmerna_db,),
-                              negate=False,
-                              threads=1)
+        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                          ref_fp=(ref_fp,),
+                                          working_dir=self.working_dir,
+                                          ref_db_fp=(sortmerna_db,),
+                                          negate=False,
+                                          threads=1)
 
         obs_seqs = []
         with open(output_fp, 'U') as output_f:
             for label, seq in parse_fasta(output_f):
                 obs_seqs.append(label)
-
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_artifacts_seqs_negate(self):
@@ -291,14 +278,11 @@ class workflowTests(TestCase):
                 ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-
         exp_seqs = ["phix1", "phix2", "phix3"]
-
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
-
         ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
                         "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
@@ -311,26 +295,24 @@ class workflowTests(TestCase):
                         "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
                         "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-
         ref_fp = join(self.working_dir, "ref4.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
-
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-
-        remove_artifacts_seqs(seqs_fp=seqs_fp,
-                              ref_fp=(ref_fp,),
-                              output_fp=output_fp,
-                              ref_db_fp=None,
-                              negate=True,
-                              threads=1)
-
+        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                          ref_fp=(ref_fp,),
+                                          working_dir=self.working_dir,
+                                          ref_db_fp=ref_db_fp,
+                                          negate=True,
+                                          threads=1)
         obs_seqs = []
         with open(output_fp, 'U') as output_f:
             for label, seq in parse_fasta(output_f):
                 obs_seqs.append(label)
-
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_artifacts_seqs_mismatch_ref_index(self):
@@ -349,12 +331,10 @@ class workflowTests(TestCase):
                 ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
-
         ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
                         "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
@@ -367,12 +347,10 @@ class workflowTests(TestCase):
                         "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
                         "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-
         ref_fp = join(self.working_dir, "ref5.fasta")
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
-
         ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatgga"
                             "tatc"),
                    ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggt"
@@ -381,28 +359,22 @@ class workflowTests(TestCase):
                             "agcatttgc"),
                    ("ref10", "gacgggtgacggagaattagggttcgattccggagagggagcct"
                              "gagaaacggctaccacatccaag")]
-
         ref_bis_fp = join(self.working_dir, "ref_bis.fasta")
         with open(ref_bis_fp, 'w') as ref_bis_f:
             for seq in ref_bis:
                 ref_bis_f.write(">%s\n%s\n" % seq)
-
         # build index
         sortmerna_db, files_to_remove = \
             build_database_sortmerna(
                 fasta_path=ref_bis_fp,
                 max_pos=10000,
                 output_dir=self.working_dir)
-
         self.files_to_remove.extend(files_to_remove)
-
-        output_fp = join(self.working_dir, "seqs_filtered.fasta")
-
         self.assertRaises(ValueError,
                           remove_artifacts_seqs,
                           seqs_fp=seqs_fp,
                           ref_fp=(ref_fp,),
-                          output_fp=output_fp,
+                          working_dir=self.working_dir,
                           ref_db_fp=(sortmerna_db,),
                           negate=False,
                           threads=1)
@@ -436,24 +408,20 @@ class workflowTests(TestCase):
                                   "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
                                   "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
                                   "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
-
         seqs_non_chimera = ["s1_1;size=9;", "s1_20;size=9;",
                             "s1_40;size=8;", "s1_60;size=8;"]
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:
                 seqs_f.write(">%s\n%s\n" % seq)
-
-        output_fp = join(self.working_dir, "seqs_derep.fasta")
-
-        remove_chimeras_denovo_from_seqs(seqs_fp, output_fp)
-
+        output_fp = remove_chimeras_denovo_from_seqs(
+            seqs_fp=seqs_fp,
+            working_dir=self.working_dir)
         seqs_obs = []
         with open(output_fp, 'U') as output_f:
             for label, seq in parse_fasta(output_f):
                 label = label.split()[0]
                 seqs_obs.append(label)
-
         self.assertEqual(seqs_non_chimera, seqs_obs)
 
     def test_parse_deblur_output(self):
@@ -555,6 +523,52 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
                 'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
         self.assertItemsEqual(alignment, align_exp)
 
+    def test_build_index_sortmerna(self):
+        """Test functionality of build_index_sortmerna()
+        """
+        ref1 = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
+                 "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
+                ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref2 = [("ref1", "GTCGTAGCTAGCTGCCCACGATCGTAGCTAGCTAGCTACGTAGCTCATCAC"
+                 "TCGCCGACCCACGTCCCACTGATGCTGTGGG"),
+                ("ref2", "GCGGCGCCCAAAAATGTCGTGTAAAATTTTCTCGTACCCACTTGCTACCCA"
+                 "TGGCCGCCATGCTGCTAACGCAATATATATA"),
+                ("ref3", "TGTGAAAGCGCGCGAGAGAGTCGTATATATGGGCGCGGCGCGATGCTGCCC"
+                 "GTCGATGCTGATCCCCCACGTACGTAGCCCC"),
+                ("ref4", "GTGTGCTCGCGTAGCTAGCTTATATATCGGCGCGTAGTGCTAGCCCCAAAA"
+                 "GTGTCCCCCCCCTCCTTTTTTATATATGCAA"),
+                ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
+                ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
+                 "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
+        ref1_fp = join(self.working_dir, "ref1.fasta")
+        with open(ref1_fp, 'w') as ref_f:
+            for seq in ref1:
+                ref_f.write(">%s\n%s\n" % seq)
+        ref2_fp = join(self.working_dir, "ref2.fasta")
+        with open(ref2_fp, 'w') as ref_f:
+            for seq in ref2:
+                ref_f.write(">%s\n%s\n" % seq)
+        ref_fps = tuple([ref1_fp, ref2_fp])
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fps,
+            working_dir=self.working_dir)
+        files_to_remove_exp = ['ref1.stats', 'ref1.pos_0.dat',
+                               'ref1.kmer_0.dat', 'ref1.bursttrie_0.dat',
+                               'ref2.stats', 'ref2.pos_0.dat',
+                               'ref2.kmer_0.dat', 'ref2.bursttrie_0.dat']
+        files_to_remove_act = [basename(f) for f in files_to_remove]
+        self.assertListEqual(files_to_remove_exp, files_to_remove_act)
+
 
     def test_launch_workflow(self):
         """Test launching complete workflow using 2 simulated sequence files.
@@ -562,12 +576,17 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         seqs2 - 200 reads using grinder, original sequences are >0.9 identical,
         0.1 chimeras, 35 phix reads
         """
+        # index the 70% rep. set database
+        ref_fp = join(self.test_data_dir,'70_otus.fasta')
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
 
-        self.run_workflow_test(self.seqs_s1_fp,self.orig_s1_fp)
-        self.run_workflow_test(self.seqs_s2_fp,self.orig_s2_fp)
+        self.run_workflow_test(self.seqs_s1_fp,self.orig_s1_fp,ref_fp,ref_db_fp)
+        self.run_workflow_test(self.seqs_s2_fp,self.orig_s2_fp,ref_fp,ref_db_fp)
 
 
-    def run_workflow_test(self,simfilename,origfilename):
+    def run_workflow_test(self,simfilename,origfilename,ref_fp,ref_db_fp):
         """Test launching the complete workflow using simulated sequences
         and compare to original ground truth.
 
@@ -578,7 +597,7 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
             name of the fasta file with the ground truth sequences
         """
         seqs_fp = simfilename
-        output_fp = join(self.working_dir, "%s.biom" % basename(seqs_fp))
+        output_fp = self.working_dir
         read_error = 0.05
         mean_error = 0.005
         error_dist = None
@@ -586,23 +605,20 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         indel_max = 3
         trim_length = 100
         min_size = 2
-        ref_fp = join(self.test_data_dir,'70_otus.fasta')
-        ref_db_fp = None
         negate = False
         threads = 1
         delim = '_'
-        launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                        error_dist, indel_prob, indel_max, trim_length,
-                        min_size, tuple([ref_fp]), ref_db_fp, negate,
-                        threads, delim)
+        biom_fp = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
+                                  error_dist, indel_prob, indel_max, trim_length,
+                                  min_size, (ref_fp,), ref_db_fp, negate,
+                                  threads, delim)
 
         # get the trimmed ground truth sequences
         with open(origfilename, 'U') as f:
             orig_seqs = [item[1] for item in parse_fasta(f)]
         orig_seqs=[item[:trim_length].upper() for item in orig_seqs]
 
-        table_obs = load_table(output_fp)
-
+        table_obs = load_table(biom_fp)
         outseqs = table_obs.ids(axis='observation')
         foundall = True
         for cseq in orig_seqs:
@@ -612,6 +628,70 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         self.assertTrue(foundall)
         # and don't see any additional sequences
         self.assertTrue(len(outseqs) == len(orig_seqs))
+
+
+    def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
+        """Parse output of split_sequence_file_on_sample_ids_to_files()
+
+        Parameters
+        ----------
+        output_dir: string
+            output directory path storing FASTA files
+
+        Returns
+        -------
+        seqs_act: dict
+            dictionary with keys being sample IDs and values list of
+            sequences belonging to sample ID
+        """
+        seqs_act = {}
+        for fn in listdir(output_dir):
+            input_fp = join(output_dir, fn)
+            sample_file = splitext(fn)[0]
+            with open(input_fp, 'U') as input_f:
+                for label, seq in parse_fasta(input_f):
+                    sample = label.split('_')[0]
+                    self.assertEqual(sample_file, sample)
+                    if sample not in seqs_act:
+                        seqs_act[sample] = [(label, seq)]
+                    else:
+                        seqs_act[sample].append((label, seq))
+        return seqs_act
+
+    def test_split_sequence_file_on_sample_ids_to_files(self):
+        """Test functionality of split_sequence_file_on_sample_ids_to_files()
+        """
+        seqs_fasta = {"s1": [
+                      ("s1_seq1",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                      ("s1_seq2",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG")],
+                      "s2": [
+                      ("s2_seq3",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
+                      ("s2_seq4",
+                       "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT")],
+                      "s3": [
+                      ("s3_seq5",
+                       "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG"),
+                      ("s3_seq6",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")],
+                      "s4": [
+                      ("s4_seq7",
+                       "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]}
+        # Test FASTA file split on sample IDs to multiple FASTA files
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for sample in seqs_fasta:
+                for seq in seqs_fasta[sample]:
+                    seqs_f.write(">%s\n%s\n" % seq)
+        output_dir = mkdtemp()
+        with open(seqs_fp, 'U') as seqs_f:
+            split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
+                                                       outdir=output_dir)
+        seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
+            output_dir=output_dir)
+        self.assertDictEqual(seqs_fasta, seqs_act)
 
 
 if __name__ == '__main__':
