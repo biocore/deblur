@@ -568,23 +568,6 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         files_to_remove_act = [basename(f) for f in files_to_remove]
         self.assertListEqual(files_to_remove_exp, files_to_remove_act)
 
-    def test_launch_workflow(self):
-        """Test launching complete workflow using 2 simulated sequence files.
-        seqs1 - 100 reads using art, original sequences are >0.5 identical.
-        seqs2 - 200 reads using grinder, original sequences are >0.9 identical,
-        0.1 chimeras, 35 phix reads
-        """
-        # index the 70% rep. set database
-        ref_fp = join(self.test_data_dir, '70_otus.fasta')
-        ref_db_fp, files_to_remove = build_index_sortmerna(
-            ref_fp=(ref_fp,),
-            working_dir=self.working_dir)
-
-        self.run_workflow_test(self.seqs_s1_fp,
-                               self.orig_s1_fp, ref_fp, ref_db_fp)
-        self.run_workflow_test(self.seqs_s2_fp,
-                               self.orig_s2_fp, ref_fp, ref_db_fp)
-
     def run_workflow_test(self, simfilename, origfilename, ref_fp, ref_db_fp):
         """Test launching the complete workflow using simulated sequences
         and compare to original ground truth.
@@ -627,6 +610,23 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         self.assertTrue(foundall)
         # and don't see any additional sequences
         self.assertTrue(len(outseqs) == len(orig_seqs))
+
+    def test_launch_workflow(self):
+        """Test launching complete workflow using 2 simulated sequence files.
+        seqs1 - 100 reads using art, original sequences are >0.5 identical.
+        seqs2 - 200 reads using grinder, original sequences are >0.9 identical,
+        0.1 chimeras, 35 phix reads
+        """
+        # index the 70% rep. set database
+        ref_fp = join(self.test_data_dir, '70_otus.fasta')
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
+
+        self.run_workflow_test(self.seqs_s1_fp,
+                               self.orig_s1_fp, ref_fp, ref_db_fp)
+        self.run_workflow_test(self.seqs_s2_fp,
+                               self.orig_s2_fp, ref_fp, ref_db_fp)
 
     def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
         """Parse output of split_sequence_file_on_sample_ids_to_files()
