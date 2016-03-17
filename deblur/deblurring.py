@@ -64,7 +64,8 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     read_error : float, optional
         The upper bound on the read error rate. Default: 0.05
     mean_error : float, optional
-        The mean illumina error, used for original sequence estimate. Default: 0.005
+        The mean illumina error, used for original sequence estimate.
+        Default: 0.005
     error_dist : list of float, optional
         A list of error probabilities. The length of the list determines the
         amount of hamming distances taken into account. Default: None, computed
