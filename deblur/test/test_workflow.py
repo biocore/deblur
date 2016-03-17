@@ -602,14 +602,9 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
 
         table_obs = load_table(biom_fp)
         outseqs = table_obs.ids(axis='observation')
-        foundall = True
-        for cseq in orig_seqs:
-            if cseq.upper() not in outseqs:
-                foundall = False
-        # test we see all ground truth sequences
-        self.assertTrue(foundall)
-        # and don't see any additional sequences
-        self.assertTrue(len(outseqs) == len(orig_seqs))
+
+        # test we see all ground truth sequences and no other
+        self.assertItemsEqual(outseqs, orig_seqs)
 
     def test_launch_workflow(self):
         """Test launching complete workflow using 2 simulated sequence files.
