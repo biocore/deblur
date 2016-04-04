@@ -95,9 +95,6 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     # Get the sequences
     seqs = get_sequences(input_seqs)
 
-    # If mean error is not provided, use the same value as read_error
-    mean_error = mean_error if mean_error is not None else read_error
-
     # if error_list not supplied, use the default (22 mock mixture setup)
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
     if error_dist is None:
