@@ -16,6 +16,6 @@ install:
   - pip install --process-dependency-links .
 script:
   - nosetests --with-doctest --with-coverage
-  - flake8 deblur scripts setup.py
+  - flake8 --max-line-length=200 deblur scripts setup.py
 after_success:
   - coveralls
