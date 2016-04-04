@@ -192,6 +192,7 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        self.files_to_remove.append(ref_fp)
         ref_db_fp, files_to_remove = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
@@ -242,6 +243,7 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        self.files_to_remove.append(ref_fp)
         # build index
         sortmerna_db, files_to_remove = \
             build_database_sortmerna(
@@ -298,6 +300,7 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        self.files_to_remove.append(ref_fp)
         ref_db_fp, files_to_remove = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
@@ -350,6 +353,7 @@ class workflowTests(TestCase):
         with open(ref_fp, 'w') as ref_f:
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
+        self.files_to_remove.append(ref_fp)
         ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatgga"
                             "tatc"),
                    ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggt"
@@ -617,6 +621,7 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         ref_db_fp, files_to_remove = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
+        self.files_to_remove.append(ref_fp)
 
         self.run_workflow_try(self.seqs_s1_fp,
                               self.orig_s1_fp, ref_fp, ref_db_fp)
