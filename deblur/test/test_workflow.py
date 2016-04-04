@@ -618,7 +618,8 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         seqs1 - 100 reads using art, original sequences are >0.5 identical.
         seqs2 - 200 reads using grinder, original sequences are >0.9 identical,
         0.1 chimeras, 35 phix reads
-        seqs3 - simple - 15 reads from seqs1 (10 reads for 1001203, 5 reads for 694276) for manual test validation
+        seqs3 - simple - 15 reads from seqs1 (10 reads for 1001203,
+        5 reads for 694276) for manual test validation
         """
         # index the 70% rep. set database
         ref_fp = join(self.test_data_dir, '70_otus.fasta')

@@ -145,7 +145,8 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
 
             mask = (sub_seq_i != sub_seq_j)
             # find all indels
-            mut_is_indel = np.logical_or(sub_seq_i[mask] == 4, sub_seq_j[mask] == 4)
+            mut_is_indel = np.logical_or(sub_seq_i[mask] == 4,
+                                         sub_seq_j[mask] == 4)
             num_indels = mut_is_indel.sum()
             num_substitutions = h_dist - num_indels
 
