@@ -52,7 +52,7 @@ def get_sequences(input_seqs):
     return seqs
 
 
-def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
+def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
            indel_prob=0.01, indel_max=3):
     """Deblur the reads
 
@@ -62,10 +62,10 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
         The list of input sequences in (label, sequence) format. The label
         should include the sequence count in the 'size=X' format.
     read_error : float, optional
-        The read error rate. Default: 0.05
+        The upper bound on the read error rate. Default: 0.05
     mean_error : float, optional
-        The mean error, used for original sequence estimate. Default: same
-        value as `read_error`
+        The mean illumina error, used for original sequence estimate.
+        Default: 0.005
     error_dist : list of float, optional
         A list of error probabilities. The length of the list determines the
         amount of hamming distances taken into account. Default: None, computed
@@ -91,11 +91,9 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
     is 10, sequences up to 10 - 1 = 9 hamming distance will be taken into
     account
     """
+
     # Get the sequences
     seqs = get_sequences(input_seqs)
-
-    # If mean error is not provided, use the same value as read_error
-    mean_error = mean_error if mean_error is not None else read_error
 
     # if error_list not supplied, use the default (22 mock mixture setup)
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
@@ -146,9 +144,11 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             sub_seq_j = seq_i.np_sequence[:l]
 
             mask = (sub_seq_i != sub_seq_j)
-            muttype = np.logical_or(sub_seq_i[mask] == 4, sub_seq_j[mask] == 4)
-            num_indels = muttype.sum()
-            num_substitutions = len(muttype) - num_indels
+            # find all indels
+            mut_is_indel = np.logical_or(sub_seq_i[mask] == 4,
+                                         sub_seq_j[mask] == 4)
+            num_indels = mut_is_indel.sum()
+            num_substitutions = h_dist - num_indels
 
             correction_value = num_err[num_substitutions]
 
@@ -161,6 +161,6 @@ def deblur(input_seqs, read_error=0.05, mean_error=None, error_dist=None,
             # met all the criteria - so correct the frequency of the neighbor
             seq_j.frequency -= correction_value
 
-    result = [s for s in seqs if s.frequency > 0]
+    result = [s for s in seqs if round(s.frequency) > 0]
 
     return result

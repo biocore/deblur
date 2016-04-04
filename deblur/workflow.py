@@ -448,6 +448,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     biom_fp: string
         filepath to BIOM table
     """
+
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
     with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
