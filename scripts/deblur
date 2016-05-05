@@ -39,10 +39,10 @@ def deblur_cmds():
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              help="Read error rate")
-@click.option('--mean-error', '-m', required=False, type=float, default=None,
-              help="The mean error, used for original sequence estimate. If "
-                   "not passed the same value as --read-error will be used")
+              help="Maximal bound on 1 nucleotide read error rate")
+@click.option('--mean-error', '-m', required=False, type=float, default=0.005,
+              help="The mean per nucleotide error, used for original sequence estimate. If "
+                   "not passed typical illumina error rate is used")
 @click.option('--error-dist', '-d', required=False, type=str, default=None,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
@@ -257,11 +257,11 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               show_default=True, help="Overwrite output directory if exists.")
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              show_default=True, help="Read error rate")
-@click.option('--mean-error', '-m', required=False, type=float, default=None,
+              show_default=True, help="Maximal bound on 1 nucleotide read error rate")
+@click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
-              help="The mean error, used for original sequence estimate. If "
-                   "not passed the same value as --read-error will be used")
+              help="The mean per nucleotide error, used for original sequence estimate. If "
+                   "not passed typical illumina error rate is used")
 @click.option('--error-dist', '-d', required=False, type=str, default=None,
               show_default=True,
               help="A comma separated list of error probabilities for each "
