@@ -189,12 +189,14 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     Returns
     -------
     Alignment object
-        The aligned sequences.
+        The aligned sequences. False if file does not exist
 
     See Also
     --------
     skbio.Alignment
     """
+    if stat(seqs_fp).st_size == 0:
+        return False
     return align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
 
 
