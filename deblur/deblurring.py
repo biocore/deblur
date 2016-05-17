@@ -9,6 +9,7 @@
 from operator import attrgetter
 
 import numpy as np
+import logging
 
 from deblur.sequence import Sequence
 
@@ -91,9 +92,11 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     is 10, sequences up to 10 - 1 = 9 hamming distance will be taken into
     account
     """
+    logger=logging.getLogger(__name__)
 
     # Get the sequences
     seqs = get_sequences(input_seqs)
+    logger.debug('deblurring %d sequences' % len(seqs))
 
     # if error_list not supplied, use the default (22 mock mixture setup)
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)

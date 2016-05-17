@@ -12,6 +12,7 @@ import click
 from os import listdir, makedirs, mkdir
 from os.path import join, isfile, exists
 from shutil import rmtree
+import logging
 
 from skbio.parse.sequences import parse_fasta
 from skbio.util import remove_files
@@ -28,9 +29,12 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              build_index_sortmerna)
 
 
+__version__="0.9.1.1"
+
+
 @click.group()
 def deblur_cmds():
-    pass
+    start_log()
 
 
 # DEBLUR SEQUENCES COMMAND
@@ -55,6 +59,9 @@ def deblur_cmds():
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 indel_max):
     """Clean read errors from Illumina reads"""
+    logger=logging.getLogger(__name__)
+    logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
+
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
@@ -81,6 +88,8 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
               help="Sequence trim length")
 def trim(seqs_fp, output_fp, trim_length):
     """Trim FASTA sequences"""
+    logger=logging.getLogger(__name__)
+    logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
     with open(seqs_fp, 'U') as in_f, open(output_fp, 'w') as out_f:
         for label, seq in trim_seqs(parse_fasta(in_f), trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
@@ -118,7 +127,7 @@ def dereplicate(seqs_fp, output_fp, min_size, uc_output):
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_fp', required=True,
+@click.argument('output_dir', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
 @click.option('--ref-fp', required=True, multiple=True,
@@ -141,7 +150,7 @@ def dereplicate(seqs_fp, output_fp, min_size, uc_output):
 @click.option('--threads', '-t', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use for SortMeRNA")
-def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
+def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
                      negate, threads):
     """
     Filter artifacts.
@@ -150,16 +159,28 @@ def remove_artifacts(seqs_fp, output_fp, ref_fp, ref_db_fp,
     provided with the --ref-fp (raw FASTA file) or
     --ref-db-fp (indexed database) options.
     """
+    logger=logging.getLogger(__name__)
+    logger.info('---------------------------------')
+    logger.info('remove_artifacts')
+    logger.info('number of database files %d' % len(ref_fp))
     if ref_db_fp:
         if len(ref_fp) != len(ref_db_fp):
+            logger.critical("The number of FASTA reference databases "
+                            "does not match the number of indexed "
+                            "reference databases")
             raise ValueError("The number of FASTA reference databases "
                              "does not match the number of indexed "
                              "reference databases")
+    else:
+        logger.warn('sortmerna database does not exist, creating it into dir %s' % output_dir)
+        ref_db_fp, files_to_remove = build_index_sortmerna(
+            ref_fp=ref_fp,
+            working_dir=output_dir)
 
     remove_artifacts_seqs(seqs_fp=seqs_fp,
-                          ref_fp=ref_fp,
-                          output_fp=output_fp,
-                          ref_db_fp=ref_db_fp,
+                          ref_fp=[ref_fp],
+                          working_dir=output_dir,
+                          ref_db_fp=[ref_db_fp],
                           negate=negate,
                           threads=threads)
 
@@ -235,7 +256,7 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @deblur_cmds.command()
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
-                              file_okay=True),
+                              file_okay=True, dir_okay=True),
               help="Demultiplexed FASTA file including all samples")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -257,7 +278,9 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               show_default=True, help="Overwrite output directory if exists.")
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              show_default=True, help="Maximal bound on 1 nucleotide read error rate")
+              show_default=True,
+              help="Maximal bound on 1 nucleotide read error rate."
+                   "Required if --eror-dist is not supplied")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
               help="The mean per nucleotide error, used for original sequence estimate. If "
@@ -266,7 +289,8 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
               show_default=True,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
-                   "number of hamming distances taken into account.")
+                   "number of hamming distances taken into account. "
+                   "This replaces of the --read-error value")
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               show_default=True,
               help='Insertion/deletion (indel) probability '
@@ -292,10 +316,16 @@ def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
+@click.option('--no-split', required=False, type=bool, default=False,
+              show_default=True,
+              help="Skip the split fasta to files step. Assumes seqs_fp "
+                   "is a directory of fasta files (one per sample)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, threads, delim, keep_tmp_files):
+             trim_length, min_size, negate, threads, delim, keep_tmp_files,no_split):
     """Launch deblur workflow"""
+    logger=logging.getLogger(__name__)
+    logger.info('deblur workflow started on file %s' % seqs_fp)
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
@@ -304,26 +334,35 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         if overwrite:
             rmtree(output_dir)
         else:
+            logger.critical('output directory %s already exists' % output_dir)
             raise OSError("Output directory already exists. Choose a "
                           "different directory or use option --overwrite True"
                           "(-w True)")
     working_dir = join(output_dir, "deblur_working_dir")
     makedirs(working_dir)
+
     # Split demultiplexed FASTA on sample IDs
-    out_dir_split = join(output_dir, "split")
-    mkdir(out_dir_split)
-    with open(seqs_fp, 'U') as seqs_f:
-        split_sequence_file_on_sample_ids_to_files(
-            seqs_f,
-            out_dir_split)
+    if not no_split:
+        out_dir_split = join(output_dir, "split")
+        logger.info('splitting file %s to per sample fasta. output %s' % (seqs_fp,out_dir_split))
+        mkdir(out_dir_split)
+        with open(seqs_fp, 'U') as seqs_f:
+            split_sequence_file_on_sample_ids_to_files(
+                seqs_f,
+                out_dir_split)
+    else:
+        logger.info('processing directory %s' % seqs_fp)
+        out_dir_split = seqs_fp
     # Build SortMeRNA indexes
     files_to_remove = []
     if not ref_db_fp:
+        logger.info('building sortmerna index files')
         ref_db_fp, files_to_remove = build_index_sortmerna(
             ref_fp=ref_fp,
             working_dir=working_dir)
     all_bioms = []
     # Create OTU table per sample
+    logger.info('processing per sample fasta files')
     for fn in listdir(out_dir_split):
         input_fp = join(out_dir_split, fn)
         if isfile(input_fp):
@@ -334,14 +373,28 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                 indel_max=indel_max, trim_length=trim_length,
                 min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                 negate=negate, threads=threads, delim=delim)
-            all_bioms.append(biom_fp)
+            if biom_fp:
+                all_bioms.append(biom_fp)
     # Merge OTU tables
-    output_fp = join(output_dir, "final.biom")
+    output_filename='final.biom'
+    output_fp = join(output_dir, output_filename)
     merge_otu_tables(output_fp, all_bioms)
     # Clean up
     if not keep_tmp_files:
+        logger.warn('Cleaning up temp files')
         remove_files(files_to_remove, error_on_missing=False)
         rmtree(working_dir)
+    else:
+        logger.warn('Keeping temp files')
+    logger.warn('deblur workflow finished')
+    logger.warn('output saved to %s' % output_fp)
+    logger.warn('------------------')
+
+
+def start_log(level=logging.DEBUG,filename='deblur.log'):
+    logging.basicConfig(filename=filename,level=level,format='%(levelname)s:%(asctime)s:%(message)s')
+    logger=logging.getLogger(__name__)
+    logger.debug('deblurring version %s' % __version__)
 
 
 if __name__ == '__main__':

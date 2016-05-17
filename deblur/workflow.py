@@ -10,6 +10,7 @@ from os.path import splitext, join, basename
 from collections import defaultdict
 from datetime import datetime
 from os import stat, rename
+import logging
 
 from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
                                vsearch_chimera_filter_de_novo)
@@ -41,6 +42,7 @@ def trim_seqs(input_seqs, trim_len):
     Generator of (str, str)
         The trimmed sequences in (label, sequence) format
     """
+
     for label, seq in input_seqs:
         if len(seq) >= trim_len:
             yield label, seq[:trim_len]
@@ -64,6 +66,9 @@ def dereplicate_seqs(seqs_fp,
     uc_output: boolean, optional
         output the dereplication map in .uc format
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('dereplicate seqs file %s' % seqs_fp)
+
     log_name = "%s.log" % splitext(output_fp)[0]
 
     vsearch_dereplicate_exact_seqs(
@@ -91,9 +96,13 @@ def build_index_sortmerna(ref_fp, working_dir):
     all_file_to_remove: list
         index files to remove
     """
+    logger=logging.getLogger(__name__)
+    logger.info('build_index_sortmerna file %s to dir %s' % (ref_fp,working_dir))
+
     all_db = []
     all_files_to_remove = []
     for db in ref_fp:
+        logger.debug('processing file %s' % db)
         # build index
         sortmerna_db, files_to_remove = \
             build_database_sortmerna(
@@ -102,6 +111,7 @@ def build_index_sortmerna(ref_fp, working_dir):
                 output_dir=working_dir)
         all_db.append(sortmerna_db)
         all_files_to_remove.extend(files_to_remove)
+    logger.info('processed %d files' % len(all_db))
     return tuple(all_db), all_files_to_remove
 
 
@@ -132,10 +142,18 @@ def remove_artifacts_seqs(seqs_fp,
     verbose: boolean, optional
         If true, output SortMeRNA errors
     """
+    logger=logging.getLogger(__name__)
+    logger.info('remove_artifacts_seqs file %s' % seqs_fp)
+
+    if stat(seqs_fp).st_size == 0:
+        logger.warn('file %s has size 0, continuing' % seqs_fp)
+        return
+
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
     aligned_seq_ids = set()
     for i, db in enumerate(ref_fp):
+        logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s' % (db,working_dir,ref_db_fp[i],seqs_fp))
         # run SortMeRNA
         app_result = sortmerna_map(
             seq_path=seqs_fp,
@@ -147,11 +165,12 @@ def remove_artifacts_seqs(seqs_fp,
         # Print SortMeRNA errors
         stderr_fp = app_result['StdErr'].name
         if stat(stderr_fp).st_size != 0:
+            logger.critical('sortmerna error on file %s' % seqs_fp)
             if verbose:
                 with open(stderr_fp, 'U') as stderr_f:
                     for line in stderr_f:
                         print(line)
-            raise ValueError("Could not run SortMeRNA.")
+            raise ValueError("Could not run SortMeRNA on file %s" % seqs_fp)
 
         for line in app_result['BlastAlignments']:
             line = line.strip().split('\t')
@@ -167,12 +186,20 @@ def remove_artifacts_seqs(seqs_fp,
 
     # if negate = False, only output sequences
     # matching to at least one of the databases
+    totalseqs=0
+    okseqs=0
+    badseqs=0
     with open(seqs_fp, 'U') as seqs_f:
         with open(output_fp, 'w') as out_f:
             for label, seq in parse_fasta(seqs_f):
+                totalseqs+=1
                 label = label.split()[0]
                 if op(label):
                         out_f.write(">%s\n%s\n" % (label, seq))
+                        okseqs+=1
+                else:
+                        badseqs+=1
+    logger.info('total sequences %d, passing sequences %d, failing sequences %d' % (totalseqs,okseqs,badseqs))
     return output_fp
 
 
@@ -195,9 +222,19 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     --------
     skbio.Alignment
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('multiple_sequence_alignment seqs file %s' % seqs_fp)
+
     if stat(seqs_fp).st_size == 0:
+        logger.info('msa failed. file %s has no reads' % seqs_fp)
         return False
-    return align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
+    try:
+        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
+        return aligned_seqs
+    except:
+        # alignment can fail if only 1 sequence present
+        logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
+        return False
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
@@ -210,6 +247,9 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     output_fp: string
         file path to store chimera-free results
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('remove_chimeras_denovo_from_seqs seqs file %s to working dir %s' % (seqs_fp, working_dir))
+
     output_fp = join(
         working_dir, "%s.no_chimeras" % basename(seqs_fp))
     output_chimera_filepath, output_non_chimera_filepath,\
@@ -251,6 +291,9 @@ def parse_deblur_output(seqs_fp, derep_clusters):
     in derep_clusters will be in seqs_fp since they could have been removed in
     the artifact filtering step.
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('parse_deblur_output seqs file %s' % seqs_fp)
+
     clusters = {}
     # Replace representative sequence name with actual sequence in cluster
     msa_fa = Alignment.read(seqs_fp, format='fasta')
@@ -260,10 +303,12 @@ def parse_deblur_output(seqs_fp, derep_clusters):
         if seq2 not in clusters:
             clusters[seq2] = []
         if cluster_id not in derep_clusters:
+            logger.critical('seed id %s does not exist in .uc file' % cluster_id)
             raise ValueError(
                 'Seed ID %s does not exist in .uc file' % cluster_id)
         else:
             clusters[seq2].extend(derep_clusters[cluster_id])
+    logger.info('got %d clusters for file %s' % (len(clusters), seqs_fp))
     return clusters
 
 
@@ -296,6 +341,9 @@ def generate_biom_data(clusters, delim='_'):
     QIIME is a GPL project, but we obtained permission from the authors of this
     function to port it to deblur (and keep it under deblur's BSD license).
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('generate_biom_data')
+
     sample_ids = []
     sample_id_idx = {}
     data = defaultdict(int)
@@ -327,6 +375,9 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
     outdir: string
         dirpath to output split FASTA files
     """
+    logger=logging.getLogger(__name__)
+    logger.info('split_sequence_file_on_sample_ids_to_files for file %s into dir %s' % (seqs, outdir))
+
     outputs = {}
     for bits in parse_fasta(seqs):
         sample = bits[0].split('_', 1)[0]
@@ -335,6 +386,7 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
     for sample in outputs:
         outputs[sample].close()
+    logger.info('split to %d files' % len(outputs))
 
 
 def generate_biom_table(seqs_fp,
@@ -359,6 +411,9 @@ def generate_biom_table(seqs_fp,
     Table: biom.table
         an instance of a BIOM table
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('generate_biom_table for file %s' % seqs_fp)
+
     # parse clusters in dereplicated sequences map (.uc format)
     with open(uc_fp, 'U') as uc_f:
         derep_clusters, failures, seeds = clusters_from_uc_file(uc_f)
@@ -403,6 +458,9 @@ def merge_otu_tables(output_fp, all_tables):
     all_tables: list
         list of filepaths for BIOM tables to merge
     """
+    logger=logging.getLogger(__name__)
+    logger.debug('merge_otu_tables for file %d tables into file %s' % (len(all_tables), output_fp))
+
     master = load_table(all_tables[0])
     for input_fp in all_tables[1:]:
         master = master.merge(load_table(input_fp))
@@ -448,8 +506,11 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     Return
     ------
     biom_fp: string
-        filepath to BIOM table
+        filepath to BIOM table or False if error encountered
     """
+    logger=logging.getLogger(__name__)
+    logger.info('------------------------------------------------------------------')
+    logger.info('launch_workflow for file %s' % seqs_fp)
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
@@ -471,12 +532,18 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                                             ref_db_fp=ref_db_fp,
                                             negate=negate,
                                             threads=threads)
+    if not output_artif_fp:
+        logger.debug('remove artifacts failed, aborting')
+        return
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
     with open(output_msa_fp, 'w') as f:
         alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
                                                 threads=threads)
+        if not alignment:
+            logger.debug('msa failed. aborting')
+            return False
         f.write(alignment.to_fasta())
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
