@@ -24,11 +24,9 @@ class parallelDeblurTests(TestCase):
     def setUp(self):
         # test output can be written to this directory
         self.working_dir = mkdtemp()
-        print "self.working_dir = ", self.working_dir
 
     def tearDown(self):
-        #rmtree(self.working_dir)
-        pass
+        rmtree(self.working_dir)
 
     def test_parallel_deblur(self):
         """Test parallel_deblur() functionality.
@@ -95,7 +93,6 @@ class parallelDeblurTests(TestCase):
         params['output-dir'] = self.working_dir
         params['ref-db-fp'] = tuple([ref_db_fp])
         params['ref-fp'] = tuple([ref_fp])
-        params['file-type'] = 'fasta'
         params['read-error'] = 0.05
         params['mean-error'] = None
         params['error-dist'] = None
