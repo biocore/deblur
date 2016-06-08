@@ -12,6 +12,7 @@ from tempfile import mkdtemp
 from os import listdir
 from types import GeneratorType
 from os.path import join, isfile, basename, abspath, dirname, splitext
+from os import listdir
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
@@ -20,18 +21,22 @@ from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
 from biom.table import Table
 from biom import load_table
+import logging
 
 from deblur.workflow import (dereplicate_seqs,
                              remove_chimeras_denovo_from_seqs,
                              remove_artifacts_seqs,
-                             parse_deblur_output,
-                             generate_biom_data,
-                             generate_biom_table,
+                             create_otu_table,
+                             get_files_for_table,
+#                             parse_deblur_output,
+#                             generate_biom_data,
+#                             generate_biom_table,
                              trim_seqs,
                              multiple_sequence_alignment,
                              launch_workflow,
                              split_sequence_file_on_sample_ids_to_files,
-                             build_index_sortmerna)
+                             build_index_sortmerna,
+                             start_log)
 
 
 class workflowTests(TestCase):
@@ -52,14 +57,17 @@ class workflowTests(TestCase):
 
         # the data directory for the workflow test files
         self.test_data_dir = join(dirname(abspath(__file__)), 'data')
-        self.seqs_s1_fp = join(self.test_data_dir, 'seqs_s1.fa')
-        self.seqs_s2_fp = join(self.test_data_dir, 'seqs_s2.fa')
-        self.seqs_s3_fp = join(self.test_data_dir, 'seqs_s3.fa')
+        self.seqs_s1_fp = join(self.test_data_dir, 'seqs_s1.fasta')
+        self.seqs_s2_fp = join(self.test_data_dir, 'seqs_s2.fasta')
+        self.seqs_s3_fp = join(self.test_data_dir, 'seqs_s3.fasta')
         self.orig_s1_fp = join(self.test_data_dir, 'simset.s1.fasta')
         self.orig_s2_fp = join(self.test_data_dir, 'simset.s2.fasta')
         self.orig_s3_fp = join(self.test_data_dir, 'simset.s3.fasta')
 
         self.files_to_remove = []
+
+        logfilename=join(self.working_dir,"log.txt")
+        start_log(level=logging.DEBUG,filename=logfilename)
 
     def tearDown(self):
         remove_files(self.files_to_remove)
@@ -429,79 +437,6 @@ class workflowTests(TestCase):
                 seqs_obs.append(label)
         self.assertEqual(seqs_non_chimera, seqs_obs)
 
-    def test_parse_deblur_output(self):
-        """ Test parsing of deblur output into a dictionary
-        """
-        derep_clusters = {'s1_80': ['s1_80', 's1_81', 's1_82'],
-                          's1_0': ['s1_0', 's1_1'],
-                          's1_10': ['s1_10', 's1_12', 's1_13'],
-                          's1_118': ['s1_118', 's1_119']}
-        deblur_clusters_exp = {
-            'AGTCGTACGTGCATGCA': ['s1_80', 's1_81', 's1_82'],
-            'TGTGTAGCTGTGCTGAT': ['s1_0', 's1_1'],
-            'CGGGTGCATGTCGTGAC': ['s1_10', 's1_12', 's1_13'],
-            'TGGCTAGTGCTAGCTCC': ['s1_118', 's1_119']}
-        seqs = [("s1_80;size=3;", "AGTCGTACGTGCATGCA"),
-                ("s1_0;size=2;", "TGTGTAGCTGTGCTGAT"),
-                ("s1_10;size=3;", "CGGGTGCATGTCGTGAC"),
-                ("s1_118;size=2;", "TGGCTAGTGCTAGCTCC")]
-        seqs_fp = join(self.working_dir, "seqs.fasta")
-        with open(seqs_fp, 'w') as seqs_f:
-            for seq in seqs:
-                seqs_f.write(">%s\n%s\n" % seq)
-        deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
-        self.assertDictEqual(deblur_clusters, deblur_clusters_exp)
-
-    def test_generate_biom_data(self):
-        """ Test generating BIOM table data for deblur output
-        """
-        data_exp = {(3, 0): 3, (2, 0): 2, (1, 0): 2, (0, 0): 3}
-        deblur_clusters = {
-            'AGTCGTACGTGCATGCA': ['s1_80', 's1_81', 's1_82'],
-            'TGTGTAGCTGTGCTGAT': ['s1_0', 's1_1'],
-            'CGGGTGCATGTCGTGAC': ['s1_10', 's1_12', 's1_13'],
-            'TGGCTAGTGCTAGCTCC': ['s1_118', 's1_119']}
-        otu_ids_exp = ['AGTCGTACGTGCATGCA', 'TGTGTAGCTGTGCTGAT',
-                       'CGGGTGCATGTCGTGAC', 'TGGCTAGTGCTAGCTCC']
-        sample_ids_exp = ['s1']
-        data, otu_ids, sample_ids = generate_biom_data(deblur_clusters)
-        self.assertDictEqual(data, data_exp)
-        self.assertItemsEqual(otu_ids, otu_ids_exp)
-        self.assertItemsEqual(sample_ids, sample_ids_exp)
-
-    def test_generate_biom_table(self):
-        """ Test generating BIOM table
-        """
-        seqs = [("s1_80;size=3;", "AGTCGTACGTGCATGCA"),
-                ("s1_0;size=3;", "TGTGTAGCTGTGCTGAT"),
-                ("s1_10;size=3;", "CGGGTGCATGTCGTGAC")]
-        uc_output = """S\t0\t100\t*\t*\t*\t*\t*\ts1_80\t*
-H\t0\t100\t100.0\t*\t0\t0\t*\ts1_81\ts1_80
-H\t0\t100\t100.0\t*\t0\t0\t*\ts1_82\ts1_80
-S\t1\t100\t*\t*\t*\t*\t*\ts1_0\t*
-H\t1\t100\t100.0\t*\t0\t0\t*\ts1_1\ts1_0
-H\t1\t100\t100.0\t*\t0\t0\t*\ts1_60\ts1_0
-S\t2\t100\t*\t*\t*\t*\t*\ts1_10\t*
-H\t2\t100\t100.0\t*\t0\t0\t*\ts1_12\ts1_10
-H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
-"""
-        data = {(2, 0): 3, (1, 0): 3, (0, 0): 3}
-        otu_ids = ['CGGGTGCATGTCGTGAC', 'TGTGTAGCTGTGCTGAT',
-                   'AGTCGTACGTGCATGCA']
-        sample_ids = ['s1']
-        seqs_fp = join(self.working_dir, "seqs.fasta")
-        with open(seqs_fp, 'w') as seqs_f:
-            for seq in seqs:
-                seqs_f.write(">%s\n%s\n" % seq)
-        # temporary file for .uc output
-        uc_output_fp = join(self.working_dir, "derep.uc")
-        with open(uc_output_fp, 'w') as uc_output_f:
-            uc_output_f.write(uc_output)
-        table_exp = Table(data, otu_ids, sample_ids, sample_metadata=None)
-        clusters, table = generate_biom_table(seqs_fp,
-                                              uc_output_fp)
-        self.assertEqual(table, table_exp)
-
     def test_multiple_sequence_alignment(self):
         """Test multiple sequence alignment.
         """
@@ -597,21 +532,57 @@ H\t2\t100\t100.0\t*\t0\t0\t*\ts1_13\ts1_10
         negate = False
         threads = 1
         delim = '_'
-        biom_fp = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                                  error_dist, indel_prob, indel_max,
-                                  trim_length, min_size, (ref_fp,),
-                                  ref_db_fp, negate, threads, delim)
+        nochimera = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
+                                    error_dist, indel_prob, indel_max,
+                                    trim_length, min_size, (ref_fp,),
+                                    ref_db_fp, negate, threads, delim)
 
         # get the trimmed ground truth sequences
         with open(origfilename, 'U') as f:
             orig_seqs = [item[1] for item in parse_fasta(f)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        table_obs = load_table(biom_fp)
+        output_filename='final.biom'
+        output_table_fp = join(output_fp, output_filename)
+
+        create_otu_table(output_table_fp, [(nochimera,seqs_fp)])
+
+        table_obs = load_table(output_table_fp)
         outseqs = table_obs.ids(axis='observation')
+        outseqs=list(outseqs)
+        outseqs.sort()
+        orig_seqs.sort()
 
         # test we see all ground truth sequences and no other
         self.assertItemsEqual(outseqs, orig_seqs)
+
+
+    def test_get_files_for_table(self):
+        filelist=get_files_for_table(self.test_data_dir)
+        file1=join(self.test_data_dir,'testmerge.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        file2=join(self.test_data_dir,'testmerge2.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        self.assertEqual(len(filelist),2)
+        self.assertTrue(file1 in [filelist[0][0], filelist[1][0]])
+        self.assertTrue(file2 in [filelist[0][0], filelist[1][0]])
+        self.assertTrue('testmerge' in [filelist[0][1], filelist[1][1]])
+
+
+    def test_create_otu_table(self):
+        # merge the fasta files
+        m1=join(self.test_data_dir,'testmerge.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        m2=join(self.test_data_dir,'testmerge2.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        outfile=join(self.working_dir,'testmerge.biom')
+        create_otu_table(outfile, [(m1,'testmerge'),(m2,'testmerge2')])
+
+        # test the result
+        table = load_table(outfile)
+
+        # test a sequence present in both
+        self.assertEqual(table.get_value_by_ids('TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge'), 5)
+        self.assertEqual(table.get_value_by_ids('TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge2'), 8)
+        # and an otu present only in one
+        self.assertEqual(table.get_value_by_ids('TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTAAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge'), 7)
+        self.assertEqual(table.get_value_by_ids('TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTAAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge2'), 0)
 
     def test_launch_workflow(self):
         """Test launching complete workflow using 3 simulated sequence files.

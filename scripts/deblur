@@ -16,20 +16,20 @@ import logging
 
 from skbio.parse.sequences import parse_fasta
 from skbio.util import remove_files
-from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
                              multiple_sequence_alignment,
                              remove_chimeras_denovo_from_seqs,
-                             generate_biom_table,
                              split_sequence_file_on_sample_ids_to_files,
-                             merge_otu_tables,
-                             build_index_sortmerna)
+                             build_index_sortmerna,
+                             get_files_for_table,
+                             create_otu_table,
+                             start_log)
 
 
-__version__="0.9.1.1"
+__version__="0.9.2.1"
 
 
 @click.group()
@@ -219,37 +219,26 @@ def remove_chimeras_denovo(seqs_fp, output_fp):
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('uc_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
 @click.argument('output_biom_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-@click.argument('output_rep_set_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True))
-@click.option('--delim', required=False, default='_', type=str,
-              show_default=True, help="Delimiter in FASTA labels to separate "
-                                      "sample ID from sequence ID")
-def build_biom_table(seqs_fp, uc_fp, output_biom_fp, output_rep_set_fp, delim):
-    """Generate a BIOM table"""
-    deblur_clrs, table = generate_biom_table(seqs_fp=seqs_fp,
-                                             uc_fp=uc_fp,
-                                             delim=delim)
-    # write BIOM table to file
-    if table.is_empty():
-        raise ValueError(
-            "Attempting to write an empty BIOM table.")
-    with biom_open(output_biom_fp, 'w') as f:
-        if HAVE_H5PY:
-            table.to_hdf5(h5grp=f, generated_by="deblur")
-        else:
-            table.to_json(direct_io=f, generated_by="deblur")
+@click.argument('file_type', required=False, type=str, default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+def build_biom_table(seqs_fp, output_biom_fp,file_type):
+    """Generate a BIOM table from a directory of chimera removed fasta files
+    Parameters
+    ----------
+    seqs_fp : str
+      the path to the directory containing the chimera removed fasta files
+    output_biom_fp : str
+      the path where to save the output biom table file ('final.biom')
+    file_type : str
+      the files type to add to the table (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras', can be '.fasta' or '.fa' if needed)
+    """
+    output_filename='final.biom'
+    output_fp = join(output_biom_fp, output_filename)
 
-    # write representative FASTA sequences to file
-    with open(output_rep_set_fp, 'w') as f:
-        for s in deblur_clrs:
-            f.write(">%s\n%s\n" % (deblur_clrs[s][0], s))
+    samples = get_files_for_table(seqs_fp,file_type)
+    create_otu_table(output_fp, samples)
 
 
 # LAUNCH FULL DEBLUR PIPELINE COMMAND
@@ -353,6 +342,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     else:
         logger.info('processing directory %s' % seqs_fp)
         out_dir_split = seqs_fp
+
     # Build SortMeRNA indexes
     files_to_remove = []
     if not ref_db_fp:
@@ -361,6 +351,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             ref_fp=ref_fp,
             working_dir=working_dir)
     all_bioms = []
+
     # Create OTU table per sample
     logger.info('processing per sample fasta files')
     for fn in listdir(out_dir_split):
@@ -375,10 +366,15 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                 negate=negate, threads=threads, delim=delim)
             if biom_fp:
                 all_bioms.append(biom_fp)
-    # Merge OTU tables
+    logger.info('finished processing per sample fasta files')
+
+    # Merge chimera cleaned fasta files to a single biom table
     output_filename='final.biom'
     output_fp = join(output_dir, output_filename)
-    merge_otu_tables(output_fp, all_bioms)
+
+    samples = get_files_for_table(working_dir)
+    create_otu_table(output_fp, samples)
+
     # Clean up
     if not keep_tmp_files:
         logger.warn('Cleaning up temp files')
@@ -389,12 +385,6 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     logger.warn('deblur workflow finished')
     logger.warn('output saved to %s' % output_fp)
     logger.warn('------------------')
-
-
-def start_log(level=logging.DEBUG,filename='deblur.log'):
-    logging.basicConfig(filename=filename,level=level,format='%(levelname)s:%(asctime)s:%(message)s')
-    logger=logging.getLogger(__name__)
-    logger.debug('deblurring version %s' % __version__)
 
 
 if __name__ == '__main__':

@@ -6,20 +6,23 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os.path import splitext, join, basename
+from os.path import splitext, join, basename, isfile
+from os import listdir
 from collections import defaultdict
 from datetime import datetime
-from os import stat, rename
+from os import stat
 import logging
+import re
+import scipy
+import numpy as np
+import subprocess
+import time
 
-from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
-                               vsearch_chimera_filter_de_novo)
-from bfillings.uclust import clusters_from_uc_file
+from bfillings.vsearch import vsearch_dereplicate_exact_seqs
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
 from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.parse.sequences import parse_fasta
-from skbio import Alignment
 from biom.table import Table
 from biom import load_table
 from biom.util import biom_open, HAVE_H5PY
@@ -246,70 +249,27 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
         file path to FASTA input sequence file
     output_fp: string
         file path to store chimera-free results
+
+    Returns
+    -------
+    output_fp
+        the chimera removed fasta file name
     """
     logger=logging.getLogger(__name__)
     logger.debug('remove_chimeras_denovo_from_seqs seqs file %s to working dir %s' % (seqs_fp, working_dir))
 
     output_fp = join(
         working_dir, "%s.no_chimeras" % basename(seqs_fp))
-    output_chimera_filepath, output_non_chimera_filepath,\
-        output_alns_filepath, output_tabular_filepath, log_filepath =\
-        vsearch_chimera_filter_de_novo(
-            fasta_filepath=seqs_fp,
-            working_dir=working_dir,
-            output_chimeras=False,
-            output_nonchimeras=True,
-            output_alns=False,
-            output_tabular=False,
-            log_name="vsearch_uchime_de_novo_chimera_filtering.log")
 
-    rename(output_non_chimera_filepath, output_fp)
+    # we use the parameters dn=0.000001, xn=1000, minh=10000000
+    # so 1 mismatch in the A/B region will cancel it being labeled as chimera
+    # and ~3 unique reads in each region will make it a chimera if no mismatches
+    params=['vsearch','--uchime_denovo',seqs_fp]
+    params.extend(['-dn','0.000001','-xn','1000','-minh','10000000','--mindiffs','5'])
+    params.extend(['--nonchimeras',output_fp])
+    with open(output_fp+'.log', "w") as f:
+        subprocess.call(params, stdout=f,stderr=f)
     return output_fp
-
-
-def parse_deblur_output(seqs_fp, derep_clusters):
-    """ Parse deblur output file into an OTU map.
-
-    Parameters
-    ----------
-    seqs_fp: string
-        file path to deblurred sequences
-    derep_clusters: dictionary
-        dictionary of dereplicated sequences map
-
-    Returns
-    -------
-    clusters: dictionary
-        dictionary of clusters including dereplicated sequence labels
-
-    Notes
-    -----
-    For each deblurred sequence in seqs_fp, use the sequence label to
-    obtain all dereplicated sequence labels belonging to it
-    (from derep_clusters) to create entries in a new dictionary where the keys
-    are actual sequences (not the labels). Note not all sequences
-    in derep_clusters will be in seqs_fp since they could have been removed in
-    the artifact filtering step.
-    """
-    logger=logging.getLogger(__name__)
-    logger.debug('parse_deblur_output seqs file %s' % seqs_fp)
-
-    clusters = {}
-    # Replace representative sequence name with actual sequence in cluster
-    msa_fa = Alignment.read(seqs_fp, format='fasta')
-    for label, seq in Alignment.iteritems(msa_fa):
-        cluster_id = label.split(';')[0]
-        seq2 = str(seq.degap())
-        if seq2 not in clusters:
-            clusters[seq2] = []
-        if cluster_id not in derep_clusters:
-            logger.critical('seed id %s does not exist in .uc file' % cluster_id)
-            raise ValueError(
-                'Seed ID %s does not exist in .uc file' % cluster_id)
-        else:
-            clusters[seq2].extend(derep_clusters[cluster_id])
-    logger.info('got %d clusters for file %s' % (len(clusters), seqs_fp))
-    return clusters
 
 
 def generate_biom_data(clusters, delim='_'):
@@ -382,51 +342,11 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
     for bits in parse_fasta(seqs):
         sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
-            outputs[sample] = open(join(outdir, sample + '.fa'), 'w')
+            outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
     for sample in outputs:
         outputs[sample].close()
     logger.info('split to %d files' % len(outputs))
-
-
-def generate_biom_table(seqs_fp,
-                        uc_fp,
-                        delim='_'):
-    """Generate BIOM table and representative FASTA set.
-
-    Parameters
-    ----------
-    seqs_fp: string
-        file path to deblurred sequences
-    uc_fp: string
-        file path to dereplicated sequences map (.uc format)
-    delim: string, optional
-        delimiter for splitting sample and sequence IDs in sequence label
-        default: '_'
-
-    Returns
-    -------
-    deblur_clusters: dictionary
-        dictionary of clusters including dereplicated sequence labels
-    Table: biom.table
-        an instance of a BIOM table
-    """
-    logger=logging.getLogger(__name__)
-    logger.debug('generate_biom_table for file %s' % seqs_fp)
-
-    # parse clusters in dereplicated sequences map (.uc format)
-    with open(uc_fp, 'U') as uc_f:
-        derep_clusters, failures, seeds = clusters_from_uc_file(uc_f)
-    # parse clusters in deblur file, set observation ID to be the sequence
-    deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
-    # create sparse dictionary of observation and sample ID counts
-    data, otu_ids, sample_ids = generate_biom_data(deblur_clusters, delim)
-    # build BIOM table
-    return deblur_clusters, Table(data, otu_ids, sample_ids,
-                                  observation_metadata=None,
-                                  sample_metadata=None, table_id=None,
-                                  generated_by="deblur",
-                                  create_date=datetime.now().isoformat())
 
 
 def write_biom_table(table, biom_fp):
@@ -439,11 +359,17 @@ def write_biom_table(table, biom_fp):
     biom_fp: string
         filepath to output BIOM table
     """
+    logger = logging.getLogger(__name__)
+    logger.debug('write_biom_table to file %s' % biom_fp)
     with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
+            logger.debug('saving with h5py')
             table.to_hdf5(h5grp=f, generated_by="deblur")
+            logger.debug('wrote to hdf5 file %s' % biom_fp)
         else:
+            logger.debug('no h5py. saving to json')
             table.to_json(direct_io=f, generated_by="deblur")
+            logger.debug('wrote to json file %s' % biom_fp)
 
 
 def merge_otu_tables(output_fp, all_tables):
@@ -465,6 +391,86 @@ def merge_otu_tables(output_fp, all_tables):
     for input_fp in all_tables[1:]:
         master = master.merge(load_table(input_fp))
     write_biom_table(master, output_fp)
+
+
+def get_files_for_table(input_dir, file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
+    """Get a list of files to add to the output table
+
+    Parameters:
+    -----------
+    input_dir : string
+        name of the directory containing the deblurred fasta files
+    file_end : string
+        the ending of all the fasta files to be added to the table
+        (default '.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+
+    Returns
+    -------
+    names : list of tuples of (string,string)
+        list of tuples of:
+            name of fasta files to be added to the biom table
+            sampleid (file names without the file_end and path)
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug('get_files_for_table input dir %s, file-ending %s' % (input_dir,file_end))
+
+    names = []
+    for cfile in listdir(input_dir):
+        cname=join(input_dir,cfile)
+        if not isfile(cname):
+            continue
+        if len(cfile) < len(file_end):
+            continue
+        if cfile[-len(file_end):] == file_end:
+            sampleid = cfile[:-len(file_end)]
+            names.append((cname, sampleid))
+    logger.debug('found %d files' % len(names))
+    return names
+
+
+def create_otu_table(output_fp, deblurred_list):
+    """Create a biom table out of all files in a directory
+
+    Parameters
+    ----------
+    output_fp : string
+        filepath to final BIOM table
+    deblurred_list : list of string
+        list of file names (including path) of all deblurred
+        fasta files to add to the table
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug('create_otu_table for %d samples, into output table %s' % (len(deblurred_list),output_fp))
+
+    seqdict = {}
+    seqlist = []
+    sampdict = {}
+    samplist = []
+    obs=scipy.sparse.dok_matrix((1E9,1E6),dtype=np.int)
+    for (cfilename, csampleid) in deblurred_list:
+        if csampleid in sampdict:
+            logger.error('sample %s already in table!' % csampleid)
+            continue
+        sampdict[csampleid]=len(sampdict)-1
+        samplist.append(csampleid)
+        csampidx=len(sampdict)-1
+        for chead,cseq in parse_fasta(open(cfilename, 'U')):
+            if cseq not in seqdict:
+                seqdict[cseq]=len(seqlist)
+                seqlist.append(cseq)
+            cseqidx=seqdict[cseq]
+            cfreq = float(re.search('(?<=size=)\w+', chead).group(0))
+            obs[cseqidx, csampidx] = cfreq
+    logger.debug('loaded %d samples, %d unique sequences' % (len(samplist),len(seqlist)))
+    obs.resize((len(seqlist),len(samplist)))
+    table = Table(obs, seqlist, samplist,
+                  observation_metadata=None,
+                  sample_metadata=None, table_id=None,
+                  generated_by="deblur",
+                  create_date=datetime.now().isoformat())
+    logger.debug('converted to biom table')
+    write_biom_table(table, output_fp)
+    logger.debug('saved to biom file %s' % output_fp)
 
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
@@ -505,8 +511,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
 
     Return
     ------
-    biom_fp: string
-        filepath to BIOM table or False if error encountered
+    output_no_chimers_fp : string
+        filepath to fasta file with no chimeras of False if error encountered
     """
     logger=logging.getLogger(__name__)
     logger.info('------------------------------------------------------------------')
@@ -558,15 +564,24 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     # Step 6: Chimera removal
     output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
         output_deblur_fp, working_dir)
-    # Step 7: Generate BIOM table
-    deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
-                                             uc_fp="%s.uc" % output_trim_fp,
-                                             delim=delim)
-    # Step 8: Write BIOM table to file
-    if table.is_empty():
-        raise ValueError(
-            "Attempting to write an empty BIOM table.")
-    biom_fp = join(working_dir, "%s.biom" % basename(seqs_fp))
-    write_biom_table(table, biom_fp)
+    return output_no_chimeras_fp
 
-    return biom_fp
+
+def start_log(level=logging.DEBUG,filename=''):
+    """
+    start the logger for the run
+
+    Parameters
+    ----------
+    levele : logging.DEBUG, logging.INFO etc. for the log level.
+    filename : str
+      name of the filename to save the log to or empty (default) to use deblur.log.TIMESTAMP
+    """
+    if not filename:
+        tstr = time.ctime()
+        tstr = tstr.replace(' ','.')
+        tstr = tstr.replace(':','.')
+        filename='deblur.log.%s' % tstr
+    logging.basicConfig(filename=filename,level=level,format='%(levelname)s:%(asctime)s:%(message)s')
+    logger=logging.getLogger(__name__)
+    logger.debug('deblurring started')
