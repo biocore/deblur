@@ -12,14 +12,12 @@ from tempfile import mkdtemp
 from os import listdir
 from types import GeneratorType
 from os.path import join, isfile, basename, abspath, dirname, splitext
-from os import listdir
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio.alignment import SequenceCollection
 from skbio.sequence import DNA
 from bfillings.sortmerna_v2 import build_database_sortmerna
-from biom.table import Table
 from biom import load_table
 import logging
 
@@ -28,9 +26,6 @@ from deblur.workflow import (dereplicate_seqs,
                              remove_artifacts_seqs,
                              create_otu_table,
                              get_files_for_table,
-#                             parse_deblur_output,
-#                             generate_biom_data,
-#                             generate_biom_table,
                              trim_seqs,
                              multiple_sequence_alignment,
                              launch_workflow,
@@ -66,8 +61,8 @@ class workflowTests(TestCase):
 
         self.files_to_remove = []
 
-        logfilename=join(self.working_dir,"log.txt")
-        start_log(level=logging.DEBUG,filename=logfilename)
+        logfilename = join(self.working_dir, "log.txt")
+        start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
         remove_files(self.files_to_remove)
@@ -542,47 +537,66 @@ class workflowTests(TestCase):
             orig_seqs = [item[1] for item in parse_fasta(f)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        output_filename='final.biom'
+        output_filename = 'final.biom'
         output_table_fp = join(output_fp, output_filename)
 
-        create_otu_table(output_table_fp, [(nochimera,seqs_fp)])
+        create_otu_table(output_table_fp, [(nochimera, seqs_fp)])
 
         table_obs = load_table(output_table_fp)
         outseqs = table_obs.ids(axis='observation')
-        outseqs=list(outseqs)
+        outseqs = list(outseqs)
         outseqs.sort()
         orig_seqs.sort()
 
         # test we see all ground truth sequences and no other
         self.assertItemsEqual(outseqs, orig_seqs)
 
-
     def test_get_files_for_table(self):
-        filelist=get_files_for_table(self.test_data_dir)
-        file1=join(self.test_data_dir,'testmerge.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
-        file2=join(self.test_data_dir,'testmerge2.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
-        self.assertEqual(len(filelist),2)
+        filelist = get_files_for_table(self.test_data_dir)
+        file1 = join(self.test_data_dir,
+                     'testmerge.fasta.trim.derep.no_artifacts'
+                     '.msa.deblur.no_chimeras')
+        file2 = join(self.test_data_dir,
+                     'testmerge2.fasta.trim.derep.no_artifacts'
+                     '.msa.deblur.no_chimeras')
+        self.assertEqual(len(filelist), 2)
         self.assertTrue(file1 in [filelist[0][0], filelist[1][0]])
         self.assertTrue(file2 in [filelist[0][0], filelist[1][0]])
         self.assertTrue('testmerge' in [filelist[0][1], filelist[1][1]])
 
-
     def test_create_otu_table(self):
         # merge the fasta files
-        m1=join(self.test_data_dir,'testmerge.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
-        m2=join(self.test_data_dir,'testmerge2.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
-        outfile=join(self.working_dir,'testmerge.biom')
-        create_otu_table(outfile, [(m1,'testmerge'),(m2,'testmerge2')])
+        m1 = join(self.test_data_dir,
+                  'testmerge.fasta.trim.derep.no_artifacts'
+                  '.msa.deblur.no_chimeras')
+        m2 = join(self.test_data_dir,
+                  'testmerge2.fasta.trim.derep.no_artifacts'
+                  '.msa.deblur.no_chimeras')
+        outfile = join(self.working_dir, 'testmerge.biom')
+        create_otu_table(outfile, [(m1, 'testmerge'), (m2, 'testmerge2')])
 
         # test the result
         table = load_table(outfile)
 
         # test a sequence present in both
-        self.assertEqual(table.get_value_by_ids('TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge'), 5)
-        self.assertEqual(table.get_value_by_ids('TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge2'), 8)
+        self.assertEqual(table.get_value_by_ids(
+            'TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCG'
+            'GTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGC'
+            'TTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge'), 5)
+        self.assertEqual(table.get_value_by_ids(
+            'TACGAGGggggCGAGCGTTGTTCG'
+            'GAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGG'
+            'CTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAAT'
+            'TTCCGGT', 'testmerge2'), 8)
         # and an otu present only in one
-        self.assertEqual(table.get_value_by_ids('TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTAAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge'), 7)
-        self.assertEqual(table.get_value_by_ids('TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTAAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge2'), 0)
+        self.assertEqual(table.get_value_by_ids(
+            'TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTT'
+            'AAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGA'
+            'GTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge'), 7)
+        self.assertEqual(table.get_value_by_ids(
+            'TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTA'
+            'AGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGT'
+            'GCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge2'), 0)
 
     def test_launch_workflow(self):
         """Test launching complete workflow using 3 simulated sequence files.

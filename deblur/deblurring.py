@@ -92,7 +92,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     is 10, sequences up to 10 - 1 = 9 hamming distance will be taken into
     account
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
     # Get the sequences
     seqs = get_sequences(input_seqs)

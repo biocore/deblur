@@ -29,7 +29,7 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              start_log)
 
 
-__version__="0.9.2.1"
+__version__ = "0.9.2.1"
 
 
 @click.group()
@@ -45,8 +45,9 @@ def deblur_cmds():
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
               help="Maximal bound on 1 nucleotide read error rate")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
-              help="The mean per nucleotide error, used for original sequence estimate. If "
-                   "not passed typical illumina error rate is used")
+              help="The mean per nucleotide error, used for original "
+              "sequence estimate. If "
+              "not passed typical illumina error rate is used")
 @click.option('--error-dist', '-d', required=False, type=str, default=None,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
@@ -59,7 +60,7 @@ def deblur_cmds():
 def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                 indel_max):
     """Clean read errors from Illumina reads"""
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
 
     # If the user provided an error_dist value, we map it to a list of floats
@@ -88,7 +89,7 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
               help="Sequence trim length")
 def trim(seqs_fp, output_fp, trim_length):
     """Trim FASTA sequences"""
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
     with open(seqs_fp, 'U') as in_f, open(output_fp, 'w') as out_f:
         for label, seq in trim_seqs(parse_fasta(in_f), trim_length):
@@ -159,7 +160,7 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
     provided with the --ref-fp (raw FASTA file) or
     --ref-db-fp (indexed database) options.
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.info('---------------------------------')
     logger.info('remove_artifacts')
     logger.info('number of database files %d' % len(ref_fp))
@@ -172,7 +173,8 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
                              "does not match the number of indexed "
                              "reference databases")
     else:
-        logger.warn('sortmerna database does not exist, creating it into dir %s' % output_dir)
+        logger.warn('sortmerna database does not exist, '
+                    'creating it into dir %s' % output_dir)
         ref_db_fp, files_to_remove = build_index_sortmerna(
             ref_fp=ref_fp,
             working_dir=output_dir)
@@ -232,12 +234,14 @@ def build_biom_table(seqs_fp, output_biom_fp,file_type):
     output_biom_fp : str
       the path where to save the output biom table file ('final.biom')
     file_type : str
-      the files type to add to the table (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras', can be '.fasta' or '.fa' if needed)
+      the files type to add to the table
+      (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras',
+      can be '.fasta' or '.fa' if needed)
     """
-    output_filename='final.biom'
+    output_filename = 'final.biom'
     output_fp = join(output_biom_fp, output_filename)
 
-    samples = get_files_for_table(seqs_fp,file_type)
+    samples = get_files_for_table(seqs_fp, file_type)
     create_otu_table(output_fp, samples)
 
 
@@ -311,9 +315,10 @@ def build_biom_table(seqs_fp, output_biom_fp,file_type):
                    "is a directory of fasta files (one per sample)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, threads, delim, keep_tmp_files,no_split):
+             trim_length, min_size, negate, threads, delim,
+             keep_tmp_files, no_split):
     """Launch deblur workflow"""
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.info('deblur workflow started on file %s' % seqs_fp)
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
@@ -333,7 +338,8 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     # Split demultiplexed FASTA on sample IDs
     if not no_split:
         out_dir_split = join(output_dir, "split")
-        logger.info('splitting file %s to per sample fasta. output %s' % (seqs_fp,out_dir_split))
+        logger.info('splitting file %s to per sample fasta. '
+                    'output %s' % (seqs_fp, out_dir_split))
         mkdir(out_dir_split)
         with open(seqs_fp, 'U') as seqs_f:
             split_sequence_file_on_sample_ids_to_files(
@@ -369,7 +375,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     logger.info('finished processing per sample fasta files')
 
     # Merge chimera cleaned fasta files to a single biom table
-    output_filename='final.biom'
+    output_filename = 'final.biom'
     output_fp = join(output_dir, output_filename)
 
     samples = get_files_for_table(working_dir)

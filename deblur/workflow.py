@@ -69,7 +69,7 @@ def dereplicate_seqs(seqs_fp,
     uc_output: boolean, optional
         output the dereplication map in .uc format
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.debug('dereplicate seqs file %s' % seqs_fp)
 
     log_name = "%s.log" % splitext(output_fp)[0]
@@ -99,8 +99,9 @@ def build_index_sortmerna(ref_fp, working_dir):
     all_file_to_remove: list
         index files to remove
     """
-    logger=logging.getLogger(__name__)
-    logger.info('build_index_sortmerna file %s to dir %s' % (ref_fp,working_dir))
+    logger = logging.getLogger(__name__)
+    logger.info('build_index_sortmerna file %s to'
+                ' dir %s' % (ref_fp, working_dir))
 
     all_db = []
     all_files_to_remove = []
@@ -145,7 +146,7 @@ def remove_artifacts_seqs(seqs_fp,
     verbose: boolean, optional
         If true, output SortMeRNA errors
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
@@ -156,7 +157,8 @@ def remove_artifacts_seqs(seqs_fp,
                      "%s.no_artifacts" % basename(seqs_fp))
     aligned_seq_ids = set()
     for i, db in enumerate(ref_fp):
-        logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s' % (db,working_dir,ref_db_fp[i],seqs_fp))
+        logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
+                     % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
         app_result = sortmerna_map(
             seq_path=seqs_fp,
@@ -189,20 +191,21 @@ def remove_artifacts_seqs(seqs_fp,
 
     # if negate = False, only output sequences
     # matching to at least one of the databases
-    totalseqs=0
-    okseqs=0
-    badseqs=0
+    totalseqs = 0
+    okseqs = 0
+    badseqs = 0
     with open(seqs_fp, 'U') as seqs_f:
         with open(output_fp, 'w') as out_f:
             for label, seq in parse_fasta(seqs_f):
-                totalseqs+=1
+                totalseqs += 1
                 label = label.split()[0]
                 if op(label):
                         out_f.write(">%s\n%s\n" % (label, seq))
-                        okseqs+=1
+                        okseqs += 1
                 else:
-                        badseqs+=1
-    logger.info('total sequences %d, passing sequences %d, failing sequences %d' % (totalseqs,okseqs,badseqs))
+                        badseqs += 1
+    logger.info('total sequences %d, passing sequences %d, '
+                'failing sequences %d' % (totalseqs, okseqs, badseqs))
     return output_fp
 
 
@@ -225,14 +228,15 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     --------
     skbio.Alignment
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.debug('multiple_sequence_alignment seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
         logger.info('msa failed. file %s has no reads' % seqs_fp)
         return False
     try:
-        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
+        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
+                                            params={'--thread': threads})
         return aligned_seqs
     except:
         # alignment can fail if only 1 sequence present
@@ -255,20 +259,23 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     output_fp
         the chimera removed fasta file name
     """
-    logger=logging.getLogger(__name__)
-    logger.debug('remove_chimeras_denovo_from_seqs seqs file %s to working dir %s' % (seqs_fp, working_dir))
+    logger = logging.getLogger(__name__)
+    logger.debug('remove_chimeras_denovo_from_seqs seqs file %s'
+                 'to working dir %s' % (seqs_fp, working_dir))
 
     output_fp = join(
         working_dir, "%s.no_chimeras" % basename(seqs_fp))
 
     # we use the parameters dn=0.000001, xn=1000, minh=10000000
     # so 1 mismatch in the A/B region will cancel it being labeled as chimera
-    # and ~3 unique reads in each region will make it a chimera if no mismatches
-    params=['vsearch','--uchime_denovo',seqs_fp]
-    params.extend(['-dn','0.000001','-xn','1000','-minh','10000000','--mindiffs','5'])
-    params.extend(['--nonchimeras',output_fp])
+    # and ~3 unique reads in each region will make it a chimera if
+    # no mismatches
+    params = ['vsearch', '--uchime_denovo', seqs_fp]
+    params.extend(['-dn', '0.000001', '-xn', '1000', '-minh'])
+    params.extend(['10000000', '--mindiffs', '5'])
+    params.extend(['--nonchimeras', output_fp])
     with open(output_fp+'.log', "w") as f:
-        subprocess.call(params, stdout=f,stderr=f)
+        subprocess.call(params, stdout=f, stderr=f)
     return output_fp
 
 
@@ -301,7 +308,7 @@ def generate_biom_data(clusters, delim='_'):
     QIIME is a GPL project, but we obtained permission from the authors of this
     function to port it to deblur (and keep it under deblur's BSD license).
     """
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     logger.debug('generate_biom_data')
 
     sample_ids = []
@@ -335,8 +342,9 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
     outdir: string
         dirpath to output split FASTA files
     """
-    logger=logging.getLogger(__name__)
-    logger.info('split_sequence_file_on_sample_ids_to_files for file %s into dir %s' % (seqs, outdir))
+    logger = logging.getLogger(__name__)
+    logger.info('split_sequence_file_on_sample_ids_to_files'
+                ' for file %s into dir %s' % (seqs, outdir))
 
     outputs = {}
     for bits in parse_fasta(seqs):
@@ -384,8 +392,9 @@ def merge_otu_tables(output_fp, all_tables):
     all_tables: list
         list of filepaths for BIOM tables to merge
     """
-    logger=logging.getLogger(__name__)
-    logger.debug('merge_otu_tables for file %d tables into file %s' % (len(all_tables), output_fp))
+    logger = logging.getLogger(__name__)
+    logger.debug('merge_otu_tables for file %d tables'
+                 ' into file %s' % (len(all_tables), output_fp))
 
     master = load_table(all_tables[0])
     for input_fp in all_tables[1:]:
@@ -393,7 +402,9 @@ def merge_otu_tables(output_fp, all_tables):
     write_biom_table(master, output_fp)
 
 
-def get_files_for_table(input_dir, file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
+def get_files_for_table(input_dir,
+                        file_end='.fasta.trim.derep.no_artifacts'
+                        '.msa.deblur.no_chimeras'):
     """Get a list of files to add to the output table
 
     Parameters:
@@ -412,11 +423,12 @@ def get_files_for_table(input_dir, file_end='.fasta.trim.derep.no_artifacts.msa.
             sampleid (file names without the file_end and path)
     """
     logger = logging.getLogger(__name__)
-    logger.debug('get_files_for_table input dir %s, file-ending %s' % (input_dir,file_end))
+    logger.debug('get_files_for_table input dir %s, '
+                 'file-ending %s' % (input_dir, file_end))
 
     names = []
     for cfile in listdir(input_dir):
-        cname=join(input_dir,cfile)
+        cname = join(input_dir, cfile)
         if not isfile(cname):
             continue
         if len(cfile) < len(file_end):
@@ -440,29 +452,31 @@ def create_otu_table(output_fp, deblurred_list):
         fasta files to add to the table
     """
     logger = logging.getLogger(__name__)
-    logger.debug('create_otu_table for %d samples, into output table %s' % (len(deblurred_list),output_fp))
+    logger.debug('create_otu_table for %d samples, '
+                 'into output table %s' % (len(deblurred_list), output_fp))
 
     seqdict = {}
     seqlist = []
     sampdict = {}
     samplist = []
-    obs=scipy.sparse.dok_matrix((1E9,1E6),dtype=np.int)
+    obs = scipy.sparse.dok_matrix((1E9, 1E6), dtype=np.int)
     for (cfilename, csampleid) in deblurred_list:
         if csampleid in sampdict:
             logger.error('sample %s already in table!' % csampleid)
             continue
-        sampdict[csampleid]=len(sampdict)-1
+        sampdict[csampleid] = len(sampdict)-1
         samplist.append(csampleid)
-        csampidx=len(sampdict)-1
-        for chead,cseq in parse_fasta(open(cfilename, 'U')):
+        csampidx = len(sampdict)-1
+        for chead, cseq in parse_fasta(open(cfilename, 'U')):
             if cseq not in seqdict:
-                seqdict[cseq]=len(seqlist)
+                seqdict[cseq] = len(seqlist)
                 seqlist.append(cseq)
-            cseqidx=seqdict[cseq]
+            cseqidx = seqdict[cseq]
             cfreq = float(re.search('(?<=size=)\w+', chead).group(0))
             obs[cseqidx, csampidx] = cfreq
-    logger.debug('loaded %d samples, %d unique sequences' % (len(samplist),len(seqlist)))
-    obs.resize((len(seqlist),len(samplist)))
+    logger.debug('loaded %d samples, %d unique sequences'
+                 % (len(samplist), len(seqlist)))
+    obs.resize((len(seqlist), len(samplist)))
     table = Table(obs, seqlist, samplist,
                   observation_metadata=None,
                   sample_metadata=None, table_id=None,
@@ -514,8 +528,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     output_no_chimers_fp : string
         filepath to fasta file with no chimeras of False if error encountered
     """
-    logger=logging.getLogger(__name__)
-    logger.info('------------------------------------------------------------------')
+    logger = logging.getLogger(__name__)
+    logger.info('--------------------------------------------------------')
     logger.info('launch_workflow for file %s' % seqs_fp)
 
     # Step 1: Trim sequences to specified length
@@ -567,7 +581,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     return output_no_chimeras_fp
 
 
-def start_log(level=logging.DEBUG,filename=''):
+def start_log(level=logging.DEBUG, filename=''):
     """
     start the logger for the run
 
@@ -575,13 +589,15 @@ def start_log(level=logging.DEBUG,filename=''):
     ----------
     levele : logging.DEBUG, logging.INFO etc. for the log level.
     filename : str
-      name of the filename to save the log to or empty (default) to use deblur.log.TIMESTAMP
+      name of the filename to save the log to or
+      empty (default) to use deblur.log.TIMESTAMP
     """
     if not filename:
         tstr = time.ctime()
-        tstr = tstr.replace(' ','.')
-        tstr = tstr.replace(':','.')
-        filename='deblur.log.%s' % tstr
-    logging.basicConfig(filename=filename,level=level,format='%(levelname)s:%(asctime)s:%(message)s')
-    logger=logging.getLogger(__name__)
+        tstr = tstr.replace(' ', '.')
+        tstr = tstr.replace(':', '.')
+        filename = 'deblur.log.%s' % tstr
+    logging.basicConfig(filename=filename, level=level,
+                        format='%(levelname)s:%(asctime)s:%(message)s')
+    logger = logging.getLogger(__name__)
     logger.debug('deblurring started')
