@@ -112,7 +112,9 @@ def build_index_sortmerna(ref_fp, working_dir):
             build_database_sortmerna(
                 fasta_path=db,
                 max_pos=10000,
-                output_dir=working_dir)
+                output_dir=working_dir,
+                temp_dir=working_dir,
+                HALT_EXEC=False)
         all_db.append(sortmerna_db)
         all_files_to_remove.extend(files_to_remove)
     logger.info('processed %d files' % len(all_db))
@@ -171,6 +173,9 @@ def remove_artifacts_seqs(seqs_fp,
         stderr_fp = app_result['StdErr'].name
         if stat(stderr_fp).st_size != 0:
             logger.critical('sortmerna error on file %s' % seqs_fp)
+            with open(stderr_fp, 'U') as stderr_f:
+                for line in stderr_f:
+                    logger.critical(line)
             if verbose:
                 with open(stderr_fp, 'U') as stderr_f:
                     for line in stderr_f:
@@ -235,9 +240,14 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
         logger.info('msa failed. file %s has no reads' % seqs_fp)
         return False
     try:
-        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
-                                            params={'--thread': threads})
-        return aligned_seqs
+        #        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
+        #                                            params={'--thread': threads})
+        #        return aligned_seqs
+        msa_fp = seqs_fp + '.msa'
+        params = ['mafft', '--quiet', '--parttree', '--auto', seqs_fp]
+        with open(msa_fp, "w") as f:
+            subprocess.call(params, stdout=f)
+        return msa_fp
     except:
         # alignment can fail if only 1 sequence present
         logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
@@ -558,13 +568,19 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
-    with open(output_msa_fp, 'w') as f:
-        alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-                                                threads=threads)
-        if not alignment:
-            logger.debug('msa failed. aborting')
-            return False
-        f.write(alignment.to_fasta())
+    # with open(output_msa_fp, 'w') as f:
+    #     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+    #                                             threads=threads)
+    #     if not alignment:
+    #         logger.debug('msa failed. aborting')
+    #         return False
+    #     f.write(alignment.to_fasta())
+    alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+                                            threads=threads)
+    if not alignment:
+        logger.debug('msa failed. aborting')
+        return False
+
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
