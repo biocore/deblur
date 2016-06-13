@@ -21,7 +21,7 @@ import time
 from bfillings.vsearch import vsearch_dereplicate_exact_seqs
 from bfillings.sortmerna_v2 import (build_database_sortmerna,
                                     sortmerna_map)
-from bfillings.mafft_v7 import align_unaligned_seqs
+# from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
 from biom import load_table
