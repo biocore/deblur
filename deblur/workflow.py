@@ -71,13 +71,13 @@ def dereplicate_seqs(seqs_fp,
 
     log_name = "%s.log" % output_fp
 
-    params = ['vsearch','--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout']
-    params.extend(['--fasta_width', '0', '--threads','1', '--minuniquesize', str(min_size)])
+    params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout']
+    params.extend(['--fasta_width', '0', '--threads', '1', '--minuniquesize', str(min_size)])
     params.extend(['--quiet'])
     if use_log:
         params.extend(['--log', log_name])
-    res=subprocess.call(params)
-    if not res==0:
+    res = subprocess.call(params)
+    if not res == 0:
         logger.error('Problem running vsearch dereplication on file %s' % seqs_fp)
         logger.debug('parameters used:\n%s' % params)
         return
@@ -108,9 +108,9 @@ def build_index_sortmerna(ref_fp, working_dir):
         index_basename = splitext(fasta_filename)[0]
         db_output = join(working_dir, index_basename)
         logger.debug('processing file %s into location %s' % (db, db_output))
-        params = ['indexdb_rna', '--ref', '%s,%s' % (db,db_output), '--tmpdir', working_dir]
-        res=subprocess.call(params)
-        if not res==0:
+        params = ['indexdb_rna', '--ref', '%s,%s' % (db, db_output), '--tmpdir', working_dir]
+        res = subprocess.call(params)
+        if not res == 0:
             logger.error('Problem running indexdb_rna on file %s to dir %s. database not indexed' % (db, db_output))
             continue
         logger.debug('file %s indexed' % db)
@@ -163,16 +163,16 @@ def remove_artifacts_seqs(seqs_fp,
         # run SortMeRNA
         params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i])]
         params.extend(['--aligned', blast_output])
-        params.extend(['--blast','3','--best','1','--print_all_reads'])
+        params.extend(['--blast', '3', '--best', '1', '--print_all_reads'])
         params.extend(['-v'])
 
         with open(blast_output + '.log', "w") as f:
-            res=subprocess.call(params, stdout=f)
-        if not res==0:
+            res = subprocess.call(params, stdout=f)
+        if not res == 0:
             logger.critical('sortmerna error on file %s' % seqs_fp)
             return output_fp
 
-        bfl = open(blast_output+'.blast','r')
+        bfl = open(blast_output+'.blast', 'r')
         for line in bfl:
             line = line.strip().split('\t')
             if line[1] == '*':
@@ -277,7 +277,7 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     params.extend(['-dn', '0.000001', '-xn', '1000'])
     params.extend(['-minh', '10000000', '--mindiffs', '5'])
     params.extend(['--fasta_width', '0'])
-    params.extend(['--threads','1'])
+    params.extend(['--threads', '1'])
     with open(output_fp+'.log', "w") as f:
         subprocess.call(params, stdout=f, stderr=f)
     return output_fp

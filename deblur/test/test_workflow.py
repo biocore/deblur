@@ -11,7 +11,7 @@ from shutil import rmtree
 from tempfile import mkdtemp
 from os import listdir
 from types import GeneratorType
-from os.path import join, isfile, basename, abspath, dirname, splitext
+from os.path import join, isfile, abspath, dirname, splitext
 
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
@@ -65,9 +65,8 @@ class workflowTests(TestCase):
         start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
-        #  remove_files(self.files_to_remove)
-        # rmtree(self.working_dir)
-        pass
+        remove_files(self.files_to_remove)
+        rmtree(self.working_dir)
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),
@@ -247,7 +246,7 @@ class workflowTests(TestCase):
                 ref_f.write(">%s\n%s\n" % seq)
         self.files_to_remove.append(ref_fp)
         # build index
-        sortmerna_db = build_index_sortmerna([ref_fp],self.working_dir)
+        sortmerna_db = build_index_sortmerna([ref_fp], self.working_dir)
 #        self.files_to_remove.extend(files_to_remove)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
@@ -299,7 +298,7 @@ class workflowTests(TestCase):
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
         self.files_to_remove.append(ref_fp)
-        ref_db_fp = build_index_sortmerna([ref_fp],self.working_dir)
+        ref_db_fp = build_index_sortmerna([ref_fp], self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),
