@@ -107,10 +107,7 @@ def trim(seqs_fp, output_fp, trim_length):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-@click.option('--uc-output', required=False, type=bool, default=True,
-              show_default=True, help="Output dereplication map in "
-                                      " .uc format")
-def dereplicate(seqs_fp, output_fp, min_size, uc_output):
+def dereplicate(seqs_fp, output_fp, min_size):
     """
     Dereplicate FASTA sequences.
 
@@ -119,8 +116,7 @@ def dereplicate(seqs_fp, output_fp, min_size, uc_output):
     """
     dereplicate_seqs(seqs_fp=seqs_fp,
                      output_fp=output_fp,
-                     min_size=min_size,
-                     uc_output=uc_output)
+                     min_size=min_size)
 
 
 # ARTIFACT REMOVAL COMMAND
@@ -175,16 +171,40 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
     else:
         logger.warn('sortmerna database does not exist, '
                     'creating it into dir %s' % output_dir)
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        ref_db_fp = build_index_sortmerna(
             ref_fp=ref_fp,
             working_dir=output_dir)
 
     remove_artifacts_seqs(seqs_fp=seqs_fp,
-                          ref_fp=[ref_fp],
+                          ref_fp=ref_fp,
                           working_dir=output_dir,
-                          ref_db_fp=[ref_db_fp],
+                          ref_db_fp=ref_db_fp,
                           negate=negate,
                           threads=threads)
+
+
+# INDEX ARTIFACT DB COMMAND
+@deblur_cmds.command()
+@click.argument('ref_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
+                                file_okay=True))
+@click.argument('output_dir', required=True,
+                type=click.Path(resolve_path=True, readable=True, exists=False,
+                                file_okay=True))
+def build_db_index(ref_fp,output_dir):
+    """
+    Preapare the artifacts database
+
+    Input:
+    ref_fp - the fasta sequence database for artifact removal
+    output_dir - the directory to where to write the indexed database
+    """
+    logger = logging.getLogger(__name__)
+    logger.info('---------------------------------')
+    logger.info('build_db_index')
+    logger.info('for database file %s, into dir %s' % (ref_fp,output_dir))
+    build_index_sortmerna(ref_fp=[ref_fp], working_dir=output_dir)
+    logger.info('done build_db_index')
 
 
 # MULTIPLE SEQUENCE ALIGNMENT COMMAND
@@ -353,7 +373,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     files_to_remove = []
     if not ref_db_fp:
         logger.info('building sortmerna index files')
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        ref_db_fp = build_index_sortmerna(
             ref_fp=ref_fp,
             working_dir=working_dir)
     all_bioms = []

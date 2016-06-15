@@ -6,7 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os.path import splitext, join, basename, isfile
+from os.path import splitext, join, basename, isfile, split
 from os import listdir
 from collections import defaultdict
 from datetime import datetime
@@ -18,9 +18,9 @@ import numpy as np
 import subprocess
 import time
 
-from bfillings.vsearch import vsearch_dereplicate_exact_seqs
-from bfillings.sortmerna_v2 import (build_database_sortmerna,
-                                    sortmerna_map)
+#from bfillings.vsearch import vsearch_dereplicate_exact_seqs
+#from bfillings.sortmerna_v2 import (build_database_sortmerna,
+#                                    sortmerna_map)
 # from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
@@ -54,7 +54,7 @@ def trim_seqs(input_seqs, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2,
-                     uc_output=True):
+                     use_log=False):
     """Dereplicate FASTA sequences and remove singletons using VSEARCH.
 
     Parameters
@@ -66,20 +66,24 @@ def dereplicate_seqs(seqs_fp,
     min_size : integer, optional
         discard sequences with an abundance value smaller
         than integer
-    uc_output: boolean, optional
-        output the dereplication map in .uc format
+    use_log: boolean, optional
+        save the vsearch logfile as well (to output_fp.log)
+        default=False
     """
     logger = logging.getLogger(__name__)
     logger.debug('dereplicate seqs file %s' % seqs_fp)
 
-    log_name = "%s.log" % splitext(output_fp)[0]
+    log_name = "%s.log" % output_fp
 
-    vsearch_dereplicate_exact_seqs(
-        fasta_filepath=seqs_fp,
-        output_filepath=output_fp,
-        output_uc=uc_output,
-        minuniquesize=min_size,
-        log_name=log_name)
+    params = ['vsearch','--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout']
+    params.extend(['--fasta_width', '0', '--threads','1', '--minuniquesize', str(min_size)])
+    if use_log:
+        params.extend(['--log', log_name])
+    res=subprocess.call(params)
+    if not res==0:
+        logger.error('Problem running vsearch dereplication on file %s' % seqs_fp)
+        logger.debug('parameters used:\n%s' % params)
+        return
 
 
 def build_index_sortmerna(ref_fp, working_dir):
@@ -90,35 +94,31 @@ def build_index_sortmerna(ref_fp, working_dir):
     ref_fp: tuple
         filepaths to FASTA reference databases
     working_dir: string
-        working directory path
+        working directory path where to store the indexed database
 
     Returns
     -------
     all_db: tuple
         filepaths to SortMeRNA indexed reference databases
-    all_file_to_remove: list
-        index files to remove
     """
     logger = logging.getLogger(__name__)
-    logger.info('build_index_sortmerna file %s to'
+    logger.info('build_index_sortmerna files %s to'
                 ' dir %s' % (ref_fp, working_dir))
 
     all_db = []
-    all_files_to_remove = []
     for db in ref_fp:
-        logger.debug('processing file %s' % db)
-        # build index
-        sortmerna_db, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=db,
-                max_pos=10000,
-                output_dir=working_dir,
-                temp_dir=working_dir,
-                HALT_EXEC=False)
-        all_db.append(sortmerna_db)
-        all_files_to_remove.extend(files_to_remove)
-    logger.info('processed %d files' % len(all_db))
-    return tuple(all_db), all_files_to_remove
+        fasta_dir, fasta_filename = split(db)
+        index_basename = splitext(fasta_filename)[0]
+        db_output = join(working_dir, index_basename)
+        logger.debug('processing file %s into location %s' % (db, db_output))
+        params = ['indexdb_rna', '--ref', '%s,%s' % (db,db_output), '--tmpdir', working_dir]
+        res=subprocess.call(params)
+        if not res==0:
+            logger.error('Problem running indexdb_rna on file %s to dir %s. database not indexed' % (db, db_output))
+            continue
+        logger.debug('file %s indexed' % db)
+        all_db.append(db_output)
+    return all_db
 
 
 def remove_artifacts_seqs(seqs_fp,
@@ -157,37 +157,32 @@ def remove_artifacts_seqs(seqs_fp,
 
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
+    blast_output = join(working_dir,
+                        '%s.sortmerna' % basename(seqs_fp))
     aligned_seq_ids = set()
     for i, db in enumerate(ref_fp):
         logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
                      % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
-        app_result = sortmerna_map(
-            seq_path=seqs_fp,
-            output_dir=working_dir,
-            refseqs_fp=db,
-            sortmerna_db=ref_db_fp[i],
-            threads=threads,
-            best=1)
-        # Print SortMeRNA errors
-        stderr_fp = app_result['StdErr'].name
-        if stat(stderr_fp).st_size != 0:
-            logger.critical('sortmerna error on file %s' % seqs_fp)
-            with open(stderr_fp, 'U') as stderr_f:
-                for line in stderr_f:
-                    logger.critical(line)
-            if verbose:
-                with open(stderr_fp, 'U') as stderr_f:
-                    for line in stderr_f:
-                        print(line)
-            raise ValueError("Could not run SortMeRNA on file %s" % seqs_fp)
+        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i])]
+        params.extend(['--aligned', blast_output])
+        params.extend(['--blast','3','--best','1','--print_all_reads'])
+        params.extend(['-v'])
 
-        for line in app_result['BlastAlignments']:
+        with open(blast_output + '.log', "w") as f:
+            res=subprocess.call(params, stdout=f)
+        if not res==0:
+            logger.critical('sortmerna error on file %s' % seqs_fp)
+            return output_fp
+
+        bfl = open(blast_output+'.blast','r')
+        for line in bfl:
             line = line.strip().split('\t')
             if line[1] == '*':
                 continue
             else:
                 aligned_seq_ids.add(line[0])
+        bfl.close()
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -281,9 +276,10 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     # and ~3 unique reads in each region will make it a chimera if
     # no mismatches
     params = ['vsearch', '--uchime_denovo', seqs_fp]
-    params.extend(['-dn', '0.000001', '-xn', '1000', '-minh'])
-    params.extend(['10000000', '--mindiffs', '5'])
     params.extend(['--nonchimeras', output_fp])
+    params.extend(['-dn', '0.000001', '-xn', '1000'])
+    params.extend(['-minh', '10000000', '--mindiffs', '5'])
+    params.extend(['--fasta_width', '0'])
     with open(output_fp+'.log', "w") as f:
         subprocess.call(params, stdout=f, stderr=f)
     return output_fp
@@ -553,8 +549,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                            "%s.derep" % basename(output_trim_fp))
     dereplicate_seqs(seqs_fp=output_trim_fp,
                      output_fp=output_derep_fp,
-                     min_size=min_size,
-                     uc_output=True)
+                     min_size=min_size)
     # Step 3: Remove artifacts
     output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
                                             ref_fp=ref_fp,
