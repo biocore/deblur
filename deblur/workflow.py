@@ -18,10 +18,6 @@ import numpy as np
 import subprocess
 import time
 
-#from bfillings.vsearch import vsearch_dereplicate_exact_seqs
-#from bfillings.sortmerna_v2 import (build_database_sortmerna,
-#                                    sortmerna_map)
-# from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
 from biom import load_table
@@ -77,6 +73,7 @@ def dereplicate_seqs(seqs_fp,
 
     params = ['vsearch','--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout']
     params.extend(['--fasta_width', '0', '--threads','1', '--minuniquesize', str(min_size)])
+    params.extend(['--quiet'])
     if use_log:
         params.extend(['--log', log_name])
     res=subprocess.call(params)
@@ -280,6 +277,7 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     params.extend(['-dn', '0.000001', '-xn', '1000'])
     params.extend(['-minh', '10000000', '--mindiffs', '5'])
     params.extend(['--fasta_width', '0'])
+    params.extend(['--threads','1'])
     with open(output_fp+'.log', "w") as f:
         subprocess.call(params, stdout=f, stderr=f)
     return output_fp

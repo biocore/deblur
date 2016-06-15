@@ -16,8 +16,8 @@ from os.path import join, isfile, basename, abspath, dirname, splitext
 from skbio.util import remove_files
 from skbio.parse.sequences import parse_fasta
 from skbio.alignment import SequenceCollection
-from skbio.sequence import DNA
-from bfillings.sortmerna_v2 import build_database_sortmerna
+from skbio import DNA
+
 from biom import load_table
 import logging
 
@@ -65,8 +65,9 @@ class workflowTests(TestCase):
         start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
-        remove_files(self.files_to_remove)
-        rmtree(self.working_dir)
+        #  remove_files(self.files_to_remove)
+        # rmtree(self.working_dir)
+        pass
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),
@@ -105,12 +106,10 @@ class workflowTests(TestCase):
                 seqs_f.write(">%s\n%s\n" % seq)
 
         output_fp = join(self.working_dir, "seqs_derep.fasta")
-        log_fp = join(self.working_dir, "seqs_derep.log")
 
         dereplicate_seqs(seqs_fp=seqs_fp,
                          output_fp=output_fp)
         self.assertTrue(isfile(output_fp))
-        self.assertTrue(isfile(log_fp))
 
         exp = [("seq1;size=3;",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
@@ -139,13 +138,11 @@ class workflowTests(TestCase):
                 seqs_f.write(">%s\n%s\n" % seq)
 
         output_fp = join(self.working_dir, "seqs_derep.fasta")
-        log_fp = join(self.working_dir, "seqs_derep.log")
 
         dereplicate_seqs(seqs_fp=seqs_fp,
                          output_fp=output_fp,
                          min_size=1)
         self.assertTrue(isfile(output_fp))
-        self.assertTrue(isfile(log_fp))
 
         exp = [("seq1;size=3;",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
@@ -198,7 +195,7 @@ class workflowTests(TestCase):
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
         self.files_to_remove.append(ref_fp)
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        ref_db_fp = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
@@ -250,17 +247,13 @@ class workflowTests(TestCase):
                 ref_f.write(">%s\n%s\n" % seq)
         self.files_to_remove.append(ref_fp)
         # build index
-        sortmerna_db, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=ref_fp,
-                max_pos=10000,
-                output_dir=self.working_dir)
-        self.files_to_remove.extend(files_to_remove)
+        sortmerna_db = build_index_sortmerna([ref_fp],self.working_dir)
+#        self.files_to_remove.extend(files_to_remove)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),
                                           working_dir=self.working_dir,
-                                          ref_db_fp=(sortmerna_db,),
+                                          ref_db_fp=sortmerna_db,
                                           negate=False,
                                           threads=1)
 
@@ -306,9 +299,7 @@ class workflowTests(TestCase):
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
         self.files_to_remove.append(ref_fp)
-        ref_db_fp, files_to_remove = build_index_sortmerna(
-            ref_fp=(ref_fp,),
-            working_dir=self.working_dir)
+        ref_db_fp = build_index_sortmerna([ref_fp],self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),
@@ -321,71 +312,6 @@ class workflowTests(TestCase):
             for label, seq in parse_fasta(output_f):
                 obs_seqs.append(label)
         self.assertEqual(obs_seqs, exp_seqs)
-
-    def test_remove_artifacts_seqs_mismatch_ref_index(self):
-        """ Test remove_artifacts_seqs() function for removing
-            sequences not matching to a reference database
-            using SortMeRNA. A ValueError() should be raised
-            when a user passes a reference sequence and an index
-            database that do not match.
-        """
-        seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
-                ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-                ("seq3", "TCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCC"),
-                ("seq4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
-                ("seq5", "CTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATAGGGTC"),
-                ("seq6", "TTGAGCCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAAT"),
-                ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
-                ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
-                ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-        seqs_fp = join(self.working_dir, "seqs.fasta")
-        with open(seqs_fp, 'w') as seqs_f:
-            for seq in seqs:
-                seqs_f.write(">%s\n%s\n" % seq)
-        ref = [("ref1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTA"
-                        "GTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-               ("ref2", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
-                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-               ("ref3", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
-                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-               ("ref4", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
-                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
-               ("ref5", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
-                        "TCGGCTTTGTAAATCCCTGGGTAAATAGGGT"),
-               ("ref6", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCCGTAG"
-                        "TCGGCTTTGTAAATCCCTGGGTAAATCGGGT")]
-        ref_fp = join(self.working_dir, "ref5.fasta")
-        with open(ref_fp, 'w') as ref_f:
-            for seq in ref:
-                ref_f.write(">%s\n%s\n" % seq)
-        self.files_to_remove.append(ref_fp)
-        ref_bis = [("ref7", "attaaatcagttatcgtttatttgatagttcctttactacatgga"
-                            "tatc"),
-                   ("ref8", "accttacgagaaatcaaagtctttgggttctggggggagtatggt"
-                            "cgcaaggctgaaacttaaaggaattgacggaaggg"),
-                   ("ref9", "aattgcgataacgaacgagaccttaacctactaaatagtgctgct"
-                            "agcatttgc"),
-                   ("ref10", "gacgggtgacggagaattagggttcgattccggagagggagcct"
-                             "gagaaacggctaccacatccaag")]
-        ref_bis_fp = join(self.working_dir, "ref_bis.fasta")
-        with open(ref_bis_fp, 'w') as ref_bis_f:
-            for seq in ref_bis:
-                ref_bis_f.write(">%s\n%s\n" % seq)
-        # build index
-        sortmerna_db, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=ref_bis_fp,
-                max_pos=10000,
-                output_dir=self.working_dir)
-        self.files_to_remove.extend(files_to_remove)
-        self.assertRaises(ValueError,
-                          remove_artifacts_seqs,
-                          seqs_fp=seqs_fp,
-                          ref_fp=(ref_fp,),
-                          working_dir=self.working_dir,
-                          ref_db_fp=(sortmerna_db,),
-                          negate=False,
-                          threads=1)
 
     def test_remove_chimeras_denovo_from_seqs(self):
         """ Test remove_chimeras_denovo_from_seqs() method functionality.
@@ -444,7 +370,10 @@ class workflowTests(TestCase):
         seqs_fp = join(self.working_dir, "seqs.fna")
         with open(seqs_fp, 'w') as o:
             o.write(seqs_col.to_fasta())
-        alignment = multiple_sequence_alignment(seqs_fp)
+        alignment_file = multiple_sequence_alignment(seqs_fp)
+        with open(alignment_file, 'U') as f:
+            aligned_seqs = [DNA(item[1], id=item[0]) for item in parse_fasta(f)]
+
         align_exp = [
             DNA(
                 'caccggcggcccg-gtggtggccattattattgggtctaaag', id='seq_1'),
@@ -456,7 +385,7 @@ class workflowTests(TestCase):
                 'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
             DNA(
                 'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
-        self.assertItemsEqual(alignment, align_exp)
+        self.assertItemsEqual(aligned_seqs, align_exp)
 
     def test_build_index_sortmerna(self):
         """Test functionality of build_index_sortmerna()
@@ -494,15 +423,10 @@ class workflowTests(TestCase):
             for seq in ref2:
                 ref_f.write(">%s\n%s\n" % seq)
         ref_fps = tuple([ref1_fp, ref2_fp])
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        ref_db_fp = build_index_sortmerna(
             ref_fp=ref_fps,
             working_dir=self.working_dir)
-        files_to_remove_exp = ['ref1.stats', 'ref1.pos_0.dat',
-                               'ref1.kmer_0.dat', 'ref1.bursttrie_0.dat',
-                               'ref2.stats', 'ref2.pos_0.dat',
-                               'ref2.kmer_0.dat', 'ref2.bursttrie_0.dat']
-        files_to_remove_act = [basename(f) for f in files_to_remove]
-        self.assertListEqual(files_to_remove_exp, files_to_remove_act)
+        self.assertEqual(len(ref_fps), len(ref_db_fp))
 
     def run_workflow_try(self, simfilename, origfilename, ref_fp, ref_db_fp):
         """Test launching the complete workflow using simulated sequences
@@ -608,7 +532,7 @@ class workflowTests(TestCase):
         """
         # index the 70% rep. set database
         ref_fp = join(self.test_data_dir, '70_otus.fasta')
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        ref_db_fp = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
 
