@@ -276,7 +276,9 @@ class workflowTests(TestCase):
                 ("phix1", "TCTAAAGGTAAAAAACGTTCTGGCGCTCGCCCTGGTCGTCCGCAGCC"),
                 ("phix2", "CTGGCGCTCGCCCTGGTCGTCCGCAGCCGTTGCGAGGTACTAAAGGC"),
                 ("phix3", "GCGCATAAATTTGAGCAGATTTGTCGTCACAGGTTGCGCCGCCAAAA")]
-        exp_seqs = ["phix1", "phix2", "phix3"]
+        # seq5 is 80% similar, so should be kept for 0.95 default similarity
+        # to artifacts
+        exp_seqs = ["seq5", "phix1", "phix2", "phix3"]
         seqs_fp = join(self.working_dir, "seqs.fasta")
         with open(seqs_fp, 'w') as seqs_f:
             for seq in seqs:

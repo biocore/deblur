@@ -333,6 +333,8 @@ def build_biom_table(seqs_fp, output_biom_fp,file_type):
               show_default=True,
               help="Skip the split fasta to files step. Assumes seqs_fp "
                    "is a directory of fasta files (one per sample)")
+@click.option('-A', required=False, type=bool, default=False,
+              help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_size, negate, threads, delim,

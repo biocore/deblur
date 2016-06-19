@@ -124,7 +124,9 @@ def remove_artifacts_seqs(seqs_fp,
                           ref_db_fp,
                           negate=False,
                           threads=1,
-                          verbose=False):
+                          verbose=False,
+                          sim_thresh=0,
+                          coverage_thresh=0):
     """Remove artifacts from FASTA file using SortMeRNA.
 
     Parameters
@@ -144,6 +146,10 @@ def remove_artifacts_seqs(seqs_fp,
         number of threads to use for SortMeRNA
     verbose: boolean, optional
         If true, output SortMeRNA errors
+    sim_thresh: float, optional
+        The minimal similarity threshold for keeping the sequence
+        if 0, the default values used are 0.65 for negate=False,
+        0.95 for negate=True
     """
     logger = logging.getLogger(__name__)
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
@@ -151,6 +157,18 @@ def remove_artifacts_seqs(seqs_fp,
     if stat(seqs_fp).st_size == 0:
         logger.warn('file %s has size 0, continuing' % seqs_fp)
         return
+
+    if coverage_thresh == 0:
+        if negate:
+            coverage_thresh = 0.95
+        else:
+            coverage_thresh = 0.3
+
+    if sim_thresh == 0:
+        if negate:
+            sim_thresh = 0.95
+        else:
+            sim_thresh = 0.65
 
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
@@ -175,9 +193,11 @@ def remove_artifacts_seqs(seqs_fp,
         bfl = open(blast_output+'.blast', 'r')
         for line in bfl:
             line = line.strip().split('\t')
+            # if * means no match
             if line[1] == '*':
                 continue
-            else:
+            # check if % identity and coverage are large enough
+            if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
                 aligned_seq_ids.add(line[0])
         bfl.close()
 
@@ -493,7 +513,7 @@ def create_otu_table(output_fp, deblurred_list):
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads=1, delim='_'):
+                    ref_db_fp, negate, threads=1, delim='_', sim_thresh=0):
     """Launch full deblur workflow.
 
     Parameters
@@ -526,6 +546,9 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         number of threads to use for SortMeRNA
     delim: string, optional
         delimiter in FASTA labels to separate sample ID from sequence ID
+    sim_thresh: float, optional
+        the minimal similarity for a sequence to the database.
+        if 0, take the defaults (0.65 for negate=False, 0.95 for negate=True)
 
     Return
     ------
@@ -554,7 +577,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                                             working_dir=working_dir,
                                             ref_db_fp=ref_db_fp,
                                             negate=negate,
-                                            threads=threads)
+                                            threads=threads,
+                                            sim_thresh=sim_thresh)
     if not output_artif_fp:
         logger.debug('remove artifacts failed, aborting')
         return
