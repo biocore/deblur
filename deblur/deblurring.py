@@ -96,7 +96,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
 
     # Get the sequences
     seqs = get_sequences(input_seqs)
-    logger.debug('deblurring %d sequences' % len(seqs))
+    logger.info('deblurring %d sequences' % len(seqs))
 
     # if error_list not supplied, use the default (22 mock mixture setup)
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
@@ -165,5 +165,5 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
             seq_j.frequency -= correction_value
 
     result = [s for s in seqs if round(s.frequency) > 0]
-
+    logger.info('%d unique sequences left following deblurring' % len(result))
     return result

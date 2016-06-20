@@ -17,6 +17,7 @@ import scipy
 import numpy as np
 import subprocess
 import time
+import warnings
 
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
@@ -70,7 +71,7 @@ def dereplicate_seqs(seqs_fp,
         number of threads to use (0 for all available)
     """
     logger = logging.getLogger(__name__)
-    logger.debug('dereplicate seqs file %s' % seqs_fp)
+    logger.info('dereplicate seqs file %s' % seqs_fp)
 
     log_name = "%s.log" % output_fp
 
@@ -162,7 +163,7 @@ def remove_artifacts_seqs(seqs_fp,
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
-        logger.warn('file %s has size 0, continuing' % seqs_fp)
+        logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
         return
 
     if coverage_thresh == 0:
@@ -250,14 +251,14 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
         name of output alignment file or None if error encountered
     """
     logger = logging.getLogger(__name__)
-    logger.debug('multiple_sequence_alignment seqs file %s' % seqs_fp)
+    logger.info('multiple_sequence_alignment seqs file %s' % seqs_fp)
 
     # for mafft we use -1 to denote all threads and not 0
     if threads==0:
         threads=-1
 
     if stat(seqs_fp).st_size == 0:
-        logger.info('msa failed. file %s has no reads' % seqs_fp)
+        logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
     # try:
         #        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
@@ -298,8 +299,8 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
         the chimera removed fasta file name
     """
     logger = logging.getLogger(__name__)
-    logger.debug('remove_chimeras_denovo_from_seqs seqs file %s'
-                 'to working dir %s' % (seqs_fp, working_dir))
+    logger.info('remove_chimeras_denovo_from_seqs seqs file %s'
+                'to working dir %s' % (seqs_fp, working_dir))
 
     output_fp = join(
         working_dir, "%s.no_chimeras" % basename(seqs_fp))
@@ -323,56 +324,56 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     return output_fp
 
 
-def generate_biom_data(clusters, delim='_'):
-    """ Parse OTU map dictionary into a sparse dictionary.
+# def generate_biom_data(clusters, delim='_'):
+#     """ Parse OTU map dictionary into a sparse dictionary.
 
-    Parameters
-    ----------
-    clusters: dictionary
-        OTU map as dictionary
-    delim: string, optional
-        delimiter for splitting sample and sequence IDs in sequence label
-        default: '_'
+#     Parameters
+#     ----------
+#     clusters: dictionary
+#         OTU map as dictionary
+#     delim: string, optional
+#         delimiter for splitting sample and sequence IDs in sequence label
+#         default: '_'
 
-    Returns
-    -------
-    data: dictionary
-        sprase dictionary {(otu_idx,sample_idx):count}
-    cluster_ids: list
-        list of cluster IDs
-    sample_ids: list
-        list of sample IDs
+#     Returns
+#     -------
+#     data: dictionary
+#         sprase dictionary {(otu_idx,sample_idx):count}
+#     cluster_ids: list
+#         list of cluster IDs
+#     sample_ids: list
+#         list of sample IDs
 
-    Notes
-    -----
-    Sparse dictionary format is {(cluster_idx,sample_idx):count}.
-    This function is based on QIIME's parse_otu_map() function found at
-    https://github.com/biocore/qiime/blob/master/qiime/parse.py.
+#     Notes
+#     -----
+#     Sparse dictionary format is {(cluster_idx,sample_idx):count}.
+#     This function is based on QIIME's parse_otu_map() function found at
+#     https://github.com/biocore/qiime/blob/master/qiime/parse.py.
 
-    QIIME is a GPL project, but we obtained permission from the authors of this
-    function to port it to deblur (and keep it under deblur's BSD license).
-    """
-    logger = logging.getLogger(__name__)
-    logger.debug('generate_biom_data')
+#     QIIME is a GPL project, but we obtained permission from the authors of this
+#     function to port it to deblur (and keep it under deblur's BSD license).
+#     """
+#     logger = logging.getLogger(__name__)
+#     logger.info('generate_biom_data')
 
-    sample_ids = []
-    sample_id_idx = {}
-    data = defaultdict(int)
-    sample_count = 0
-    for cluster_idx, otu in enumerate(clusters):
-        for seq_id in clusters[otu]:
-            seq_id_sample = seq_id.split(delim)[0]
-            try:
-                sample_idx = sample_id_idx[seq_id_sample]
-            except KeyError:
-                sample_idx = sample_count
-                sample_id_idx[seq_id_sample] = sample_idx
-                sample_ids.append(seq_id_sample)
-                sample_count += 1
-            data[(cluster_idx, sample_idx)] += 1
-    cluster_ids = clusters.keys()
+#     sample_ids = []
+#     sample_id_idx = {}
+#     data = defaultdict(int)
+#     sample_count = 0
+#     for cluster_idx, otu in enumerate(clusters):
+#         for seq_id in clusters[otu]:
+#             seq_id_sample = seq_id.split(delim)[0]
+#             try:
+#                 sample_idx = sample_id_idx[seq_id_sample]
+#             except KeyError:
+#                 sample_idx = sample_count
+#                 sample_id_idx[seq_id_sample] = sample_idx
+#                 sample_ids.append(seq_id_sample)
+#                 sample_count += 1
+#             data[(cluster_idx, sample_idx)] += 1
+#     cluster_ids = clusters.keys()
 
-    return data, cluster_ids, sample_ids
+#     return data, cluster_ids, sample_ids
 
 
 def split_sequence_file_on_sample_ids_to_files(seqs,
@@ -424,31 +425,30 @@ def write_biom_table(table, biom_fp):
             logger.debug('wrote to json file %s' % biom_fp)
 
 
-def merge_otu_tables(output_fp, all_tables):
-    """Merge multiple BIOM tables into one.
+# def merge_otu_tables(output_fp, all_tables):
+#     """Merge multiple BIOM tables into one.
 
-    Code taken from QIIME's merge_otu_tables.py
+#     Code taken from QIIME's merge_otu_tables.py
 
-    Parameters
-    ----------
-    output_fp: string
-        filepath to final BIOM table
-    all_tables: list
-        list of filepaths for BIOM tables to merge
-    """
-    logger = logging.getLogger(__name__)
-    logger.debug('merge_otu_tables for file %d tables'
-                 ' into file %s' % (len(all_tables), output_fp))
+#     Parameters
+#     ----------
+#     output_fp: string
+#         filepath to final BIOM table
+#     all_tables: list
+#         list of filepaths for BIOM tables to merge
+#     """
+#     logger = logging.getLogger(__name__)
+#     logger.info('merge_otu_tables for file %d files'
+#                 ' into file %s' % (len(all_tables), output_fp))
 
-    master = load_table(all_tables[0])
-    for input_fp in all_tables[1:]:
-        master = master.merge(load_table(input_fp))
-    write_biom_table(master, output_fp)
+#     master = load_table(all_tables[0])
+#     for input_fp in all_tables[1:]:
+#         master = master.merge(load_table(input_fp))
+#     write_biom_table(master, output_fp)
 
 
 def get_files_for_table(input_dir,
-                        file_end='.fasta.trim.derep.no_artifacts'
-                        '.msa.deblur.no_chimeras'):
+                        file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
     """Get a list of files to add to the output table
 
     Parameters:
@@ -457,7 +457,7 @@ def get_files_for_table(input_dir,
         name of the directory containing the deblurred fasta files
     file_end : string
         the ending of all the fasta files to be added to the table
-        (default '.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        (default '.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
 
     Returns
     -------
@@ -471,15 +471,17 @@ def get_files_for_table(input_dir,
                  'file-ending %s' % (input_dir, file_end))
 
     names = []
+    # scan the input directory entries
     for cfile in listdir(input_dir):
         cname = join(input_dir, cfile)
+        # we want onlu files
         if not isfile(cname):
             continue
-        if len(cfile) < len(file_end):
-            continue
-        if cfile[-len(file_end):] == file_end:
+        # test if the filename has the ending we're expecting
+        if cfile.endswith(file_end):
             sampleid = cfile[:-len(file_end)]
             names.append((cname, sampleid))
+
     logger.debug('found %d files' % len(names))
     return names
 
@@ -496,28 +498,36 @@ def create_otu_table(output_fp, deblurred_list):
         fasta files to add to the table
     """
     logger = logging.getLogger(__name__)
-    logger.debug('create_otu_table for %d samples, '
-                 'into output table %s' % (len(deblurred_list), output_fp))
+    logger.info('create_otu_table for %d samples, '
+                'into output table %s' % (len(deblurred_list), output_fp))
 
     seqdict = {}
     seqlist = []
-    sampdict = {}
+    sampset = set()
     samplist = []
-    obs = scipy.sparse.dok_matrix((1E9, 1E6), dtype=np.int)
+    sizeregexp = re.compile('(?<=size=)\w+')
+    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.int)
     for (cfilename, csampleid) in deblurred_list:
-        if csampleid in sampdict:
+        if csampleid in sampset:
+            warnings.warn('sample %s already in table!', UserWarning)
             logger.error('sample %s already in table!' % csampleid)
             continue
-        sampdict[csampleid] = len(sampdict)-1
+        sampset.add(csampleid)
         samplist.append(csampleid)
-        csampidx = len(sampdict)-1
-        for chead, cseq in parse_fasta(open(cfilename, 'U')):
-            if cseq not in seqdict:
-                seqdict[cseq] = len(seqlist)
-                seqlist.append(cseq)
-            cseqidx = seqdict[cseq]
-            cfreq = float(re.search('(?<=size=)\w+', chead).group(0))
-            obs[cseqidx, csampidx] = cfreq
+        csampidx = len(sampset)-1
+        with open(cfilename, 'U') as f:
+            for chead, cseq in parse_fasta(f):
+                if cseq not in seqdict:
+                    seqdict[cseq] = len(seqlist)
+                    seqlist.append(cseq)
+                cseqidx = seqdict[cseq]
+                cfreq = float(sizeregexp.search(chead).group(0))
+                try:
+                    obs[cseqidx, csampidx] = cfreq
+                except IndexError:
+                    shape = obs.shape
+                    obs.resize((shape[0]*2,  shape[1]))
+                    obs[cseqidx, csampidx] = cfreq
     logger.debug('loaded %d samples, %d unique sequences'
                  % (len(samplist), len(seqlist)))
     obs.resize((len(seqlist), len(samplist)))
@@ -534,12 +544,12 @@ def create_otu_table(output_fp, deblurred_list):
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
                     ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=0):
-    """Launch full deblur workflow.
+    """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
     ----------
     seqs_fp: string
-        post split library sequences for debluring
+        a post split library fasta file for debluring
     working_dir: string
         working directory path
     read_error: float
@@ -573,7 +583,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     Return
     ------
     output_no_chimers_fp : string
-        filepath to fasta file with no chimeras of False if error encountered
+        filepath to fasta file with no chimeras of None if error encountered
     """
     logger = logging.getLogger(__name__)
     logger.info('--------------------------------------------------------')
@@ -600,8 +610,9 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                                             threads=threads_per_sample,
                                             sim_thresh=sim_thresh)
     if not output_artif_fp:
-        logger.debug('remove artifacts failed, aborting')
-        return
+        warnings.warn('Problem removing artifacts from file %s' % seqs_fp, UserWarning)
+        logger.warning('remove artifacts failed, aborting')
+        return None
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
@@ -615,7 +626,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
                                             threads=threads_per_sample)
     if not alignment:
-        logger.debug('msa failed. aborting')
+        warnings.warn('Problem performing multiple sequence alignment on file %s' % seqs_fp, UserWarning)
+        logger.warning('msa failed. aborting')
         return None
 
     # Step 5: Launch deblur
@@ -631,6 +643,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     # Step 6: Chimera removal
     output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
         output_deblur_fp, working_dir,threads=threads_per_sample)
+    logger.info('finished processing file')
     return output_no_chimeras_fp
 
 
@@ -653,7 +666,8 @@ def start_log(level=logging.DEBUG, filename=''):
     logging.basicConfig(filename=filename, level=level,
                         format='%(levelname)s:%(asctime)s:%(message)s')
     logger = logging.getLogger(__name__)
-    logger.debug('deblurring started')
+    logger.info('*************************')
+    logger.info('deblurring started')
 
 
 def _system_call(cmd, stdoutfilename=None):
@@ -680,6 +694,8 @@ def _system_call(cmd, stdoutfilename=None):
     the authors of this function to port it to Qiita and keep it under BSD
     license.
     """
+    logger = logging.getLogger(__name__)
+    logger.debug('system call: %s' % cmd)
     if stdoutfilename:
         with open(stdoutfilename,'w') as f:
             proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=f,
