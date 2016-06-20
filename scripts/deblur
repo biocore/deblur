@@ -144,11 +144,11 @@ def dereplicate(seqs_fp, output_fp, min_size):
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
-@click.option('--threads', '-t', required=False, type=int,
+@click.option('--threads-per-sample', '-t', required=False, type=int,
               default=1, show_default=True,
-              help="Number of threads to use for SortMeRNA")
+              help="Number of threads to use per sample")
 def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
-                     negate, threads):
+                     negate, threads_per_sample):
     """
     Filter artifacts.
 
@@ -180,7 +180,7 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
                           working_dir=output_dir,
                           ref_db_fp=ref_db_fp,
                           negate=negate,
-                          threads=threads)
+                          threads=threads_per_sample)
 
 
 # INDEX ARTIFACT DB COMMAND
@@ -215,9 +215,12 @@ def build_db_index(ref_fp,output_dir):
 @click.argument('output_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-def multiple_seq_alignment(seqs_fp, output_fp):
+@click.option('--threads-per-sample', '-a', required=False, type=int,
+              default=1, show_default=True,
+              help="Number of threads to use per sample")
+def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample):
     """Multiple sequence alignment"""
-    alignment = multiple_sequence_alignment(seqs_fp)
+    alignment = multiple_sequence_alignment(seqs_fp, threads=threads_per_sample)
 
     with open(output_fp, 'w') as f:
         f.write(alignment.to_fasta())
@@ -320,9 +323,9 @@ def build_biom_table(seqs_fp, output_biom_fp,file_type):
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
-@click.option('--threads', '-a', required=False, type=int,
+@click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
-              help="Number of threads to use for SortMeRNA")
+              help="Number of threads to use per sample")
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
@@ -333,11 +336,11 @@ def build_biom_table(seqs_fp, output_biom_fp,file_type):
               show_default=True,
               help="Skip the split fasta to files step. Assumes seqs_fp "
                    "is a directory of fasta files (one per sample)")
-@click.option('-A', required=False, type=bool, default=False,
-              help="ATTACK MODE (http://xkcd.com/1692)")
+#@click.option('-A', required=False, type=bool, default=False,
+#              help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, threads, delim,
+             trim_length, min_size, negate, threads_per_sample, delim,
              keep_tmp_files, no_split):
     """Launch deblur workflow"""
     logger = logging.getLogger(__name__)
@@ -391,7 +394,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                 error_dist=error_dist, indel_prob=indel_prob,
                 indel_max=indel_max, trim_length=trim_length,
                 min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
-                negate=negate, threads=threads, delim=delim)
+                negate=negate, threads_per_sample=threads_per_sample, delim=delim)
             if biom_fp:
                 all_bioms.append(biom_fp)
     logger.info('finished processing per sample fasta files')

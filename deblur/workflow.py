@@ -50,7 +50,8 @@ def trim_seqs(input_seqs, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2,
-                     use_log=False):
+                     use_log=False,
+                     threads=1):
     """Dereplicate FASTA sequences and remove singletons using VSEARCH.
 
     Parameters
@@ -65,21 +66,25 @@ def dereplicate_seqs(seqs_fp,
     use_log: boolean, optional
         save the vsearch logfile as well (to output_fp.log)
         default=False
+    threads : int
+        number of threads to use (0 for all available)
     """
     logger = logging.getLogger(__name__)
     logger.debug('dereplicate seqs file %s' % seqs_fp)
 
     log_name = "%s.log" % output_fp
 
-    params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout']
-    params.extend(['--fasta_width', '0', '--threads', '1', '--minuniquesize', str(min_size)])
-    params.extend(['--quiet'])
+    params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout',
+              '--fasta_width', '0', '--threads', '1', '--minuniquesize', str(min_size),
+              '--quiet', '--threads', str(threads)]
     if use_log:
         params.extend(['--log', log_name])
-    res = subprocess.call(params)
+    sout, serr, res = _system_call(params)
     if not res == 0:
         logger.error('Problem running vsearch dereplication on file %s' % seqs_fp)
         logger.debug('parameters used:\n%s' % params)
+        logger.debug('stdout: %s' % sout)
+        logger.debug('stderr: %s' % serr)
         return
 
 
@@ -101,7 +106,6 @@ def build_index_sortmerna(ref_fp, working_dir):
     logger = logging.getLogger(__name__)
     logger.info('build_index_sortmerna files %s to'
                 ' dir %s' % (ref_fp, working_dir))
-
     all_db = []
     for db in ref_fp:
         fasta_dir, fasta_filename = split(db)
@@ -109,10 +113,13 @@ def build_index_sortmerna(ref_fp, working_dir):
         db_output = join(working_dir, index_basename)
         logger.debug('processing file %s into location %s' % (db, db_output))
         params = ['indexdb_rna', '--ref', '%s,%s' % (db, db_output), '--tmpdir', working_dir]
-        res = subprocess.call(params)
+        sout, serr, res = _system_call(params)
         if not res == 0:
             logger.error('Problem running indexdb_rna on file %s to dir %s. database not indexed' % (db, db_output))
-            continue
+            logger.debug('stdout: %s' % sout)
+            logger.debug('stderr: %s' % serr)
+            logger.critical('execution halted')
+            raise Exception('Cannot index database file %s' % db)
         logger.debug('file %s indexed' % db)
         all_db.append(db_output)
     return all_db
@@ -179,27 +186,28 @@ def remove_artifacts_seqs(seqs_fp,
         logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
                      % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
-        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i])]
-        params.extend(['--aligned', blast_output])
-        params.extend(['--blast', '3', '--best', '1', '--print_all_reads'])
-        params.extend(['-v'])
+        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i]),
+                  '--aligned', blast_output, '--blast', '3', '--best', '1',
+                  '--print_all_reads', '-v']
 
-        with open(blast_output + '.log', "w") as f:
-            res = subprocess.call(params, stdout=f)
+#        with open(blast_output + '.log', "w") as f:
+#            res = subprocess.call(params, stdout=f)
+        sout, serr, res = _system_call(params)
         if not res == 0:
-            logger.critical('sortmerna error on file %s' % seqs_fp)
+            logger.error('sortmerna error on file %s' % seqs_fp)
+            logger.error('stdout : %s' % sout)
+            logger.error('stderr : %s' % serr)
             return output_fp
 
-        bfl = open(blast_output+'.blast', 'r')
-        for line in bfl:
-            line = line.strip().split('\t')
-            # if * means no match
-            if line[1] == '*':
-                continue
-            # check if % identity and coverage are large enough
-            if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
-                aligned_seq_ids.add(line[0])
-        bfl.close()
+        with open('%s.blast' % blast_output, 'r') as bfl:
+            for line in bfl:
+                line = line.strip().split('\t')
+                # if * means no match
+                if line[1] == '*':
+                    continue
+                # check if % identity and coverage are large enough
+                if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
+                    aligned_seq_ids.add(line[0])
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -234,39 +242,45 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     seqs_fp: string
         filepath to FASTA file for multiple sequence alignment
     threads: integer, optional
-        number of threads to use
+        number of threads to use. 0 to use all threads
 
     Returns
     -------
-    Alignment object
-        The aligned sequences. False if file does not exist
-
-    See Also
-    --------
-    skbio.Alignment
+    msa_fp : str
+        name of output alignment file or None if error encountered
     """
     logger = logging.getLogger(__name__)
     logger.debug('multiple_sequence_alignment seqs file %s' % seqs_fp)
 
+    # for mafft we use -1 to denote all threads and not 0
+    if threads==0:
+        threads=-1
+
     if stat(seqs_fp).st_size == 0:
         logger.info('msa failed. file %s has no reads' % seqs_fp)
-        return False
-    try:
+        return None
+    # try:
         #        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
         #                                            params={'--thread': threads})
         #        return aligned_seqs
-        msa_fp = seqs_fp + '.msa'
-        params = ['mafft', '--quiet', '--parttree', '--auto', seqs_fp]
-        with open(msa_fp, "w") as f:
-            subprocess.call(params, stdout=f)
-        return msa_fp
-    except:
-        # alignment can fail if only 1 sequence present
+    msa_fp = seqs_fp + '.msa'
+    params = ['mafft', '--quiet', '--parttree', '--auto', '--thread', str(threads), seqs_fp]
+    sout, serr, res = _system_call(params,stdoutfilename=msa_fp)
+    if not res == 0:
         logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
-        return False
+        logger.debug('stderr : %s' % serr)
+        return None
+    # with open(msa_fp, "w") as f:
+    #     subprocess.call(params, stdout=f)
+    return msa_fp
+    # except:
+    #     # alignment can fail if only 1 sequence present
+    #     logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
+    #     logger.debug('stderr : %s' % serr)
+    #     return None
 
 
-def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
+def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     """Remove chimeras de novo using UCHIME (VSEARCH implementation).
 
     Parameters
@@ -275,6 +289,8 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
         file path to FASTA input sequence file
     output_fp: string
         file path to store chimera-free results
+    threads : int
+        number of threads (0 for all cores)
 
     Returns
     -------
@@ -292,14 +308,18 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
     # so 1 mismatch in the A/B region will cancel it being labeled as chimera
     # and ~3 unique reads in each region will make it a chimera if
     # no mismatches
-    params = ['vsearch', '--uchime_denovo', seqs_fp]
-    params.extend(['--nonchimeras', output_fp])
-    params.extend(['-dn', '0.000001', '-xn', '1000'])
-    params.extend(['-minh', '10000000', '--mindiffs', '5'])
-    params.extend(['--fasta_width', '0'])
-    params.extend(['--threads', '1'])
-    with open(output_fp+'.log', "w") as f:
-        subprocess.call(params, stdout=f, stderr=f)
+    params = ['vsearch', '--uchime_denovo', seqs_fp,
+              '--nonchimeras', output_fp,
+              '-dn', '0.000001', '-xn', '1000',
+              '-minh', '10000000', '--mindiffs', '5',
+              '--fasta_width', '0', '--threads', str(threads)]
+    sout, serr, res = _system_call(params)
+    if not res == 0:
+        logger.error('problem with chimera removal for file %s' % seqs_fp)
+        logger.debug('stdout : %s' % sout)
+        logger.debug('stderr : %s' % serr)
+#    with open(output_fp+'.log', "w") as f:
+#        subprocess.call(params, stdout=f, stderr=f)
     return output_fp
 
 
@@ -513,7 +533,7 @@ def create_otu_table(output_fp, deblurred_list):
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads=1, delim='_', sim_thresh=0):
+                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=0):
     """Launch full deblur workflow.
 
     Parameters
@@ -542,8 +562,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         filepath(s) to SortMeRNA indexed database for artifact removal
     negate: boolean
         discard all sequences aligning to the ref_fp database
-    threads: integer, optional
-        number of threads to use for SortMeRNA
+    threads_per_sample: integer, optional
+        number of threads to use for SortMeRNA/mafft/vsearch (0 for max available)
     delim: string, optional
         delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
@@ -570,14 +590,14 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                            "%s.derep" % basename(output_trim_fp))
     dereplicate_seqs(seqs_fp=output_trim_fp,
                      output_fp=output_derep_fp,
-                     min_size=min_size)
+                     min_size=min_size, threads=threads_per_sample)
     # Step 3: Remove artifacts
     output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
                                             ref_fp=ref_fp,
                                             working_dir=working_dir,
                                             ref_db_fp=ref_db_fp,
                                             negate=negate,
-                                            threads=threads,
+                                            threads=threads_per_sample,
                                             sim_thresh=sim_thresh)
     if not output_artif_fp:
         logger.debug('remove artifacts failed, aborting')
@@ -593,10 +613,10 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     #         return False
     #     f.write(alignment.to_fasta())
     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-                                            threads=threads)
+                                            threads=threads_per_sample)
     if not alignment:
         logger.debug('msa failed. aborting')
-        return False
+        return None
 
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
@@ -610,7 +630,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
-        output_deblur_fp, working_dir)
+        output_deblur_fp, working_dir,threads=threads_per_sample)
     return output_no_chimeras_fp
 
 
@@ -634,3 +654,41 @@ def start_log(level=logging.DEBUG, filename=''):
                         format='%(levelname)s:%(asctime)s:%(message)s')
     logger = logging.getLogger(__name__)
     logger.debug('deblurring started')
+
+
+def _system_call(cmd, stdoutfilename=None):
+    """Execute the command `cmd`
+    Parameters
+    ----------
+    cmd : str
+        The string containing the command to be run.
+    stdoutfilename : str
+        Name of the file to save stdout to or None (default) to not save to file
+    stderrfilename : str
+        Name of the file to save stderr to or None (default) to not save to file
+
+    Returns
+    -------
+    tuple of (str, str, int)
+        The standard output, standard error and exist status of the
+        executed command
+
+    Notes
+    -----
+    This function is ported and modified from QIIME (http://www.qiime.org), previously named
+    qiime_system_call. QIIME is a GPL project, but we obtained permission from
+    the authors of this function to port it to Qiita and keep it under BSD
+    license.
+    """
+    if stdoutfilename:
+        with open(stdoutfilename,'w') as f:
+            proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=f,
+                                    stderr=subprocess.PIPE)
+    else:
+        proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    # Communicate pulls all stdout/stderr from the PIPEs
+    # This call blocks until the command is done
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+    return stdout, stderr, return_value
