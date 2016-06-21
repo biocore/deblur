@@ -247,7 +247,6 @@ class workflowTests(TestCase):
         self.files_to_remove.append(ref_fp)
         # build index
         sortmerna_db = build_index_sortmerna([ref_fp], self.working_dir)
-#        self.files_to_remove.extend(files_to_remove)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
         output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
                                           ref_fp=(ref_fp,),

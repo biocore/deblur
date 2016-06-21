@@ -329,7 +329,11 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True, dir_okay=True),
-              help="Demultiplexed FASTA file including all samples")
+              help="Demultiplexed FASTA file including all samples or a directory of .fasta files (requires --no-split)")
+@click.option('--no-split', required=False, type=bool, default=False,
+              show_default=True,
+              help="Skip the split fasta to files step. Assumes seqs_fp "
+                   "is a directory of fasta files (one per sample)")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
@@ -388,10 +392,6 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
-@click.option('--no-split', required=False, type=bool, default=False,
-              show_default=True,
-              help="Skip the split fasta to files step. Assumes seqs_fp "
-                   "is a directory of fasta files (one per sample)")
 @click.option('--log-level', required=False, type=int, default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")

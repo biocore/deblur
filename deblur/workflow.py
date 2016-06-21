@@ -8,7 +8,6 @@
 
 from os.path import splitext, join, basename, isfile, split
 from os import listdir
-from collections import defaultdict
 from datetime import datetime
 from os import stat
 import logging
@@ -21,7 +20,6 @@ import warnings
 
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
-from biom import load_table
 from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
@@ -191,8 +189,6 @@ def remove_artifacts_seqs(seqs_fp,
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
                   '--print_all_reads', '-v']
 
-#        with open(blast_output + '.log', "w") as f:
-#            res = subprocess.call(params, stdout=f)
         sout, serr, res = _system_call(params)
         if not res == 0:
             logger.error('sortmerna error on file %s' % seqs_fp)
@@ -260,10 +256,6 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     if stat(seqs_fp).st_size == 0:
         logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
-    # try:
-        #        aligned_seqs = align_unaligned_seqs(seqs_fp=seqs_fp,
-        #                                            params={'--thread': threads})
-        #        return aligned_seqs
     msa_fp = seqs_fp + '.msa'
     params = ['mafft', '--quiet', '--parttree', '--auto', '--thread', str(threads), seqs_fp]
     sout, serr, res = _system_call(params,stdoutfilename=msa_fp)
@@ -271,14 +263,7 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
         logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
         logger.debug('stderr : %s' % serr)
         return None
-    # with open(msa_fp, "w") as f:
-    #     subprocess.call(params, stdout=f)
     return msa_fp
-    # except:
-    #     # alignment can fail if only 1 sequence present
-    #     logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
-    #     logger.debug('stderr : %s' % serr)
-    #     return None
 
 
 def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
@@ -319,61 +304,7 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
         logger.error('problem with chimera removal for file %s' % seqs_fp)
         logger.debug('stdout : %s' % sout)
         logger.debug('stderr : %s' % serr)
-#    with open(output_fp+'.log', "w") as f:
-#        subprocess.call(params, stdout=f, stderr=f)
     return output_fp
-
-
-# def generate_biom_data(clusters, delim='_'):
-#     """ Parse OTU map dictionary into a sparse dictionary.
-
-#     Parameters
-#     ----------
-#     clusters: dictionary
-#         OTU map as dictionary
-#     delim: string, optional
-#         delimiter for splitting sample and sequence IDs in sequence label
-#         default: '_'
-
-#     Returns
-#     -------
-#     data: dictionary
-#         sprase dictionary {(otu_idx,sample_idx):count}
-#     cluster_ids: list
-#         list of cluster IDs
-#     sample_ids: list
-#         list of sample IDs
-
-#     Notes
-#     -----
-#     Sparse dictionary format is {(cluster_idx,sample_idx):count}.
-#     This function is based on QIIME's parse_otu_map() function found at
-#     https://github.com/biocore/qiime/blob/master/qiime/parse.py.
-
-#     QIIME is a GPL project, but we obtained permission from the authors of this
-#     function to port it to deblur (and keep it under deblur's BSD license).
-#     """
-#     logger = logging.getLogger(__name__)
-#     logger.info('generate_biom_data')
-
-#     sample_ids = []
-#     sample_id_idx = {}
-#     data = defaultdict(int)
-#     sample_count = 0
-#     for cluster_idx, otu in enumerate(clusters):
-#         for seq_id in clusters[otu]:
-#             seq_id_sample = seq_id.split(delim)[0]
-#             try:
-#                 sample_idx = sample_id_idx[seq_id_sample]
-#             except KeyError:
-#                 sample_idx = sample_count
-#                 sample_id_idx[seq_id_sample] = sample_idx
-#                 sample_ids.append(seq_id_sample)
-#                 sample_count += 1
-#             data[(cluster_idx, sample_idx)] += 1
-#     cluster_ids = clusters.keys()
-
-#     return data, cluster_ids, sample_ids
 
 
 def split_sequence_file_on_sample_ids_to_files(seqs,
@@ -425,28 +356,6 @@ def write_biom_table(table, biom_fp):
             logger.debug('wrote to json file %s' % biom_fp)
 
 
-# def merge_otu_tables(output_fp, all_tables):
-#     """Merge multiple BIOM tables into one.
-
-#     Code taken from QIIME's merge_otu_tables.py
-
-#     Parameters
-#     ----------
-#     output_fp: string
-#         filepath to final BIOM table
-#     all_tables: list
-#         list of filepaths for BIOM tables to merge
-#     """
-#     logger = logging.getLogger(__name__)
-#     logger.info('merge_otu_tables for file %d files'
-#                 ' into file %s' % (len(all_tables), output_fp))
-
-#     master = load_table(all_tables[0])
-#     for input_fp in all_tables[1:]:
-#         master = master.merge(load_table(input_fp))
-#     write_biom_table(master, output_fp)
-
-
 def get_files_for_table(input_dir,
                         file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
     """Get a list of files to add to the output table
@@ -474,7 +383,7 @@ def get_files_for_table(input_dir,
     # scan the input directory entries
     for cfile in listdir(input_dir):
         cname = join(input_dir, cfile)
-        # we want onlu files
+        # we want only files
         if not isfile(cname):
             continue
         # test if the filename has the ending we're expecting
@@ -616,13 +525,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
-    # with open(output_msa_fp, 'w') as f:
-    #     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-    #                                             threads=threads)
-    #     if not alignment:
-    #         logger.debug('msa failed. aborting')
-    #         return False
-    #     f.write(alignment.to_fasta())
     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
                                             threads=threads_per_sample)
     if not alignment:
