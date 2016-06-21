@@ -161,7 +161,7 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
-@click.option('--negate', '-n', required=False, default=False,
+@click.option('--negate', '-n', required=False, default=False, is_flag=True,
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
@@ -292,11 +292,12 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
 @deblur_cmds.command()
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True))
+                                file_okay=True), help='name of directory containing fasta files to be added to biom table')
 @click.argument('output_biom_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True))
-@click.argument('file_type', required=False, type=str, default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+                                file_okay=True), help='name of output biom table')
+@click.argument('file_type', required=False, type=str, default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras',
+                show_default=True, help='ending of files to be added to the biom table')
 @click.option('--log-level', required=False, type=int, default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
@@ -330,7 +331,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True, dir_okay=True),
               help="Demultiplexed FASTA file including all samples or a directory of .fasta files (requires --no-split)")
-@click.option('--no-split', required=False, type=bool, default=False,
+@click.option('--no-split', required=False, type=bool, default=False, is_flag=True,
               show_default=True,
               help="Skip the split fasta to files step. Assumes seqs_fp "
                    "is a directory of fasta files (one per sample)")
@@ -351,7 +352,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
-@click.option('--overwrite', '-w', required=False, type=bool, default=False,
+@click.option('--overwrite', '-w', required=False, type=bool, default=False, is_flag=True,
               show_default=True, help="Overwrite output directory if exists.")
 @click.option('--read-error', '-e', required=False, type=float, default=0.05,
               show_default=True,
@@ -379,7 +380,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-@click.option('--negate', '-n', required=False, default=False,
+@click.option('--negate', '-n', required=False, default=False, is_flag=True,
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
@@ -389,7 +390,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
-@click.option('--keep-tmp-files', required=False, type=bool, default=False,
+@click.option('--keep-tmp-files', required=False, type=bool, default=False, is_flag=True,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
 @click.option('--log-level', required=False, type=int, default=2,
