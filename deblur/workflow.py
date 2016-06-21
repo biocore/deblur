@@ -65,7 +65,7 @@ def dereplicate_seqs(seqs_fp,
     use_log: boolean, optional
         save the vsearch logfile as well (to output_fp.log)
         default=False
-    threads : int
+    threads : int, optional
         number of threads to use (0 for all available)
     """
     logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ def dereplicate_seqs(seqs_fp,
     log_name = "%s.log" % output_fp
 
     params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout',
-              '--fasta_width', '0', '--threads', '1', '--minuniquesize', str(min_size),
+              '--fasta_width', '0', '--minuniquesize', str(min_size),
               '--quiet', '--threads', str(threads)]
     if use_log:
         params.extend(['--log', log_name])
@@ -131,8 +131,8 @@ def remove_artifacts_seqs(seqs_fp,
                           negate=False,
                           threads=1,
                           verbose=False,
-                          sim_thresh=0,
-                          coverage_thresh=0):
+                          sim_thresh=None,
+                          coverage_thresh=None):
     """Remove artifacts from FASTA file using SortMeRNA.
 
     Parameters
@@ -153,8 +153,12 @@ def remove_artifacts_seqs(seqs_fp,
     verbose: boolean, optional
         If true, output SortMeRNA errors
     sim_thresh: float, optional
-        The minimal similarity threshold for keeping the sequence
-        if 0, the default values used are 0.65 for negate=False,
+        The minimal similarity threshold (between 0 and 1) for keeping the sequence
+        if None, the default values used are 0.65 for negate=False,
+        0.95 for negate=True
+    coverage_thresh: float, optional
+        The minimal coverage threshold (between 0 and 1) for alignments for keeping the sequence
+        if Nonr, the default values used are 0.3 for negate=False,
         0.95 for negate=True
     """
     logger = logging.getLogger(__name__)
@@ -164,13 +168,13 @@ def remove_artifacts_seqs(seqs_fp,
         logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
         return
 
-    if coverage_thresh == 0:
+    if coverage_thresh is None:
         if negate:
             coverage_thresh = 0.95
         else:
             coverage_thresh = 0.3
 
-    if sim_thresh == 0:
+    if sim_thresh is None:
         if negate:
             sim_thresh = 0.95
         else:
@@ -250,15 +254,15 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     logger.info('multiple_sequence_alignment seqs file %s' % seqs_fp)
 
     # for mafft we use -1 to denote all threads and not 0
-    if threads==0:
-        threads=-1
+    if threads == 0:
+        threads = -1
 
     if stat(seqs_fp).st_size == 0:
         logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
     msa_fp = seqs_fp + '.msa'
     params = ['mafft', '--quiet', '--parttree', '--auto', '--thread', str(threads), seqs_fp]
-    sout, serr, res = _system_call(params,stdoutfilename=msa_fp)
+    sout, serr, res = _system_call(params, stdoutfilename=msa_fp)
     if not res == 0:
         logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
         logger.debug('stderr : %s' % serr)
@@ -544,7 +548,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
-        output_deblur_fp, working_dir,threads=threads_per_sample)
+        output_deblur_fp, working_dir, threads=threads_per_sample)
     logger.info('finished processing file')
     return output_no_chimeras_fp
 
@@ -599,7 +603,7 @@ def _system_call(cmd, stdoutfilename=None):
     logger = logging.getLogger(__name__)
     logger.debug('system call: %s' % cmd)
     if stdoutfilename:
-        with open(stdoutfilename,'w') as f:
+        with open(stdoutfilename, 'w') as f:
             proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=f,
                                     stderr=subprocess.PIPE)
     else:
