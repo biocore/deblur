@@ -414,13 +414,18 @@ def create_otu_table(output_fp, deblurred_list):
     logger.info('create_otu_table for %d samples, '
                 'into output table %s' % (len(deblurred_list), output_fp))
 
+    # the regexp for finding the number of reads of a sequence
+    sizeregexp = re.compile('(?<=size=)\w+')
     seqdict = {}
     seqlist = []
     sampset = set()
     samplist = []
-    sizeregexp = re.compile('(?<=size=)\w+')
+    # arbitrary size for the sparse results matrix so we won't run out of space
     obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.int)
+
+    # load the sequences from all samples into a sprase matrix
     for (cfilename, csampleid) in deblurred_list:
+        # test if sample has already been processed
         if csampleid in sampset:
             warnings.warn('sample %s already in table!', UserWarning)
             logger.error('sample %s already in table!' % csampleid)
@@ -428,6 +433,7 @@ def create_otu_table(output_fp, deblurred_list):
         sampset.add(csampleid)
         samplist.append(csampleid)
         csampidx = len(sampset)-1
+        # read the fasta file and add to the matrix
         with open(cfilename, 'U') as f:
             for chead, cseq in parse_fasta(f):
                 if cseq not in seqdict:
@@ -438,9 +444,12 @@ def create_otu_table(output_fp, deblurred_list):
                 try:
                     obs[cseqidx, csampidx] = cfreq
                 except IndexError:
+                    # exception means we ran out of space - add more OTUs
                     shape = obs.shape
                     obs.resize((shape[0]*2,  shape[1]))
                     obs[cseqidx, csampidx] = cfreq
+
+    # convert the matrix to a biom table
     logger.debug('loaded %d samples, %d unique sequences'
                  % (len(samplist), len(seqlist)))
     obs.resize((len(seqlist), len(samplist)))
@@ -449,6 +458,8 @@ def create_otu_table(output_fp, deblurred_list):
                   sample_metadata=None, table_id=None,
                   generated_by="deblur",
                   create_date=datetime.now().isoformat())
+
+    # save the merged otu table
     logger.debug('converted to biom table')
     write_biom_table(table, output_fp)
     logger.debug('saved to biom file %s' % output_fp)
@@ -456,7 +467,7 @@ def create_otu_table(output_fp, deblurred_list):
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=0):
+                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=None,coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
@@ -491,7 +502,10 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
         the minimal similarity for a sequence to the database.
-        if 0, take the defaults (0.65 for negate=False, 0.95 for negate=True)
+        if None, take the defaults (0.65 for negate=False, 0.95 for negate=True)
+    coverage_thresh: float, optional
+        the minimal coverage for alignment of a sequence to the database.
+        if None, take the defaults (0.3 for negate=False, 0.95 for negate=True)
 
     Return
     ------
@@ -553,18 +567,18 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     return output_no_chimeras_fp
 
 
-def start_log(level=logging.DEBUG, filename=''):
-    """
-    start the logger for the run
+def start_log(level=logging.DEBUG, filename=None):
+    """start the logger for the run
 
     Parameters
     ----------
-    levele : logging.DEBUG, logging.INFO etc. for the log level.
-    filename : str
+    level : int, optional
+        logging.DEBUG, logging.INFO etc. for the log level (between 0-50).
+    filename : str, optional
       name of the filename to save the log to or
       empty (default) to use deblur.log.TIMESTAMP
     """
-    if not filename:
+    if filename is None:
         tstr = time.ctime()
         tstr = tstr.replace(' ', '.')
         tstr = tstr.replace(':', '.')

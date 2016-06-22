@@ -10,7 +10,7 @@
 
 import click
 from os import listdir, makedirs, mkdir
-from os.path import join, isfile, exists
+from os.path import join, isfile, exists, isdir
 from shutil import rmtree
 import logging
 
@@ -57,7 +57,7 @@ def deblur_cmds():
                    '(same for N indels)')
 @click.option('--indel-max', required=False, type=int, default=3,
               help="Maximal indel number")
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -94,7 +94,7 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
                                 file_okay=True))
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               help="Sequence trim length")
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -121,7 +121,7 @@ def trim(seqs_fp, output_fp, trim_length, log_level, log_file):
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Discard sequences with an abundance "
               "value smaller than min-size")
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -167,8 +167,8 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
                    "passed via --ref-fp option")
 @click.option('--threads-per-sample', '-t', required=False, type=int,
               default=1, show_default=True,
-              help="Number of threads to use per sample")
-@click.option('--log-level', required=False, type=int, default=2,
+              help="Number of threads to use per sample (0 to use all)")
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -219,7 +219,7 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
 @click.argument('output_dir', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -252,8 +252,8 @@ def build_db_index(ref_fp,output_dir, log_level, log_file):
                                 file_okay=True))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
-              help="Number of threads to use per sample")
-@click.option('--log-level', required=False, type=int, default=2,
+              help="Number of threads to use per sample (0 to use all)")
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -276,7 +276,7 @@ def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample, log_level, lo
 @click.argument('output_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -292,13 +292,13 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
 @deblur_cmds.command()
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
-                                file_okay=True), help='name of directory containing fasta files to be added to biom table')
-@click.argument('output_biom_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True), help='name of output biom table')
-@click.argument('file_type', required=False, type=str, default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras',
-                show_default=True, help='ending of files to be added to the biom table')
-@click.option('--log-level', required=False, type=int, default=2,
+                                file_okay=True))
+@click.argument('output_fp', required=True,
+                type=click.Path(resolve_path=True, readable=True,
+                                exists=False, file_okay=True))
+@click.option('--file_type', required=False, type=str, default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras',
+              show_default=True, help='ending of files to be added to the biom table')
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -331,10 +331,6 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True, dir_okay=True),
               help="Demultiplexed FASTA file including all samples or a directory of .fasta files (requires --no-split)")
-@click.option('--no-split', required=False, type=bool, default=False, is_flag=True,
-              show_default=True,
-              help="Skip the split fasta to files step. Assumes seqs_fp "
-                   "is a directory of fasta files (one per sample)")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
@@ -386,14 +382,14 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
                    "passed via --ref-fp option")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
-              help="Number of threads to use per sample")
+              help="Number of threads to use per sample (0 to use all)")
 @click.option('--delim', required=False, type=str, default='_',
               show_default=True, help="Delimiter in FASTA labels to separate "
                                       "sample ID from sequence ID")
 @click.option('--keep-tmp-files', required=False, type=bool, default=False, is_flag=True,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
-@click.option('--log-level', required=False, type=int, default=2,
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
               "(range 1-debug to 5-critical")
 @click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -404,7 +400,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_size, negate, threads_per_sample, delim,
-             keep_tmp_files, no_split, log_level, log_file, attack_mode):
+             keep_tmp_files, log_level, log_file, attack_mode):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
@@ -425,8 +421,14 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     working_dir = join(output_dir, "deblur_working_dir")
     makedirs(working_dir)
 
-    # Split demultiplexed FASTA on sample IDs
-    if not no_split:
+    # if seqs_fp is a dir, use the fasta files in it,
+    # otherwise, assume its a post split-libraries fasta file
+    # and split it to fasta file per sample
+    if isdir(seqs_fp):
+        logger.info('processing directory %s' % seqs_fp)
+        out_dir_split = seqs_fp
+    else:
+        # Split demultiplexed FASTA on sample IDs
         out_dir_split = join(output_dir, "split")
         logger.info('splitting file %s to per sample fasta. '
                     'output %s' % (seqs_fp, out_dir_split))
@@ -435,9 +437,6 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             split_sequence_file_on_sample_ids_to_files(
                 seqs_f,
                 out_dir_split)
-    else:
-        logger.info('processing directory %s' % seqs_fp)
-        out_dir_split = seqs_fp
 
     # Build SortMeRNA indexes
     files_to_remove = []
