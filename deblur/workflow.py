@@ -467,7 +467,7 @@ def create_otu_table(output_fp, deblurred_list):
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=None,coverage_thresh=None):
+                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
@@ -576,7 +576,7 @@ def start_log(level=logging.DEBUG, filename=None):
         logging.DEBUG, logging.INFO etc. for the log level (between 0-50).
     filename : str, optional
       name of the filename to save the log to or
-      empty (default) to use deblur.log.TIMESTAMP
+      None (default) to use deblur.log.TIMESTAMP
     """
     if filename is None:
         tstr = time.ctime()
