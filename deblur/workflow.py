@@ -118,7 +118,7 @@ def build_index_sortmerna(ref_fp, working_dir):
             logger.debug('stdout: %s' % sout)
             logger.debug('stderr: %s' % serr)
             logger.critical('execution halted')
-            raise Exception('Cannot index database file %s' % db)
+            raise RuntimeError('Cannot index database file %s' % db)
         logger.debug('file %s indexed' % db)
         all_db.append(db_output)
     return all_db
@@ -220,16 +220,15 @@ def remove_artifacts_seqs(seqs_fp,
     totalseqs = 0
     okseqs = 0
     badseqs = 0
-    with open(seqs_fp, 'U') as seqs_f:
-        with open(output_fp, 'w') as out_f:
-            for label, seq in parse_fasta(seqs_f):
-                totalseqs += 1
-                label = label.split()[0]
-                if op(label):
-                        out_f.write(">%s\n%s\n" % (label, seq))
-                        okseqs += 1
-                else:
-                        badseqs += 1
+    with open(seqs_fp, 'U') as seqs_f, open(output_fp, 'w') as out_f:
+        for label, seq in parse_fasta(seqs_f):
+            totalseqs += 1
+            label = label.split()[0]
+            if op(label):
+                out_f.write(">%s\n%s\n" % (label, seq))
+                okseqs += 1
+            else:
+                badseqs += 1
     logger.info('total sequences %d, passing sequences %d, '
                 'failing sequences %d' % (totalseqs, okseqs, badseqs))
     return output_fp
