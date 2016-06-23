@@ -6,21 +6,20 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os.path import splitext, join, basename
-from collections import defaultdict
+from os.path import splitext, join, basename, isfile, split
 from datetime import datetime
-from os import stat, rename
+from os import stat
+from glob import glob
+import logging
+import re
+import scipy
+import numpy as np
+import subprocess
+import time
+import warnings
 
-from bfillings.vsearch import (vsearch_dereplicate_exact_seqs,
-                               vsearch_chimera_filter_de_novo)
-from bfillings.uclust import clusters_from_uc_file
-from bfillings.sortmerna_v2 import (build_database_sortmerna,
-                                    sortmerna_map)
-from bfillings.mafft_v7 import align_unaligned_seqs
 from skbio.parse.sequences import parse_fasta
-from skbio import Alignment
 from biom.table import Table
-from biom import load_table
 from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
@@ -41,6 +40,7 @@ def trim_seqs(input_seqs, trim_len):
     Generator of (str, str)
         The trimmed sequences in (label, sequence) format
     """
+
     for label, seq in input_seqs:
         if len(seq) >= trim_len:
             yield label, seq[:trim_len]
@@ -49,7 +49,8 @@ def trim_seqs(input_seqs, trim_len):
 def dereplicate_seqs(seqs_fp,
                      output_fp,
                      min_size=2,
-                     uc_output=True):
+                     use_log=False,
+                     threads=1):
     """Dereplicate FASTA sequences and remove singletons using VSEARCH.
 
     Parameters
@@ -61,17 +62,29 @@ def dereplicate_seqs(seqs_fp,
     min_size : integer, optional
         discard sequences with an abundance value smaller
         than integer
-    uc_output: boolean, optional
-        output the dereplication map in .uc format
+    use_log: boolean, optional
+        save the vsearch logfile as well (to output_fp.log)
+        default=False
+    threads : int, optional
+        number of threads to use (0 for all available)
     """
-    log_name = "%s.log" % splitext(output_fp)[0]
+    logger = logging.getLogger(__name__)
+    logger.info('dereplicate seqs file %s' % seqs_fp)
 
-    vsearch_dereplicate_exact_seqs(
-        fasta_filepath=seqs_fp,
-        output_filepath=output_fp,
-        output_uc=uc_output,
-        minuniquesize=min_size,
-        log_name=log_name)
+    log_name = "%s.log" % output_fp
+
+    params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout',
+              '--fasta_width', '0', '--minuniquesize', str(min_size),
+              '--quiet', '--threads', str(threads)]
+    if use_log:
+        params.extend(['--log', log_name])
+    sout, serr, res = _system_call(params)
+    if not res == 0:
+        logger.error('Problem running vsearch dereplication on file %s' % seqs_fp)
+        logger.debug('parameters used:\n%s' % params)
+        logger.debug('stdout: %s' % sout)
+        logger.debug('stderr: %s' % serr)
+        return
 
 
 def build_index_sortmerna(ref_fp, working_dir):
@@ -82,27 +95,33 @@ def build_index_sortmerna(ref_fp, working_dir):
     ref_fp: tuple
         filepaths to FASTA reference databases
     working_dir: string
-        working directory path
+        working directory path where to store the indexed database
 
     Returns
     -------
     all_db: tuple
         filepaths to SortMeRNA indexed reference databases
-    all_file_to_remove: list
-        index files to remove
     """
+    logger = logging.getLogger(__name__)
+    logger.info('build_index_sortmerna files %s to'
+                ' dir %s' % (ref_fp, working_dir))
     all_db = []
-    all_files_to_remove = []
     for db in ref_fp:
-        # build index
-        sortmerna_db, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=db,
-                max_pos=10000,
-                output_dir=working_dir)
-        all_db.append(sortmerna_db)
-        all_files_to_remove.extend(files_to_remove)
-    return tuple(all_db), all_files_to_remove
+        fasta_dir, fasta_filename = split(db)
+        index_basename = splitext(fasta_filename)[0]
+        db_output = join(working_dir, index_basename)
+        logger.debug('processing file %s into location %s' % (db, db_output))
+        params = ['indexdb_rna', '--ref', '%s,%s' % (db, db_output), '--tmpdir', working_dir]
+        sout, serr, res = _system_call(params)
+        if not res == 0:
+            logger.error('Problem running indexdb_rna on file %s to dir %s. database not indexed' % (db, db_output))
+            logger.debug('stdout: %s' % sout)
+            logger.debug('stderr: %s' % serr)
+            logger.critical('execution halted')
+            raise RuntimeError('Cannot index database file %s' % db)
+        logger.debug('file %s indexed' % db)
+        all_db.append(db_output)
+    return all_db
 
 
 def remove_artifacts_seqs(seqs_fp,
@@ -111,7 +130,9 @@ def remove_artifacts_seqs(seqs_fp,
                           ref_db_fp,
                           negate=False,
                           threads=1,
-                          verbose=False):
+                          verbose=False,
+                          sim_thresh=None,
+                          coverage_thresh=None):
     """Remove artifacts from FASTA file using SortMeRNA.
 
     Parameters
@@ -131,34 +152,63 @@ def remove_artifacts_seqs(seqs_fp,
         number of threads to use for SortMeRNA
     verbose: boolean, optional
         If true, output SortMeRNA errors
+    sim_thresh: float, optional
+        The minimal similarity threshold (between 0 and 1) for keeping the sequence
+        if None, the default values used are 0.65 for negate=False,
+        0.95 for negate=True
+    coverage_thresh: float, optional
+        The minimal coverage threshold (between 0 and 1) for alignments for keeping the sequence
+        if Nonr, the default values used are 0.3 for negate=False,
+        0.95 for negate=True
     """
+    logger = logging.getLogger(__name__)
+    logger.info('remove_artifacts_seqs file %s' % seqs_fp)
+
+    if stat(seqs_fp).st_size == 0:
+        logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
+        return
+
+    if coverage_thresh is None:
+        if negate:
+            coverage_thresh = 0.95
+        else:
+            coverage_thresh = 0.3
+
+    if sim_thresh is None:
+        if negate:
+            sim_thresh = 0.95
+        else:
+            sim_thresh = 0.65
+
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
+    blast_output = join(working_dir,
+                        '%s.sortmerna' % basename(seqs_fp))
     aligned_seq_ids = set()
     for i, db in enumerate(ref_fp):
+        logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
+                     % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
-        app_result = sortmerna_map(
-            seq_path=seqs_fp,
-            output_dir=working_dir,
-            refseqs_fp=db,
-            sortmerna_db=ref_db_fp[i],
-            threads=threads,
-            best=1)
-        # Print SortMeRNA errors
-        stderr_fp = app_result['StdErr'].name
-        if stat(stderr_fp).st_size != 0:
-            if verbose:
-                with open(stderr_fp, 'U') as stderr_f:
-                    for line in stderr_f:
-                        print(line)
-            raise ValueError("Could not run SortMeRNA.")
+        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i]),
+                  '--aligned', blast_output, '--blast', '3', '--best', '1',
+                  '--print_all_reads', '-v']
 
-        for line in app_result['BlastAlignments']:
-            line = line.strip().split('\t')
-            if line[1] == '*':
-                continue
-            else:
-                aligned_seq_ids.add(line[0])
+        sout, serr, res = _system_call(params)
+        if not res == 0:
+            logger.error('sortmerna error on file %s' % seqs_fp)
+            logger.error('stdout : %s' % sout)
+            logger.error('stderr : %s' % serr)
+            return output_fp
+
+        with open('%s.blast' % blast_output, 'r') as bfl:
+            for line in bfl:
+                line = line.strip().split('\t')
+                # if * means no match
+                if line[1] == '*':
+                    continue
+                # check if % identity and coverage are large enough
+                if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
+                    aligned_seq_ids.add(line[0])
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -167,12 +217,20 @@ def remove_artifacts_seqs(seqs_fp,
 
     # if negate = False, only output sequences
     # matching to at least one of the databases
-    with open(seqs_fp, 'U') as seqs_f:
-        with open(output_fp, 'w') as out_f:
-            for label, seq in parse_fasta(seqs_f):
-                label = label.split()[0]
-                if op(label):
-                        out_f.write(">%s\n%s\n" % (label, seq))
+    totalseqs = 0
+    okseqs = 0
+    badseqs = 0
+    with open(seqs_fp, 'U') as seqs_f, open(output_fp, 'w') as out_f:
+        for label, seq in parse_fasta(seqs_f):
+            totalseqs += 1
+            label = label.split()[0]
+            if op(label):
+                out_f.write(">%s\n%s\n" % (label, seq))
+                okseqs += 1
+            else:
+                badseqs += 1
+    logger.info('total sequences %d, passing sequences %d, '
+                'failing sequences %d' % (totalseqs, okseqs, badseqs))
     return output_fp
 
 
@@ -184,21 +242,34 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     seqs_fp: string
         filepath to FASTA file for multiple sequence alignment
     threads: integer, optional
-        number of threads to use
+        number of threads to use. 0 to use all threads
 
     Returns
     -------
-    Alignment object
-        The aligned sequences.
-
-    See Also
-    --------
-    skbio.Alignment
+    msa_fp : str
+        name of output alignment file or None if error encountered
     """
-    return align_unaligned_seqs(seqs_fp=seqs_fp, params={'--thread': threads})
+    logger = logging.getLogger(__name__)
+    logger.info('multiple_sequence_alignment seqs file %s' % seqs_fp)
+
+    # for mafft we use -1 to denote all threads and not 0
+    if threads == 0:
+        threads = -1
+
+    if stat(seqs_fp).st_size == 0:
+        logger.warning('msa failed. file %s has no reads' % seqs_fp)
+        return None
+    msa_fp = seqs_fp + '.msa'
+    params = ['mafft', '--quiet', '--parttree', '--auto', '--thread', str(threads), seqs_fp]
+    sout, serr, res = _system_call(params, stdoutfilename=msa_fp)
+    if not res == 0:
+        logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
+        logger.debug('stderr : %s' % serr)
+        return None
+    return msa_fp
 
 
-def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
+def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     """Remove chimeras de novo using UCHIME (VSEARCH implementation).
 
     Parameters
@@ -207,111 +278,36 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir):
         file path to FASTA input sequence file
     output_fp: string
         file path to store chimera-free results
+    threads : int
+        number of threads (0 for all cores)
+
+    Returns
+    -------
+    output_fp
+        the chimera removed fasta file name
     """
+    logger = logging.getLogger(__name__)
+    logger.info('remove_chimeras_denovo_from_seqs seqs file %s'
+                'to working dir %s' % (seqs_fp, working_dir))
+
     output_fp = join(
         working_dir, "%s.no_chimeras" % basename(seqs_fp))
-    output_chimera_filepath, output_non_chimera_filepath,\
-        output_alns_filepath, output_tabular_filepath, log_filepath =\
-        vsearch_chimera_filter_de_novo(
-            fasta_filepath=seqs_fp,
-            working_dir=working_dir,
-            output_chimeras=False,
-            output_nonchimeras=True,
-            output_alns=False,
-            output_tabular=False,
-            log_name="vsearch_uchime_de_novo_chimera_filtering.log")
 
-    rename(output_non_chimera_filepath, output_fp)
+    # we use the parameters dn=0.000001, xn=1000, minh=10000000
+    # so 1 mismatch in the A/B region will cancel it being labeled as chimera
+    # and ~3 unique reads in each region will make it a chimera if
+    # no mismatches
+    params = ['vsearch', '--uchime_denovo', seqs_fp,
+              '--nonchimeras', output_fp,
+              '-dn', '0.000001', '-xn', '1000',
+              '-minh', '10000000', '--mindiffs', '5',
+              '--fasta_width', '0', '--threads', str(threads)]
+    sout, serr, res = _system_call(params)
+    if not res == 0:
+        logger.error('problem with chimera removal for file %s' % seqs_fp)
+        logger.debug('stdout : %s' % sout)
+        logger.debug('stderr : %s' % serr)
     return output_fp
-
-
-def parse_deblur_output(seqs_fp, derep_clusters):
-    """ Parse deblur output file into an OTU map.
-
-    Parameters
-    ----------
-    seqs_fp: string
-        file path to deblurred sequences
-    derep_clusters: dictionary
-        dictionary of dereplicated sequences map
-
-    Returns
-    -------
-    clusters: dictionary
-        dictionary of clusters including dereplicated sequence labels
-
-    Notes
-    -----
-    For each deblurred sequence in seqs_fp, use the sequence label to
-    obtain all dereplicated sequence labels belonging to it
-    (from derep_clusters) to create entries in a new dictionary where the keys
-    are actual sequences (not the labels). Note not all sequences
-    in derep_clusters will be in seqs_fp since they could have been removed in
-    the artifact filtering step.
-    """
-    clusters = {}
-    # Replace representative sequence name with actual sequence in cluster
-    msa_fa = Alignment.read(seqs_fp, format='fasta')
-    for label, seq in Alignment.iteritems(msa_fa):
-        cluster_id = label.split(';')[0]
-        seq2 = str(seq.degap())
-        if seq2 not in clusters:
-            clusters[seq2] = []
-        if cluster_id not in derep_clusters:
-            raise ValueError(
-                'Seed ID %s does not exist in .uc file' % cluster_id)
-        else:
-            clusters[seq2].extend(derep_clusters[cluster_id])
-    return clusters
-
-
-def generate_biom_data(clusters, delim='_'):
-    """ Parse OTU map dictionary into a sparse dictionary.
-
-    Parameters
-    ----------
-    clusters: dictionary
-        OTU map as dictionary
-    delim: string, optional
-        delimiter for splitting sample and sequence IDs in sequence label
-        default: '_'
-
-    Returns
-    -------
-    data: dictionary
-        sprase dictionary {(otu_idx,sample_idx):count}
-    cluster_ids: list
-        list of cluster IDs
-    sample_ids: list
-        list of sample IDs
-
-    Notes
-    -----
-    Sparse dictionary format is {(cluster_idx,sample_idx):count}.
-    This function is based on QIIME's parse_otu_map() function found at
-    https://github.com/biocore/qiime/blob/master/qiime/parse.py.
-
-    QIIME is a GPL project, but we obtained permission from the authors of this
-    function to port it to deblur (and keep it under deblur's BSD license).
-    """
-    sample_ids = []
-    sample_id_idx = {}
-    data = defaultdict(int)
-    sample_count = 0
-    for cluster_idx, otu in enumerate(clusters):
-        for seq_id in clusters[otu]:
-            seq_id_sample = seq_id.split(delim)[0]
-            try:
-                sample_idx = sample_id_idx[seq_id_sample]
-            except KeyError:
-                sample_idx = sample_count
-                sample_id_idx[seq_id_sample] = sample_idx
-                sample_ids.append(seq_id_sample)
-                sample_count += 1
-            data[(cluster_idx, sample_idx)] += 1
-    cluster_ids = clusters.keys()
-
-    return data, cluster_ids, sample_ids
 
 
 def split_sequence_file_on_sample_ids_to_files(seqs,
@@ -325,51 +321,19 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
     outdir: string
         dirpath to output split FASTA files
     """
+    logger = logging.getLogger(__name__)
+    logger.info('split_sequence_file_on_sample_ids_to_files'
+                ' for file %s into dir %s' % (seqs, outdir))
+
     outputs = {}
     for bits in parse_fasta(seqs):
         sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
-            outputs[sample] = open(join(outdir, sample + '.fa'), 'w')
+            outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
     for sample in outputs:
         outputs[sample].close()
-
-
-def generate_biom_table(seqs_fp,
-                        uc_fp,
-                        delim='_'):
-    """Generate BIOM table and representative FASTA set.
-
-    Parameters
-    ----------
-    seqs_fp: string
-        file path to deblurred sequences
-    uc_fp: string
-        file path to dereplicated sequences map (.uc format)
-    delim: string, optional
-        delimiter for splitting sample and sequence IDs in sequence label
-        default: '_'
-
-    Returns
-    -------
-    deblur_clusters: dictionary
-        dictionary of clusters including dereplicated sequence labels
-    Table: biom.table
-        an instance of a BIOM table
-    """
-    # parse clusters in dereplicated sequences map (.uc format)
-    with open(uc_fp, 'U') as uc_f:
-        derep_clusters, failures, seeds = clusters_from_uc_file(uc_f)
-    # parse clusters in deblur file, set observation ID to be the sequence
-    deblur_clusters = parse_deblur_output(seqs_fp, derep_clusters)
-    # create sparse dictionary of observation and sample ID counts
-    data, otu_ids, sample_ids = generate_biom_data(deblur_clusters, delim)
-    # build BIOM table
-    return deblur_clusters, Table(data, otu_ids, sample_ids,
-                                  observation_metadata=None,
-                                  sample_metadata=None, table_id=None,
-                                  generated_by="deblur",
-                                  create_date=datetime.now().isoformat())
+    logger.info('split to %d files' % len(outputs))
 
 
 def write_biom_table(table, biom_fp):
@@ -382,40 +346,128 @@ def write_biom_table(table, biom_fp):
     biom_fp: string
         filepath to output BIOM table
     """
+    logger = logging.getLogger(__name__)
+    logger.debug('write_biom_table to file %s' % biom_fp)
     with biom_open(biom_fp, 'w') as f:
         if HAVE_H5PY:
+            logger.debug('saving with h5py')
             table.to_hdf5(h5grp=f, generated_by="deblur")
+            logger.debug('wrote to hdf5 file %s' % biom_fp)
         else:
+            logger.debug('no h5py. saving to json')
             table.to_json(direct_io=f, generated_by="deblur")
+            logger.debug('wrote to json file %s' % biom_fp)
 
 
-def merge_otu_tables(output_fp, all_tables):
-    """Merge multiple BIOM tables into one.
+def get_files_for_table(input_dir,
+                        file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
+    """Get a list of files to add to the output table
 
-    Code taken from QIIME's merge_otu_tables.py
+    Parameters:
+    -----------
+    input_dir : string
+        name of the directory containing the deblurred fasta files
+    file_end : string
+        the ending of all the fasta files to be added to the table
+        (default '.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+
+    Returns
+    -------
+    names : list of tuples of (string,string)
+        list of tuples of:
+            name of fasta files to be added to the biom table
+            sampleid (file names without the file_end and path)
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug('get_files_for_table input dir %s, '
+                 'file-ending %s' % (input_dir, file_end))
+
+    names = []
+    for cfile in glob(join(input_dir, "*%s" % file_end)):
+        if not isfile(cfile):
+            continue
+        sample_id = basename(cfile)[:-len(file_end)]
+        names.append((cfile, sample_id))
+
+    logger.debug('found %d files' % len(names))
+    return names
+
+
+def create_otu_table(output_fp, deblurred_list):
+    """Create a biom table out of all files in a directory
 
     Parameters
     ----------
-    output_fp: string
+    output_fp : string
         filepath to final BIOM table
-    all_tables: list
-        list of filepaths for BIOM tables to merge
+    deblurred_list : list of string
+        list of file names (including path) of all deblurred
+        fasta files to add to the table
     """
-    master = load_table(all_tables[0])
-    for input_fp in all_tables[1:]:
-        master = master.merge(load_table(input_fp))
-    write_biom_table(master, output_fp)
+    logger = logging.getLogger(__name__)
+    logger.info('create_otu_table for %d samples, '
+                'into output table %s' % (len(deblurred_list), output_fp))
+
+    # the regexp for finding the number of reads of a sequence
+    sizeregexp = re.compile('(?<=size=)\w+')
+    seqdict = {}
+    seqlist = []
+    sampset = set()
+    samplist = []
+    # arbitrary size for the sparse results matrix so we won't run out of space
+    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.int)
+
+    # load the sequences from all samples into a sprase matrix
+    for (cfilename, csampleid) in deblurred_list:
+        # test if sample has already been processed
+        if csampleid in sampset:
+            warnings.warn('sample %s already in table!', UserWarning)
+            logger.error('sample %s already in table!' % csampleid)
+            continue
+        sampset.add(csampleid)
+        samplist.append(csampleid)
+        csampidx = len(sampset)-1
+        # read the fasta file and add to the matrix
+        with open(cfilename, 'U') as f:
+            for chead, cseq in parse_fasta(f):
+                if cseq not in seqdict:
+                    seqdict[cseq] = len(seqlist)
+                    seqlist.append(cseq)
+                cseqidx = seqdict[cseq]
+                cfreq = float(sizeregexp.search(chead).group(0))
+                try:
+                    obs[cseqidx, csampidx] = cfreq
+                except IndexError:
+                    # exception means we ran out of space - add more OTUs
+                    shape = obs.shape
+                    obs.resize((shape[0]*2,  shape[1]))
+                    obs[cseqidx, csampidx] = cfreq
+
+    # convert the matrix to a biom table
+    logger.debug('loaded %d samples, %d unique sequences'
+                 % (len(samplist), len(seqlist)))
+    obs.resize((len(seqlist), len(samplist)))
+    table = Table(obs, seqlist, samplist,
+                  observation_metadata=None,
+                  sample_metadata=None, table_id=None,
+                  generated_by="deblur",
+                  create_date=datetime.now().isoformat())
+
+    # save the merged otu table
+    logger.debug('converted to biom table')
+    write_biom_table(table, output_fp)
+    logger.debug('saved to biom file %s' % output_fp)
 
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads=1, delim='_'):
-    """Launch full deblur workflow.
+                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=None, coverage_thresh=None):
+    """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
     ----------
     seqs_fp: string
-        post split library sequences for debluring
+        a post split library fasta file for debluring
     working_dir: string
         working directory path
     read_error: float
@@ -438,16 +490,25 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         filepath(s) to SortMeRNA indexed database for artifact removal
     negate: boolean
         discard all sequences aligning to the ref_fp database
-    threads: integer, optional
-        number of threads to use for SortMeRNA
+    threads_per_sample: integer, optional
+        number of threads to use for SortMeRNA/mafft/vsearch (0 for max available)
     delim: string, optional
         delimiter in FASTA labels to separate sample ID from sequence ID
+    sim_thresh: float, optional
+        the minimal similarity for a sequence to the database.
+        if None, take the defaults (0.65 for negate=False, 0.95 for negate=True)
+    coverage_thresh: float, optional
+        the minimal coverage for alignment of a sequence to the database.
+        if None, take the defaults (0.3 for negate=False, 0.95 for negate=True)
 
     Return
     ------
-    biom_fp: string
-        filepath to BIOM table
+    output_no_chimers_fp : string
+        filepath to fasta file with no chimeras of None if error encountered
     """
+    logger = logging.getLogger(__name__)
+    logger.info('--------------------------------------------------------')
+    logger.info('launch_workflow for file %s' % seqs_fp)
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
@@ -460,22 +521,29 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                            "%s.derep" % basename(output_trim_fp))
     dereplicate_seqs(seqs_fp=output_trim_fp,
                      output_fp=output_derep_fp,
-                     min_size=min_size,
-                     uc_output=True)
+                     min_size=min_size, threads=threads_per_sample)
     # Step 3: Remove artifacts
     output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
                                             ref_fp=ref_fp,
                                             working_dir=working_dir,
                                             ref_db_fp=ref_db_fp,
                                             negate=negate,
-                                            threads=threads)
+                                            threads=threads_per_sample,
+                                            sim_thresh=sim_thresh)
+    if not output_artif_fp:
+        warnings.warn('Problem removing artifacts from file %s' % seqs_fp, UserWarning)
+        logger.warning('remove artifacts failed, aborting')
+        return None
     # Step 4: Multiple sequence alignment
     output_msa_fp = join(working_dir,
                          "%s.msa" % basename(output_artif_fp))
-    with open(output_msa_fp, 'w') as f:
-        alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-                                                threads=threads)
-        f.write(alignment.to_fasta())
+    alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+                                            threads=threads_per_sample)
+    if not alignment:
+        warnings.warn('Problem performing multiple sequence alignment on file %s' % seqs_fp, UserWarning)
+        logger.warning('msa failed. aborting')
+        return None
+
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
@@ -488,16 +556,69 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
             f.write(s.to_fasta())
     # Step 6: Chimera removal
     output_no_chimeras_fp = remove_chimeras_denovo_from_seqs(
-        output_deblur_fp, working_dir)
-    # Step 7: Generate BIOM table
-    deblur_clrs, table = generate_biom_table(seqs_fp=output_no_chimeras_fp,
-                                             uc_fp="%s.uc" % output_trim_fp,
-                                             delim=delim)
-    # Step 8: Write BIOM table to file
-    if table.is_empty():
-        raise ValueError(
-            "Attempting to write an empty BIOM table.")
-    biom_fp = join(working_dir, "%s.biom" % basename(seqs_fp))
-    write_biom_table(table, biom_fp)
+        output_deblur_fp, working_dir, threads=threads_per_sample)
+    logger.info('finished processing file')
+    return output_no_chimeras_fp
 
-    return biom_fp
+
+def start_log(level=logging.DEBUG, filename=None):
+    """start the logger for the run
+
+    Parameters
+    ----------
+    level : int, optional
+        logging.DEBUG, logging.INFO etc. for the log level (between 0-50).
+    filename : str, optional
+      name of the filename to save the log to or
+      None (default) to use deblur.log.TIMESTAMP
+    """
+    if filename is None:
+        tstr = time.ctime()
+        tstr = tstr.replace(' ', '.')
+        tstr = tstr.replace(':', '.')
+        filename = 'deblur.log.%s' % tstr
+    logging.basicConfig(filename=filename, level=level,
+                        format='%(levelname)s:%(asctime)s:%(message)s')
+    logger = logging.getLogger(__name__)
+    logger.info('*************************')
+    logger.info('deblurring started')
+
+
+def _system_call(cmd, stdoutfilename=None):
+    """Execute the command `cmd`
+    Parameters
+    ----------
+    cmd : str
+        The string containing the command to be run.
+    stdoutfilename : str
+        Name of the file to save stdout to or None (default) to not save to file
+    stderrfilename : str
+        Name of the file to save stderr to or None (default) to not save to file
+
+    Returns
+    -------
+    tuple of (str, str, int)
+        The standard output, standard error and exist status of the
+        executed command
+
+    Notes
+    -----
+    This function is ported and modified from QIIME (http://www.qiime.org), previously named
+    qiime_system_call. QIIME is a GPL project, but we obtained permission from
+    the authors of this function to port it to Qiita and keep it under BSD
+    license.
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug('system call: %s' % cmd)
+    if stdoutfilename:
+        with open(stdoutfilename, 'w') as f:
+            proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=f,
+                                    stderr=subprocess.PIPE)
+    else:
+        proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    # Communicate pulls all stdout/stderr from the PIPEs
+    # This call blocks until the command is done
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+    return stdout, stderr, return_value
