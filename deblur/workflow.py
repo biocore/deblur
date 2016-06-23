@@ -382,7 +382,7 @@ def get_files_for_table(input_dir,
     logger.debug('get_files_for_table input dir %s, '
                  'file-ending %s' % (input_dir, file_end))
 
-    names=[]
+    names = []
     for cfile in glob(join(input_dir, "*%s" % file_end)):
         if not isfile(cfile):
             continue
