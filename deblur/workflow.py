@@ -7,9 +7,9 @@
 # ----------------------------------------------------------------------------
 
 from os.path import splitext, join, basename, isfile, split
-from os import listdir
 from datetime import datetime
 from os import stat
+from glob import glob
 import logging
 import re
 import scipy
@@ -382,17 +382,12 @@ def get_files_for_table(input_dir,
     logger.debug('get_files_for_table input dir %s, '
                  'file-ending %s' % (input_dir, file_end))
 
-    names = []
-    # scan the input directory entries
-    for cfile in listdir(input_dir):
-        cname = join(input_dir, cfile)
-        # we want only files
-        if not isfile(cname):
+    names=[]
+    for cfile in glob(join(input_dir, "*%s" % file_end)):
+        if not isfile(cfile):
             continue
-        # test if the filename has the ending we're expecting
-        if cfile.endswith(file_end):
-            sampleid = cfile[:-len(file_end)]
-            names.append((cname, sampleid))
+        sample_id = basename(cfile)[:-len(file_end)]
+        names.append((cfile, sample_id))
 
     logger.debug('found %d files' % len(names))
     return names
