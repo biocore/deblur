@@ -404,7 +404,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
-    logger.info('deblur workflow started on %s' % seqs_fp)
+    logger.info('deblur version %s workflow started on %s' % (__version__, seqs_fp))
     logger.info('parameters: %s' % locals())
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
