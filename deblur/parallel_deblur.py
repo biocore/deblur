@@ -91,6 +91,10 @@ def system_call(cmd):
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
 
+    print(stdout)
+    print(stderr)
+    print(return_value)
+
     return stdout, stderr, return_value
 
 

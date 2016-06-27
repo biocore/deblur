@@ -48,12 +48,8 @@ setup(name='deblur',
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
       install_requires=['click == 7.0-dev', 'numpy >= 1.7',
                         'scikit-bio >= 0.2.2, < 0.3.0',
-                        'biom-format >= 2.1.3, < 2.2.0',
-                        'burrito < 1.0.0',
-                        'burrito-fillings == 0.1.0-dev'],
-      dependency_links=[('https://github.com/biocore/burrito-fillings/archive/'
-                        'master.zip#egg=burrito-fillings-0.1.0-dev'),
-                        ('https://github.com/pallets/click/archive/master.zip'
+                        'biom-format >= 2.1.3, < 2.2.0']
+      dependency_links=[('https://github.com/pallets/click/archive/master.zip'
                          '#egg=click-7.0-dev')],
       classifiers=classifiers
       )
