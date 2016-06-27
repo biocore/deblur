@@ -24,11 +24,9 @@ class parallelDeblurTests(TestCase):
     def setUp(self):
         # test output can be written to this directory
         self.working_dir = mkdtemp()
-        print self.working_dir
 
     def tearDown(self):
-        #rmtree(self.working_dir)
-        pass
+        rmtree(self.working_dir)
 
     def test_parallel_deblur(self):
         """Test parallel_deblur() functionality.
@@ -107,6 +105,7 @@ class parallelDeblurTests(TestCase):
         all_result_paths = parallel_deblur(inputs=inputs,
                                            params=params,
                                            jobs_to_start=1)
+        print(all_result_paths)
 
 
 if __name__ == '__main__':

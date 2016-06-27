@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os.path import join, exists, split
+from os.path import exists, split
 from os import makedirs, mkdir
 from glob import glob
 from shutil import rmtree
