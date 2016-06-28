@@ -12,8 +12,6 @@ from tempfile import mkdtemp
 from os.path import join
 from glob import glob
 
-from bfillings.sortmerna_v2 import build_database_sortmerna
-
 from deblur.parallel_deblur import parallel_deblur
 
 
@@ -84,12 +82,14 @@ class parallelDeblurTests(TestCase):
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
         # build index
-        ref_db_fp, files_to_remove = \
-            build_database_sortmerna(
-                fasta_path=ref_fp,
-                max_pos=10000,
-                output_dir=self.working_dir)
+        #ref_db_fp, files_to_remove = \
+        #    build_database_sortmerna(
+        #        fasta_path=ref_fp,
+        #        max_pos=10000,
+        #        output_dir=self.working_dir)
         params = {}
+        ref_db_fp = ""
+        files_to_remove = []
         params['output-dir'] = self.working_dir
         params['ref-db-fp'] = tuple([ref_db_fp])
         params['ref-fp'] = tuple([ref_fp])

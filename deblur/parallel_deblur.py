@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 from __future__ import division
 import os
-from os.path import join
 from tempfile import mkdtemp
 import multiprocessing as mp
 import traceback
@@ -46,11 +45,15 @@ def deblur_system_call(params, fps):
                '--output-dir', output_dp]
     # add reference databases to command
     ref_fp_l = [db[1] for db in enumerate(params.get('ref-fp', []))]
+    if not ref_fp_l:
+        raise ValueError("%s is empty" % ref_fp_l)
     for ref_fp in ref_fp_l:
         command.append('--ref-fp')
         command.append(ref_fp)
     # add reference database indexes to command
     ref_db_fp_l = [db[1] for db in enumerate(params.get('ref-db-fp', []))]
+    if not ref_db_fp_l:
+        raise ValueError("%s is empty" % ref_db_fp_l)
     for ref_dp_fp in ref_db_fp_l:
         command.append('--ref-db-fp')
         command.append(ref_dp_fp)
@@ -90,10 +93,6 @@ def system_call(cmd):
                             stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
-
-    print(stdout)
-    print(stderr)
-    print(return_value)
 
     return stdout, stderr, return_value
 
