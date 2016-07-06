@@ -82,7 +82,7 @@ class parallelDeblurTests(TestCase):
             for seq in ref:
                 ref_f.write(">%s\n%s\n" % seq)
         # build index
-        #ref_db_fp, files_to_remove = \
+        # ref_db_fp, files_to_remove = \
         #    build_database_sortmerna(
         #        fasta_path=ref_fp,
         #        max_pos=10000,
