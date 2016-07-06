@@ -89,7 +89,6 @@ class parallelDeblurTests(TestCase):
         #        output_dir=self.working_dir)
         params = {}
         ref_db_fp = ""
-        files_to_remove = []
         params['output-dir'] = self.working_dir
         params['ref-db-fp'] = tuple([ref_db_fp])
         params['ref-fp'] = tuple([ref_fp])
