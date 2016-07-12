@@ -333,7 +333,7 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True, dir_okay=True),
-              help="Demultiplexed FASTA file including all samples or a directory of .fasta files (requires --no-split)")
+              help="Demultiplexed FASTA file including all samples or a directory of .fasta files")
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
@@ -472,13 +472,15 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         for input_fp in input_file_list:
             # input_fp = join(out_dir_split, fn)
             if isfile(input_fp):
-                biom_fp = launch_workflow(
+                deblurred_file_name = launch_workflow(
                     seqs_fp=input_fp, working_dir=working_dir,
                     read_error=read_error, mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                     negate=negate, threads_per_sample=threads_per_sample, delim=delim)
+            if deblurred_file_name is None:
+                logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
     else:
         # we're want to start parallel mode - so need to create the thread shell commands

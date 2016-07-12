@@ -191,7 +191,7 @@ def remove_artifacts_seqs(seqs_fp,
         # run SortMeRNA
         params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i]),
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
-                  '--print_all_reads', '-v']
+                  '--print_all_reads', '-v', '-e', '10']
 
         sout, serr, res = _system_call(params)
         if not res == 0:
@@ -206,9 +206,14 @@ def remove_artifacts_seqs(seqs_fp,
                 # if * means no match
                 if line[1] == '*':
                     continue
-                # check if % identity and coverage are large enough
-                if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
-                    aligned_seq_ids.add(line[0])
+                # check if % identity[2] and coverage[13] are large enough
+                # note e-value is [10]
+                if negate:
+                    if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
+                        aligned_seq_ids.add(line[0])
+                else:
+                    if float(line[10]) <= 10:
+                        aligned_seq_ids.add(line[0])
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -550,6 +555,10 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     with open(output_deblur_fp, 'w') as f:
         seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
                       error_dist, indel_prob, indel_max)
+        if seqs is None:
+            warnings.warn('multiple sequence alignment file %s contains no sequences' % output_msa_fp, UserWarning)
+            logger.warn('no sequences returned from deblur for file %s' % output_msa_fp)
+            return None
         for s in seqs:
             # remove '-' from aligned sequences
             s.sequence = s.sequence.replace('-', '')
