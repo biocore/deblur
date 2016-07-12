@@ -423,6 +423,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     if not is_worker_thread:
         if exists(output_dir):
             if overwrite:
+                logger.debug('overwrite is on - deleting directory %s' % output_dir)
                 rmtree(output_dir)
             else:
                 logger.critical('output directory %s already exists' % output_dir)
