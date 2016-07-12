@@ -35,7 +35,7 @@ def deblur_system_call(params, input_fp):
 
     """
     logger = logging.getLogger(__name__)
-    logger.debug('deblur system call params %s, input_fp %s' % (params,input_fp))
+    logger.debug('deblur system call params %s, input_fp %s' % (params, input_fp))
 
     # construct command
     script_name = "deblur"
@@ -128,15 +128,15 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
     logger.info('parallel deblur started for %d inputs' % len(inputs))
 
     # remove the irrelevant parameters
-    remove_param_list = ['-O','--jobs-to-start','--seqs-fp','--ref-db-fp']
-    skipnext=False
-    newparams=[]
+    remove_param_list = ['-O', '--jobs-to-start', '--seqs-fp', '--ref-db-fp']
+    skipnext = False
+    newparams = []
     for carg in params[2:]:
         if skipnext:
-            skipnext=False
+            skipnext = False
             continue
         if carg in remove_param_list:
-            skipnext=True
+            skipnext = True
             continue
         newparams.append(carg)
 
