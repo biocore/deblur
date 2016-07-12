@@ -11,14 +11,17 @@
 import click
 from os.path import exists, split
 from os import makedirs, mkdir
+from os.path import join
 from glob import glob
 from shutil import rmtree
+import logging
 
 from skbio.util import remove_files
 
 from deblur.parallel_deblur import parallel_deblur
-from deblur.workflow import (merge_otu_tables,
-                             split_sequence_file_on_sample_ids_to_files)
+from deblur.workflow import (split_sequence_file_on_sample_ids_to_files,
+                             start_log,
+                             build_index_sortmerna)
 
 
 @click.group()
@@ -87,12 +90,25 @@ def parallel_deblur_cmds():
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               show_default=True,
               help="Keep temporary files (useful for debugging)")
+@click.option('--log-level', required=False, type=click.IntRange(1, 5, clamp=True), default=2,
+              show_default=True, help="Level of messages for log file"
+              "(range 1-debug to 5-critical")
+@click.option('--log-file', required=False, type=click.Path(resolve_path=True, readable=True, exists=False,
+              dir_okay=True), default='deblur.log',
+              show_default=True, help="log file name")
+@click.option('attack_mode', '-A', required=False, type=bool, default=False,
+              help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_size, negate, delim, jobs_to_start,
-             keep_tmp_files):
+             keep_tmp_files,log_level,log_file):
     """Launch deblur workflow in parallel"""
     # If the user provided an error_dist value, we map it to a list of floats
+    start_log(level=log_level * 10, filename=log_file)
+    logger = logging.getLogger(__name__)
+    logger.info('deblur version %s workflow started on %s' % (__version__, seqs_fp))
+    logger.info('parameters: %s' % locals())
+
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
     # Create output directory
@@ -113,12 +129,13 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             out_dir_split)
     # Build SortMeRNA indexes
     files_to_remove = []
+
     if not ref_db_fp:
-        index_dir = join(output_dir, "index")
-        mkdir(index_dir)
-        ref_db_fp, files_to_remove = build_index_sortmerna(
+        logger.info('building sortmerna index files')
+        ref_db_fp = build_index_sortmerna(
             ref_fp=ref_fp,
-            working_dir=index_dir)
+            working_dir=output_dir)
+
     # Run deblur in parallel
     params = {}
     input_fps = glob('%s/*' % out_dir_split)
@@ -137,7 +154,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     all_bioms = parallel_deblur(input_fps, params, jobs_to_start)
     # Merge OTU tables
     output_fp = join(output_dir, "final.biom")
-    merge_otu_tables(output_fp, all_bioms)
+#    merge_otu_tables(output_fp, all_bioms)
     # Clean up
     if not keep_tmp_files:
         remove_files(files_to_remove, error_on_missing=False)

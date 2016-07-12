@@ -578,7 +578,7 @@ def start_log(level=logging.DEBUG, filename=None):
         tstr = tstr.replace(':', '.')
         filename = 'deblur.log.%s' % tstr
     logging.basicConfig(filename=filename, level=level,
-                        format='%(levelname)s:%(asctime)s:%(message)s')
+                        format='%(levelname)s:%(asctime)s:%(message)s:%(thread)d')
     logger = logging.getLogger(__name__)
     logger.info('*************************')
     logger.info('deblurring started')

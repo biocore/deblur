@@ -6,24 +6,23 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from __future__ import division
-import os
-from tempfile import mkdtemp
 import multiprocessing as mp
 import traceback
 import sys
 import subprocess
 from functools import partial
+import logging
 
 
-def deblur_system_call(params, fps):
+def deblur_system_call(params, input_fp):
     """Build deblur command for subprocess.
 
     Parameters
     ----------
-    params: dict
-        parameter settings to pass to deblur
-    fps: tuple
-        input and output paths
+    params: list of str
+        parameter settings to pass to deblur CLI
+    input_fp : str
+        name of the input fasta file to deblur
 
     Returns
     -------
@@ -35,39 +34,20 @@ def deblur_system_call(params, fps):
         return code from process
 
     """
-    input_fp, output_dp = fps
-    script_name = "deblur"
-    script_subprogram = "workflow_parallel"
+    logger = logging.getLogger(__name__)
+    logger.debug('deblur system call params %s, input_fp %s' % (params,input_fp))
+
     # construct command
+    script_name = "deblur"
+    script_subprogram = "workflow"
     command = [script_name,
                script_subprogram,
                '--seqs-fp', input_fp,
-               '--output-dir', output_dp]
-    # add reference databases to command
-    ref_fp_l = [db[1] for db in enumerate(params.get('ref-fp', []))]
-    if not ref_fp_l:
-        raise ValueError("%s is empty" % ref_fp_l)
-    for ref_fp in ref_fp_l:
-        command.append('--ref-fp')
-        command.append(ref_fp)
-    # add reference database indexes to command
-    ref_db_fp_l = [db[1] for db in enumerate(params.get('ref-db-fp', []))]
-    if not ref_db_fp_l:
-        raise ValueError("%s is empty" % ref_db_fp_l)
-    for ref_dp_fp in ref_db_fp_l:
-        command.append('--ref-db-fp')
-        command.append(ref_dp_fp)
-    cmd_list = []
-    # add the remainder of the parameters
-    for key, value in params.iteritems():
-        if (key != 'ref-fp' and
-                key != 'ref-db-fp' and
-                key != 'output-dir' and
-                value is not None):
-            cmd_list.append("--%s" % key)
-            cmd_list.append("%s" % value)
-    command.extend(cmd_list)
+               '--is-worker-thread',
+               '--keep-tmp-files']
+    command.extend(params)
 
+    logger.debug('running command %s' % command)
     return system_call(command)
 
 
@@ -88,11 +68,15 @@ def system_call(cmd):
     return_value: integer
         return code from process
     """
+    logger = logging.getLogger(__name__)
+    logger.info('system call cmd %s' % cmd)
+
     proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
+    logger.info('system call finished return code %d' % return_value)
 
     return stdout, stderr, return_value
 
@@ -118,7 +102,7 @@ def run_functor(functor, *args, **kwargs):
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 
-def parallel_deblur(inputs, params, jobs_to_start=1):
+def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
     """Dispatch execution over a pool of processors
 
     This code was adopted from the American Gut project:
@@ -128,8 +112,10 @@ def parallel_deblur(inputs, params, jobs_to_start=1):
     ----------
     inputs : iterable of str
         File paths to input per-sample sequence files
-    params : dict
-        A dict of parameters invariant to per-sample calls
+    params : list of str
+        list of CLI parameters supplied to the deblur workflow (argv - first 2 are 'deblur','workflow' and are ignored)
+    ref_db_fp : list of str
+        the indexed sortmerna database (created in the main thread)
     jobs_to_start : int, optional
         The number of processors on the local system to use
 
@@ -138,21 +124,34 @@ def parallel_deblur(inputs, params, jobs_to_start=1):
     all_result_paths : list
         list of expected output files
     """
-    args = []
-    all_result_paths = []
-    output_dir = params['output-dir']
-    for in_ in inputs:
-        filename = os.path.split(in_)[-1]
-        # create output directory for each process
-        process_output_dir = mkdtemp(prefix=filename, dir=output_dir)
-        output = os.path.join(process_output_dir, "%s.biom" % filename)
-        all_result_paths.append(output)
-        args.append((in_, process_output_dir))
-    functor = partial(run_functor, deblur_system_call, params)
+    logger = logging.getLogger(__name__)
+    logger.info('parallel deblur started for %d inputs' % len(inputs))
+
+    # remove the irrelevant parameters
+    remove_param_list = ['-O','--jobs-to-start','--seqs-fp','--ref-db-fp']
+    skipnext=False
+    newparams=[]
+    for carg in params[2:]:
+        if skipnext:
+            skipnext=False
+            continue
+        if carg in remove_param_list:
+            skipnext=True
+            continue
+        newparams.append(carg)
+
+    # add the ref_db_fp (since it may be not present in the original command parameters)
+    new_ref_db_fp = ','.join(ref_db_fp)
+    newparams.append('--ref-db-fp')
+    newparams.append(new_ref_db_fp)
+
+    logger.debug('ready for functor %s' % newparams)
+    functor = partial(run_functor, deblur_system_call, newparams)
+    logger.debug('ready for pool %d jobs' % jobs_to_start)
     pool = mp.Pool(processes=jobs_to_start)
-    for stdout, stderr, es in pool.map(functor, args):
+    logger.debug('almost running...')
+    for stdout, stderr, es in pool.map(functor, inputs):
         if es != 0:
             raise RuntimeError("stdout: %s\nstderr: %s\nexit: %d" % (stdout,
                                                                      stderr,
                                                                      es))
-    return all_result_paths
