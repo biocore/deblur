@@ -372,7 +372,8 @@ class workflowTests(TestCase):
             o.write(seqs_col.to_fasta())
         alignment_file = multiple_sequence_alignment(seqs_fp)
         with open(alignment_file, 'U') as f:
-            aligned_seqs = [DNA(item[1], id=item[0]) for item in parse_fasta(f)]
+            aligned_seqs = [DNA(item[1], id=item[0])
+                            for item in parse_fasta(f)]
 
         align_exp = [
             DNA(

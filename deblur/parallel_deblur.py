@@ -35,7 +35,8 @@ def deblur_system_call(params, input_fp):
 
     """
     logger = logging.getLogger(__name__)
-    logger.debug('deblur system call params %s, input_fp %s' % (params, input_fp))
+    logger.debug('deblur system call params %s, input_fp %s' %
+                 (params, input_fp))
 
     # construct command
     script_name = "deblur"
@@ -113,7 +114,8 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
     inputs : iterable of str
         File paths to input per-sample sequence files
     params : list of str
-        list of CLI parameters supplied to the deblur workflow (argv - first 2 are 'deblur','workflow' and are ignored)
+        list of CLI parameters supplied to the deblur workflow
+        (argv - first 2 are 'deblur','workflow' and are ignored)
     ref_db_fp : list of str
         the indexed sortmerna database (created in the main thread)
     jobs_to_start : int, optional
@@ -140,7 +142,8 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
             continue
         newparams.append(carg)
 
-    # add the ref_db_fp (since it may be not present in the original command parameters)
+    # add the ref_db_fp (since it may be not present in the
+    # original command parameters)
     new_ref_db_fp = ','.join(ref_db_fp)
     newparams.append('--ref-db-fp')
     newparams.append(new_ref_db_fp)

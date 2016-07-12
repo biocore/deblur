@@ -102,19 +102,29 @@ class parallelDeblurTests(TestCase):
             working_dir=self.working_dir)
 
         trim_length = 100
-        params = ['deblur', 'workflow', '--seqs-fp', 'ignorethis', '--output-dir', self.working_dir, '--ref-fp',
-                  ref_fp, '-d', '1,0.06,0.02,0.02,0.01,0.005,0.005,0.005,0.001,0.001,0.001,0.0005', '-t', str(trim_length)]
-        parallel_deblur([self.seqs_s1_fp, self.seqs_s2_fp, self.seqs_s3_fp], params, ref_db_fp, jobs_to_start=2)
+        params = ['deblur', 'workflow', '--seqs-fp', 'ignorethis',
+                  '--output-dir', self.working_dir, '--ref-fp', ref_fp,
+                  '-d', '1,0.06,0.02,0.02,0.01,0.005,0.005,0.005,0.001'
+                  ',0.001,0.001,0.0005',
+                  '-t', str(trim_length)]
+        parallel_deblur([self.seqs_s1_fp, self.seqs_s2_fp, self.seqs_s3_fp],
+                        params, ref_db_fp, jobs_to_start=2)
 
         deblur_working_dir = join(self.working_dir, "deblur_working_dir")
 
-        deb1res = join(deblur_working_dir, 'seqs_s1.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        deb1res = join(deblur_working_dir,
+                       'seqs_s1.fasta.trim.derep.no_artifacts'
+                       '.msa.deblur.no_chimeras')
         self.compare_result(deb1res, self.orig_s1_fp, trim_length=trim_length)
 
-        deb2res = join(deblur_working_dir, 'seqs_s2.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        deb2res = join(deblur_working_dir,
+                       'seqs_s2.fasta.trim.derep.no_artifacts'
+                       '.msa.deblur.no_chimeras')
         self.compare_result(deb2res, self.orig_s2_fp, trim_length=trim_length)
 
-        deb3res = join(deblur_working_dir, 'seqs_s3.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+        deb3res = join(deblur_working_dir,
+                       'seqs_s3.fasta.trim.derep.no_artifacts'
+                       '.msa.deblur.no_chimeras')
         self.compare_result(deb3res, self.orig_s3_fp, trim_length=trim_length)
 
 if __name__ == '__main__':
