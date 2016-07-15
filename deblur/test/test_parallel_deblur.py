@@ -54,7 +54,6 @@ class parallelDeblurTests(TestCase):
         start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
-        pass
         remove_files(self.files_to_remove)
         rmtree(self.working_dir)
 

@@ -408,9 +408,13 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
               help="Maximal indel number")
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               show_default=True, help="Sequence trim length")
+@click.option('--min-reads', required=False, type=int, default=0,
+              show_default=True, help="In final biom table - keep only "
+              "sequences appearing at least min-reads in all samples "
+              "combined.")
 @click.option('--min-size', required=False, type=int, default=2,
-              show_default=True, help="Discard sequences with an abundance "
-              "value smaller than min-size")
+              show_default=True, help="Per sample - discard sequences with"
+              " an abundance value smaller than min-size")
 @click.option('--negate', '-n', required=False, default=False, is_flag=True,
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
@@ -446,8 +450,8 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
               help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_size, negate, threads_per_sample, delim,
-             keep_tmp_files, log_level, log_file, jobs_to_start,
+             trim_length, min_reads, min_size, negate, threads_per_sample,
+             delim, keep_tmp_files, log_level, log_file, jobs_to_start,
              is_worker_thread, attack_mode):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
@@ -541,9 +545,12 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     # Merge chimera cleaned fasta files to a single biom table
     output_filename = 'final.biom'
     output_fp = join(output_dir, output_filename)
+    outputfasta_filename = 'final.seqs.fa'
+    outputfasta_fp = join(output_dir, outputfasta_filename)
 
     samples = get_files_for_table(working_dir)
-    create_otu_table(output_fp, samples)
+    create_otu_table(output_fp, samples,
+                     outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
     # Clean up
     if not keep_tmp_files:

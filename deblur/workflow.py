@@ -408,7 +408,8 @@ def get_files_for_table(input_dir,
     return names
 
 
-def create_otu_table(output_fp, deblurred_list):
+def create_otu_table(output_fp, deblurred_list,
+                     outputfasta_fp=None, minreads=0):
     """Create a biom table out of all files in a directory
 
     Parameters
@@ -418,6 +419,12 @@ def create_otu_table(output_fp, deblurred_list):
     deblurred_list : list of string
         list of file names (including path) of all deblurred
         fasta files to add to the table
+    outputfasta_fp : str
+        name of output fasta file (of all sequences in the table) or None
+        to not write
+    minreads : int
+        minimal number of reads per bacterial sequence in order to write
+        it to the biom table and fasta file or 0 to write all
     """
     logger = logging.getLogger(__name__)
     logger.info('create_otu_table for %d samples, '
@@ -458,9 +465,21 @@ def create_otu_table(output_fp, deblurred_list):
                     obs.resize((shape[0]*2,  shape[1]))
                     obs[cseqidx, csampidx] = cfreq
 
+    logger.info('for final biom table loaded %d samples, %d unique sequences'
+                % (len(samplist), len(seqlist)))
+
+    # do the minimal reads per otu filtering
+    if minreads > 0:
+        readsperotu = obs.sum(axis=1)
+        keep = np.where(readsperotu >= minreads)
+        keep = keep.getA1()
+        logger.info('keeping %d (out of %d sequences) with >=%d reads' %
+                    (len(keep), len(seqlist), minreads))
+        obs = obs[keep, :]
+        seqlist = list(np.array(seqlist)[keep])
+        logger.debug('filtering completed')
+
     # convert the matrix to a biom table
-    logger.debug('loaded %d samples, %d unique sequences'
-                 % (len(samplist), len(seqlist)))
     obs.resize((len(seqlist), len(samplist)))
     table = Table(obs, seqlist, samplist,
                   observation_metadata=None,
@@ -471,7 +490,15 @@ def create_otu_table(output_fp, deblurred_list):
     # save the merged otu table
     logger.debug('converted to biom table')
     write_biom_table(table, output_fp)
-    logger.debug('saved to biom file %s' % output_fp)
+    logger.info('saved to biom file %s' % output_fp)
+
+    # and save the fasta file
+    if outputfasta_fp is not None:
+        logger.debug('saving fasta file')
+        with open(outputfasta_fp, 'w') as f:
+            for cseq in seqlist:
+                f.write('>%s\n%s\n' % (cseq, cseq))
+        logger.info('saved sequence fasta file to %s' % outputfasta_fp)
 
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
