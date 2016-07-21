@@ -320,9 +320,13 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_fp', required=True,
+@click.argument('output_biom_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
+@click.option('--min-reads', required=False, type=int, default=0,
+              show_default=True, help="In final biom table - keep only "
+              "sequences appearing at least min-reads in all samples "
+              "combined.")
 @click.option('--file_type', required=False, type=str,
               default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras',
               show_default=True,
@@ -336,7 +340,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
+def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, log_file):
     """Generate a BIOM table from a directory of chimera removed fasta files
     Parameters
     ----------
@@ -352,9 +356,12 @@ def build_biom_table(seqs_fp, output_biom_fp, file_type, log_level, log_file):
     start_log(level=log_level * 10, filename=log_file)
     output_filename = 'final.biom'
     output_fp = join(output_biom_fp, output_filename)
+    outputfasta_filename = 'final.seq.fa'
+    outputfasta_fp = join(output_biom_fp, outputfasta_filename)
 
     samples = get_files_for_table(seqs_fp, file_type)
-    create_otu_table(output_fp, samples)
+    create_otu_table(output_fp, samples,
+                     outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
 
 # LAUNCH FULL DEBLUR PIPELINE COMMAND

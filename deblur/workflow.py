@@ -468,11 +468,13 @@ def create_otu_table(output_fp, deblurred_list,
     logger.info('for final biom table loaded %d samples, %d unique sequences'
                 % (len(samplist), len(seqlist)))
 
+    # and now make the sparse matrix the real size
+    obs.resize((len(seqlist), len(samplist)))
+
     # do the minimal reads per otu filtering
     if minreads > 0:
         readsperotu = obs.sum(axis=1)
-        keep = np.where(readsperotu >= minreads)
-        keep = keep.getA1()
+        keep = np.where(readsperotu >= minreads)[0]
         logger.info('keeping %d (out of %d sequences) with >=%d reads' %
                     (len(keep), len(seqlist), minreads))
         obs = obs[keep, :]
@@ -480,7 +482,6 @@ def create_otu_table(output_fp, deblurred_list,
         logger.debug('filtering completed')
 
     # convert the matrix to a biom table
-    obs.resize((len(seqlist), len(samplist)))
     table = Table(obs, seqlist, samplist,
                   observation_metadata=None,
                   sample_metadata=None, table_id=None,
