@@ -49,7 +49,5 @@ setup(name='deblur',
       install_requires=['click >= 6', 'numpy >= 1.7',
                         'scikit-bio >= 0.2.2, < 0.3.0',
                         'biom-format >= 2.1.3, < 2.2.0'],
-      dependency_links=[('https://github.com/pallets/click/archive/master.zip'
-                         '#egg=click-7.0-dev')],
       classifiers=classifiers
       )
