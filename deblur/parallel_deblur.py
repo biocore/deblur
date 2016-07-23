@@ -10,7 +10,6 @@ from workflow import _system_call
 import multiprocessing as mp
 import traceback
 import sys
-import subprocess
 from functools import partial
 import logging
 
