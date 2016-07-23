@@ -39,7 +39,6 @@ def get_sequences(input_seqs):
         logger = logging.getLogger(__name__)
         logger.warn('No sequences found in fasta file!')
         return None
-#       raise ValueError("No sequences found!")
 
     # Check that all the sequence lengths (aligned and unaligned are the same)
     aligned_lengths = set(s.length for s in seqs)

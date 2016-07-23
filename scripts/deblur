@@ -510,7 +510,6 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                     seqs_f,
                     out_dir_split)
         input_file_list = glob('%s/*.fasta' % out_dir_split)
-#    input_file_list = listdir(out_dir_split)
 
     # Build SortMeRNA indexes
     files_to_remove = []
@@ -524,9 +523,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     if jobs_to_start < 2:
         # run in serial mode (no parallelization)
         logger.info('processing per sample fasta files')
-#        for fn in input_file_list:
         for input_fp in input_file_list:
-            # input_fp = join(out_dir_split, fn)
             if isfile(input_fp):
                 deblurred_file_name = launch_workflow(
                     seqs_fp=input_fp, working_dir=working_dir,

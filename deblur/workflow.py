@@ -419,10 +419,10 @@ def create_otu_table(output_fp, deblurred_list,
     deblurred_list : list of string
         list of file names (including path) of all deblurred
         fasta files to add to the table
-    outputfasta_fp : str
+    outputfasta_fp : str, optional
         name of output fasta file (of all sequences in the table) or None
         to not write
-    minreads : int
+    minreads : int, optional
         minimal number of reads per bacterial sequence in order to write
         it to the biom table and fasta file or 0 to write all
     """

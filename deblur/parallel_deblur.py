@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from __future__ import division
+from workflow import _system_call
 import multiprocessing as mp
 import traceback
 import sys
@@ -49,37 +50,7 @@ def deblur_system_call(params, input_fp):
     command.extend(params)
 
     logger.debug('running command %s' % command)
-    return system_call(command)
-
-
-def system_call(cmd):
-    """Call cmd and return (stdout, stderr, return_value).
-
-    Parameters
-    ----------
-    cmd: iterable
-        A sequence of strings that are the tokens of the command
-
-    Returns
-    -------
-    stdout: string
-        process output directed to standard output
-    stderr: string
-        process output directed to standard error
-    return_value: integer
-        return code from process
-    """
-    logger = logging.getLogger(__name__)
-    logger.info('system call cmd %s' % cmd)
-
-    proc = subprocess.Popen(cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate()
-    return_value = proc.returncode
-    logger.info('system call finished return code %d' % return_value)
-
-    return stdout, stderr, return_value
+    return _system_call(command)
 
 
 def run_functor(functor, *args, **kwargs):
