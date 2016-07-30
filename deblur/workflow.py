@@ -73,14 +73,16 @@ def dereplicate_seqs(seqs_fp,
 
     log_name = "%s.log" % output_fp
 
-    params = ['vsearch', '--derep_fulllength', seqs_fp, '--output', output_fp, '--sizeout',
+    params = ['vsearch', '--derep_fulllength', seqs_fp,
+              '--output', output_fp, '--sizeout',
               '--fasta_width', '0', '--minuniquesize', str(min_size),
               '--quiet', '--threads', str(threads)]
     if use_log:
         params.extend(['--log', log_name])
     sout, serr, res = _system_call(params)
     if not res == 0:
-        logger.error('Problem running vsearch dereplication on file %s' % seqs_fp)
+        logger.error('Problem running vsearch dereplication on file %s' %
+                     seqs_fp)
         logger.debug('parameters used:\n%s' % params)
         logger.debug('stdout: %s' % sout)
         logger.debug('stderr: %s' % serr)
@@ -111,10 +113,12 @@ def build_index_sortmerna(ref_fp, working_dir):
         index_basename = splitext(fasta_filename)[0]
         db_output = join(working_dir, index_basename)
         logger.debug('processing file %s into location %s' % (db, db_output))
-        params = ['indexdb_rna', '--ref', '%s,%s' % (db, db_output), '--tmpdir', working_dir]
+        params = ['indexdb_rna', '--ref', '%s,%s' %
+                  (db, db_output), '--tmpdir', working_dir]
         sout, serr, res = _system_call(params)
         if not res == 0:
-            logger.error('Problem running indexdb_rna on file %s to dir %s. database not indexed' % (db, db_output))
+            logger.error('Problem running indexdb_rna on file %s to dir %s. '
+                         'database not indexed' % (db, db_output))
             logger.debug('stdout: %s' % sout)
             logger.debug('stderr: %s' % serr)
             logger.critical('execution halted')
@@ -153,11 +157,13 @@ def remove_artifacts_seqs(seqs_fp,
     verbose: boolean, optional
         If true, output SortMeRNA errors
     sim_thresh: float, optional
-        The minimal similarity threshold (between 0 and 1) for keeping the sequence
+        The minimal similarity threshold (between 0 and 1)
+        for keeping the sequence
         if None, the default values used are 0.65 for negate=False,
         0.95 for negate=True
     coverage_thresh: float, optional
-        The minimal coverage threshold (between 0 and 1) for alignments for keeping the sequence
+        The minimal coverage threshold (between 0 and 1)
+        for alignments for keeping the sequence
         if Nonr, the default values used are 0.3 for negate=False,
         0.95 for negate=True
     """
@@ -189,9 +195,10 @@ def remove_artifacts_seqs(seqs_fp,
         logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
                      % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
-        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' % (db, ref_db_fp[i]),
+        params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' %
+                  (db, ref_db_fp[i]),
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
-                  '--print_all_reads', '-v']
+                  '--print_all_reads', '-v', '-e', '10']
 
         sout, serr, res = _system_call(params)
         if not res == 0:
@@ -206,9 +213,15 @@ def remove_artifacts_seqs(seqs_fp,
                 # if * means no match
                 if line[1] == '*':
                     continue
-                # check if % identity and coverage are large enough
-                if (float(line[2]) >= sim_thresh*100) and (float(line[13]) >= coverage_thresh*100):
-                    aligned_seq_ids.add(line[0])
+                # check if % identity[2] and coverage[13] are large enough
+                # note e-value is [10]
+                if negate:
+                    if (float(line[2]) >= sim_thresh*100) and \
+                       (float(line[13]) >= coverage_thresh*100):
+                        aligned_seq_ids.add(line[0])
+                else:
+                    if float(line[10]) <= 10:
+                        aligned_seq_ids.add(line[0])
 
     if negate:
         def op(x): return x not in aligned_seq_ids
@@ -260,7 +273,8 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
         logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
     msa_fp = seqs_fp + '.msa'
-    params = ['mafft', '--quiet', '--parttree', '--auto', '--thread', str(threads), seqs_fp]
+    params = ['mafft', '--quiet', '--parttree', '--auto',
+              '--thread', str(threads), seqs_fp]
     sout, serr, res = _system_call(params, stdoutfilename=msa_fp)
     if not res == 0:
         logger.info('msa failed for file %s (maybe only 1 read?)' % seqs_fp)
@@ -360,7 +374,8 @@ def write_biom_table(table, biom_fp):
 
 
 def get_files_for_table(input_dir,
-                        file_end='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras'):
+                        file_end='.fasta.trim.derep.no_artifacts'
+                        '.msa.deblur.no_chimeras'):
     """Get a list of files to add to the output table
 
     Parameters:
@@ -393,7 +408,8 @@ def get_files_for_table(input_dir,
     return names
 
 
-def create_otu_table(output_fp, deblurred_list):
+def create_otu_table(output_fp, deblurred_list,
+                     outputfasta_fp=None, minreads=0):
     """Create a biom table out of all files in a directory
 
     Parameters
@@ -403,6 +419,12 @@ def create_otu_table(output_fp, deblurred_list):
     deblurred_list : list of string
         list of file names (including path) of all deblurred
         fasta files to add to the table
+    outputfasta_fp : str, optional
+        name of output fasta file (of all sequences in the table) or None
+        to not write
+    minreads : int, optional
+        minimal number of reads per bacterial sequence in order to write
+        it to the biom table and fasta file or 0 to write all
     """
     logger = logging.getLogger(__name__)
     logger.info('create_otu_table for %d samples, '
@@ -443,10 +465,23 @@ def create_otu_table(output_fp, deblurred_list):
                     obs.resize((shape[0]*2,  shape[1]))
                     obs[cseqidx, csampidx] = cfreq
 
-    # convert the matrix to a biom table
-    logger.debug('loaded %d samples, %d unique sequences'
-                 % (len(samplist), len(seqlist)))
+    logger.info('for final biom table loaded %d samples, %d unique sequences'
+                % (len(samplist), len(seqlist)))
+
+    # and now make the sparse matrix the real size
     obs.resize((len(seqlist), len(samplist)))
+
+    # do the minimal reads per otu filtering
+    if minreads > 0:
+        readsperotu = obs.sum(axis=1)
+        keep = np.where(readsperotu >= minreads)[0]
+        logger.info('keeping %d (out of %d sequences) with >=%d reads' %
+                    (len(keep), len(seqlist), minreads))
+        obs = obs[keep, :]
+        seqlist = list(np.array(seqlist)[keep])
+        logger.debug('filtering completed')
+
+    # convert the matrix to a biom table
     table = Table(obs, seqlist, samplist,
                   observation_metadata=None,
                   sample_metadata=None, table_id=None,
@@ -456,12 +491,21 @@ def create_otu_table(output_fp, deblurred_list):
     # save the merged otu table
     logger.debug('converted to biom table')
     write_biom_table(table, output_fp)
-    logger.debug('saved to biom file %s' % output_fp)
+    logger.info('saved to biom file %s' % output_fp)
+
+    # and save the fasta file
+    if outputfasta_fp is not None:
+        logger.debug('saving fasta file')
+        with open(outputfasta_fp, 'w') as f:
+            for cseq in seqlist:
+                f.write('>%s\n%s\n' % (cseq, cseq))
+        logger.info('saved sequence fasta file to %s' % outputfasta_fp)
 
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_', sim_thresh=None, coverage_thresh=None):
+                    ref_db_fp, negate, threads_per_sample=1, delim='_',
+                    sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
@@ -491,12 +535,14 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     negate: boolean
         discard all sequences aligning to the ref_fp database
     threads_per_sample: integer, optional
-        number of threads to use for SortMeRNA/mafft/vsearch (0 for max available)
+        number of threads to use for SortMeRNA/mafft/vsearch
+        (0 for max available)
     delim: string, optional
         delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
         the minimal similarity for a sequence to the database.
-        if None, take the defaults (0.65 for negate=False, 0.95 for negate=True)
+        if None, take the defaults (0.65 for negate=False,
+        0.95 for negate=True)
     coverage_thresh: float, optional
         the minimal coverage for alignment of a sequence to the database.
         if None, take the defaults (0.3 for negate=False, 0.95 for negate=True)
@@ -531,7 +577,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                                             threads=threads_per_sample,
                                             sim_thresh=sim_thresh)
     if not output_artif_fp:
-        warnings.warn('Problem removing artifacts from file %s' % seqs_fp, UserWarning)
+        warnings.warn('Problem removing artifacts from file %s' %
+                      seqs_fp, UserWarning)
         logger.warning('remove artifacts failed, aborting')
         return None
     # Step 4: Multiple sequence alignment
@@ -540,7 +587,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
                                             threads=threads_per_sample)
     if not alignment:
-        warnings.warn('Problem performing multiple sequence alignment on file %s' % seqs_fp, UserWarning)
+        warnings.warn('Problem performing multiple sequence alignment '
+                      'on file %s' % seqs_fp, UserWarning)
         logger.warning('msa failed. aborting')
         return None
 
@@ -550,6 +598,12 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     with open(output_deblur_fp, 'w') as f:
         seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
                       error_dist, indel_prob, indel_max)
+        if seqs is None:
+            warnings.warn('multiple sequence alignment file %s contains '
+                          'no sequences' % output_msa_fp, UserWarning)
+            logger.warn('no sequences returned from deblur for file %s' %
+                        output_msa_fp)
+            return None
         for s in seqs:
             # remove '-' from aligned sequences
             s.sequence = s.sequence.replace('-', '')
@@ -578,7 +632,8 @@ def start_log(level=logging.DEBUG, filename=None):
         tstr = tstr.replace(':', '.')
         filename = 'deblur.log.%s' % tstr
     logging.basicConfig(filename=filename, level=level,
-                        format='%(levelname)s:%(asctime)s:%(message)s')
+                        format='%(levelname)s(%(thread)d)'
+                        '%(asctime)s:%(message)s')
     logger = logging.getLogger(__name__)
     logger.info('*************************')
     logger.info('deblurring started')
@@ -591,9 +646,11 @@ def _system_call(cmd, stdoutfilename=None):
     cmd : str
         The string containing the command to be run.
     stdoutfilename : str
-        Name of the file to save stdout to or None (default) to not save to file
+        Name of the file to save stdout to or None
+        (default) to not save to file
     stderrfilename : str
-        Name of the file to save stderr to or None (default) to not save to file
+        Name of the file to save stderr to or None
+        (default) to not save to file
 
     Returns
     -------
@@ -603,7 +660,8 @@ def _system_call(cmd, stdoutfilename=None):
 
     Notes
     -----
-    This function is ported and modified from QIIME (http://www.qiime.org), previously named
+    This function is ported and modified from QIIME
+    (http://www.qiime.org), previously named
     qiime_system_call. QIIME is a GPL project, but we obtained permission from
     the authors of this function to port it to Qiita and keep it under BSD
     license.
@@ -612,10 +670,12 @@ def _system_call(cmd, stdoutfilename=None):
     logger.debug('system call: %s' % cmd)
     if stdoutfilename:
         with open(stdoutfilename, 'w') as f:
-            proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=f,
+            proc = subprocess.Popen(cmd, universal_newlines=True,
+                                    shell=False, stdout=f,
                                     stderr=subprocess.PIPE)
     else:
-        proc = subprocess.Popen(cmd, universal_newlines=True, shell=False, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, universal_newlines=True,
+                                shell=False, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     # Communicate pulls all stdout/stderr from the PIPEs
     # This call blocks until the command is done

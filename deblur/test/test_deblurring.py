@@ -46,8 +46,7 @@ class DeblurringTests(TestCase):
             get_sequences(seqs)
 
     def test_get_sequences_error_empty(self):
-        with self.assertRaises(ValueError):
-            get_sequences([])
+        self.assertIsNone(get_sequences([]))
 
     def test_get_sequences(self):
         exp_seqs = [
