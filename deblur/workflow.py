@@ -341,7 +341,7 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
 
     outputs = {}
     for bits in parse_fasta(seqs):
-        sample = bits[0].split('_', 1)[0]
+        sample = bits[0].rsplit('_', 1)[0]
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
