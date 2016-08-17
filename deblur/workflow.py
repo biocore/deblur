@@ -40,10 +40,24 @@ def trim_seqs(input_seqs, trim_len):
     Generator of (str, str)
         The trimmed sequences in (label, sequence) format
     """
+    # counters for the number of trimmed and total sequences
+    okseqs = 0
+    totseqs = 0
 
     for label, seq in input_seqs:
+        totseqs += 1
         if len(seq) >= trim_len:
+            okseqs += 1
             yield label, seq[:trim_len]
+
+    if okseqs < 0.01*totseqs:
+        logger = logging.getLogger(__name__)
+        logger.warn('Vast majority of sequences are shorter than the '
+                    'trim length. '
+                    'Are you using the correct -t trim length?')
+        warnings.warn('Vast majority of sequences are shorter than the '
+                      'trim length. '
+                      'Are you using the correct -t trim length?', UserWarning)
 
 
 def dereplicate_seqs(seqs_fp,
@@ -171,7 +185,7 @@ def remove_artifacts_seqs(seqs_fp,
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
-        logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
+        logger.warn('file %s has size 0, continuing' % seqs_fp)
         return
 
     if coverage_thresh is None:
