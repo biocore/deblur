@@ -588,7 +588,6 @@ class workflowTests(TestCase):
                                                 "ew_bc=CGTTAAGTCAGC bc_diffs="
                                                 "0"), "S1_1")
 
-
     def test_split_sequence_file_on_sample_ids_to_files(self):
         """Test functionality of split_sequence_file_on_sample_ids_to_files()
         """
