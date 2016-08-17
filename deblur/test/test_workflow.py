@@ -31,7 +31,8 @@ from deblur.workflow import (dereplicate_seqs,
                              launch_workflow,
                              split_sequence_file_on_sample_ids_to_files,
                              build_index_sortmerna,
-                             start_log)
+                             start_log,
+                             sample_id_from_read_id)
 
 
 class workflowTests(TestCase):
@@ -571,6 +572,22 @@ class workflowTests(TestCase):
                     else:
                         seqs_act[sample].append((label, seq))
         return seqs_act
+
+    def test_sample_id_from_read_id(self):
+        """Test the fasta readid to sample id
+        used in split_sequence_file_on_sample_ids_to_files
+        """
+        self.assertEqual(sample_id_from_read_id("Samp1_0 M04771:27:000000000"
+                                                "-ARFWH:1:1101:18081:1897 1:"
+                                                "N:0:0 orig_bc=CGTTAAGTCAGC n"
+                                                "ew_bc=CGTTAAGTCAGC bc_diffs="
+                                                "0"),"Samp1")
+        self.assertEqual(sample_id_from_read_id("S1_1_0 M04771:27:000000000"
+                                                "-ARFWH:1:1101:18081:1897 1:"
+                                                "N:0:0 orig_bc=CGTTAAGTCAGC n"
+                                                "ew_bc=CGTTAAGTCAGC bc_diffs="
+                                                "0"),"S1_1")
+
 
     def test_split_sequence_file_on_sample_ids_to_files(self):
         """Test functionality of split_sequence_file_on_sample_ids_to_files()

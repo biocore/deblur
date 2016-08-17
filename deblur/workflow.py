@@ -324,6 +324,29 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     return output_fp
 
 
+def sample_id_from_read_id(readid):
+    """Get SampleID from the split_libraries_fastq.py output
+    fasta file read header
+
+    Parameters
+    ----------
+    readid : str
+        the fasta file read name
+
+    Returns
+    -------
+    sampleid : str
+        the sample id
+    """
+
+    # get the sampleid_readid field
+    sampleread=readid.split(' ')[0]
+
+    # get the sampleid field
+    sampleid=sampleread.rsplit('_', 1)[0]
+    return sampleid
+
+
 def split_sequence_file_on_sample_ids_to_files(seqs,
                                                outdir):
     """Split FASTA file on sample IDs.
@@ -341,7 +364,7 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
 
     outputs = {}
     for bits in parse_fasta(seqs):
-        sample = bits[0].split(' ')[0].rsplit('_', 1)[0]
+        sample = sample_id_from_read_id(bits[0])
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
