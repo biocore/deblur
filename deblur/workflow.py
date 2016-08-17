@@ -527,7 +527,7 @@ def create_otu_table(output_fp, deblurred_list,
 
 def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_',
+                    ref_db_fp, negate, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
@@ -560,8 +560,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     threads_per_sample: integer, optional
         number of threads to use for SortMeRNA/mafft/vsearch
         (0 for max available)
-    delim: string, optional
-        delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
         the minimal similarity for a sequence to the database.
         if None, take the defaults (0.65 for negate=False,

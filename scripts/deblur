@@ -429,9 +429,6 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
-@click.option('--delim', required=False, type=str, default='_',
-              show_default=True, help="Delimiter in FASTA labels to separate "
-                                      "sample ID from sequence ID")
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True,
@@ -458,7 +455,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              read_error, mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_reads, min_size, negate, threads_per_sample,
-             delim, keep_tmp_files, log_level, log_file, jobs_to_start,
+             keep_tmp_files, log_level, log_file, jobs_to_start,
              is_worker_thread, attack_mode):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
@@ -531,8 +528,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
-                    negate=negate, threads_per_sample=threads_per_sample,
-                    delim=delim)
+                    negate=negate, threads_per_sample=threads_per_sample)
             if deblurred_file_name is None:
                 logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')

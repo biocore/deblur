@@ -452,11 +452,10 @@ class workflowTests(TestCase):
         min_size = 2
         negate = False
         threads = 1
-        delim = '_'
         nochimera = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
                                     error_dist, indel_prob, indel_max,
                                     trim_length, min_size, (ref_fp,),
-                                    ref_db_fp, negate, threads, delim)
+                                    ref_db_fp, negate, threads)
 
         # get the trimmed ground truth sequences
         with open(origfilename, 'U') as f:
