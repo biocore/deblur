@@ -340,10 +340,10 @@ def sample_id_from_read_id(readid):
     """
 
     # get the sampleid_readid field
-    sampleread=readid.split(' ')[0]
+    sampleread = readid.split(' ')[0]
 
     # get the sampleid field
-    sampleid=sampleread.rsplit('_', 1)[0]
+    sampleid = sampleread.rsplit('_', 1)[0]
     return sampleid
 
 
