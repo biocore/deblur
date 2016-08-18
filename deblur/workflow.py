@@ -539,7 +539,7 @@ def create_otu_table(output_fp, deblurred_list,
         logger.info('saved sequence fasta file to %s' % outputfasta_fp)
 
 
-def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
+def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
                     ref_db_fp, negate, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
@@ -551,8 +551,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         a post split library fasta file for debluring
     working_dir: string
         working directory path
-    read_error: float
-        read error rate
     mean_error: float
         mean error for original sequence estimate
     error_dist: list
@@ -631,7 +629,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
-        seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
+        seqs = deblur(parse_fasta(output_msa_fp), mean_error,
                       error_dist, indel_prob, indel_max)
         if seqs is None:
             warnings.warn('multiple sequence alignment file %s contains '

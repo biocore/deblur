@@ -19,7 +19,7 @@ from glob import glob
 from skbio.parse.sequences import parse_fasta
 from skbio.util import remove_files
 
-from deblur.deblurring import deblur
+from deblur.deblurring import (deblur, create_error_profile)
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
@@ -34,6 +34,9 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
 
 __version__ = "0.9.2.1"
 
+default_error_dist = '1,0.06,0.02,0.02,0.01,0.005,0.005' \
+                     ',0.005,0.001,0.001,0.001,0.0005'
+
 
 @click.group()
 def deblur_cmds():
@@ -45,16 +48,23 @@ def deblur_cmds():
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              help="Maximal bound on 1 nucleotide read error rate")
+@click.option('--read-error', required=False, type=float, default=None,
+              show_default=True,
+              help="Maximal bound on 1 nucleotide read error rate."
+                   "If supplied, overrides the --eror-dist!")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
+              show_default=True,
               help="The mean per nucleotide error, used for original "
               "sequence estimate. If "
               "not passed typical illumina error rate is used")
-@click.option('--error-dist', '-d', required=False, type=str, default=None,
+@click.option('--error-dist', '-d', required=False, type=str,
+              default=None,
+              show_default=False,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
-                   "number of hamming distances taken into account.")
+                   "number of hamming distances taken into account. "
+                   "Ignored if --read-error is supplied.\n"
+                   "default is: %s" % default_error_dist)
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               help='Insertion/deletion (indel) probability '
                    '(same for N indels)')
@@ -77,12 +87,33 @@ def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
     logger = logging.getLogger(__name__)
     logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
 
+    # set the error distribution
+    if error_dist is None:
+        if read_error is None:
+            logger.info('using default error profile')
+            # set to the default illumina read error profile
+            error_dist = default_error_dist
+        else:
+            # If the user provided an error_dist value,
+            # we map it to a list of floats
+            logger.info('creating error_dist from read_error')
+            error_dist = create_error_profile(read_error)
+    else:
+        if read_error is not None:
+            # if we get both read_error and error_dist it's an error
+            # since they both set the same variable
+            logger.error('Cannot use both --error_dist and --read_error')
+            raise ValueError("Cannot use both --error_dist and --read_error")
+
+    logger.info('error_dist is : %s' % error_dist)
+    error_dist = list(map(float, error_dist.split(',')))
+
     # If the user provided an error_dist value, we map it to a list of floats
     if error_dist:
         error_dist = list(map(float, error_dist.split(',')))
 
     with open(seqs_fp, 'U') as f:
-        seqs = deblur(parse_fasta(f), read_error, mean_error, error_dist,
+        seqs = deblur(parse_fasta(f), mean_error, error_dist,
                       indel_prob, indel_max)
 
     output_path = "%s.clean" % seqs_fp
@@ -391,21 +422,23 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True, help="Overwrite output directory if exists.")
-@click.option('--read-error', '-e', required=False, type=float, default=0.05,
+@click.option('--read-error', required=False, type=float, default=None,
               show_default=True,
               help="Maximal bound on 1 nucleotide read error rate."
-                   "Required if --eror-dist is not supplied")
+                   "If supplied, overrides the --eror-dist!")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
               help="The mean per nucleotide error, used for original "
               "sequence estimate. If "
               "not passed typical illumina error rate is used")
-@click.option('--error-dist', '-d', required=False, type=str, default=None,
-              show_default=True,
+@click.option('--error-dist', '-d', required=False, type=str,
+              default=None,
+              show_default=False,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account. "
-                   "This replaces of the --read-error value")
+                   "Ignored if --read-error is supplied.\n"
+                   "default is: %s" % default_error_dist)
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               show_default=True,
               help='Insertion/deletion (indel) probability '
@@ -460,12 +493,30 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
-    logger.info('deblur version %s workflow started on %s' %
+    logger.warn('deblur version %s workflow started on %s' %
                 (__version__, seqs_fp))
-    logger.info('parameters: %s' % locals())
-    # If the user provided an error_dist value, we map it to a list of floats
-    if error_dist:
-        error_dist = list(map(float, error_dist.split(',')))
+    logger.warn('parameters: %s' % locals())
+
+    # set the error distribution
+    if error_dist is None:
+        if read_error is None:
+            logger.info('using default error profile')
+            # set to the default illumina read error profile
+            error_dist = default_error_dist
+        else:
+            # If the user provided an error_dist value,
+            # we map it to a list of floats
+            logger.info('creating error_dist from read_error')
+            error_dist = create_error_profile(read_error)
+    else:
+        if read_error is not None:
+            # if we get both read_error and error_dist it's an error
+            # since they both set the same variable
+            logger.error('Cannot use both --error_dist and --read_error')
+            raise ValueError("Cannot use both --error_dist and --read_error")
+
+    logger.info('error_dist is : %s' % error_dist)
+    error_dist = list(map(float, error_dist.split(',')))
 
     # Create output directory
     if not is_worker_thread:
@@ -524,7 +575,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             if isfile(input_fp):
                 deblurred_file_name = launch_workflow(
                     seqs_fp=input_fp, working_dir=working_dir,
-                    read_error=read_error, mean_error=mean_error,
+                    mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,

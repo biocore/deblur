@@ -443,19 +443,27 @@ class workflowTests(TestCase):
         """
         seqs_fp = simfilename
         output_fp = self.working_dir
-        read_error = 0.05
         mean_error = 0.005
-        error_dist = None
+        error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
+                      0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000025,
+                      0.0000005, 0.0000005, 0.0000005, 0.0000005]
         indel_prob = 0.01
         indel_max = 3
         trim_length = 100
         min_size = 2
         negate = False
         threads = 1
-        nochimera = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                                    error_dist, indel_prob, indel_max,
-                                    trim_length, min_size, (ref_fp,),
-                                    ref_db_fp, negate, threads)
+        nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
+                                    mean_error=mean_error,
+                                    error_dist=error_dist,
+                                    indel_prob=indel_prob,
+                                    indel_max=indel_max,
+                                    trim_length=trim_length,
+                                    min_size=min_size,
+                                    ref_fp=(ref_fp,),
+                                    ref_db_fp=ref_db_fp,
+                                    negate=negate,
+                                    threads_per_sample=threads)
 
         # get the trimmed ground truth sequences
         with open(origfilename, 'U') as f:
