@@ -17,6 +17,7 @@ Install
 =======
 
 ```
+conda install -c biocore VSEARCH MAFFT SortMeRNA numpy
 python setup.py install
 ```
 

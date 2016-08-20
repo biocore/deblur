@@ -6,7 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from __future__ import division
-from workflow import _system_call
+from .workflow import _system_call
 import multiprocessing as mp
 import traceback
 import sys

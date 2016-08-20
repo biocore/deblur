@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 
 from unittest import TestCase, main
-from StringIO import StringIO
+from io import StringIO
 
 from skbio.parse.sequences import parse_fasta
 import numpy as np
