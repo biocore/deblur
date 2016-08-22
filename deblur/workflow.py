@@ -52,12 +52,12 @@ def trim_seqs(input_seqs, trim_len):
 
     if okseqs < 0.01*totseqs:
         logger = logging.getLogger(__name__)
-        logger.warn('Vast majority of sequences are shorter than the '
-                    'trim length. '
-                    'Are you using the correct -t trim length?')
-        warnings.warn('Vast majority of sequences are shorter than the '
-                      'trim length. '
-                      'Are you using the correct -t trim length?', UserWarning)
+        errmsg = 'Vast majority of sequences (%d / %d) are shorter ' \
+                 'than the trim length (%d). ' \
+                 'Are you using the correct -t trim length?' \
+                 % (totseqs-okseqs, totseqs, trim_len)
+        logger.warn(errmsg)
+        warnings.warn(errmsg, UserWarning)
 
 
 def dereplicate_seqs(seqs_fp,

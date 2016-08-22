@@ -51,7 +51,7 @@ def deblur_cmds():
 @click.option('--read-error', required=False, type=float, default=None,
               show_default=True,
               help="Maximal bound on 1 nucleotide read error rate."
-                   "If supplied, overrides the --eror-dist!")
+                   "If supplied, overrides the default --eror-dist")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
               help="The mean per nucleotide error, used for original "
@@ -63,7 +63,7 @@ def deblur_cmds():
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account. "
-                   "Ignored if --read-error is supplied.\n"
+                   "Mutually exclusive with --read-error.\n"
                    "default is: %s" % default_error_dist)
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               help='Insertion/deletion (indel) probability '
@@ -425,7 +425,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--read-error', required=False, type=float, default=None,
               show_default=True,
               help="Maximal bound on 1 nucleotide read error rate."
-                   "If supplied, overrides the --eror-dist!")
+                   "If supplied, overrides the default --eror-dist")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
               help="The mean per nucleotide error, used for original "
@@ -437,7 +437,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account. "
-                   "Ignored if --read-error is supplied.\n"
+                   "Mutually exclusive with --read-error.\n"
                    "default is: %s" % default_error_dist)
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               show_default=True,

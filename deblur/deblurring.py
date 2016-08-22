@@ -126,7 +126,8 @@ def deblur(input_seqs, mean_error=0.005,
         return None
     logger.info('deblurring %d sequences' % len(seqs))
 
-    # if error_list not supplied, use the default (22 mock mixture setup)
+    # fix the original frequencies of each read error using the
+    # mean error profile
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
     error_dist = np.array(error_dist) / mod_factor
 
