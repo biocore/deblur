@@ -19,7 +19,8 @@ from glob import glob
 from skbio.parse.sequences import parse_fasta
 from skbio.util import remove_files
 
-from deblur.deblurring import (deblur, create_error_profile, get_default_error_profile)
+from deblur.deblurring import (deblur, create_error_profile,
+                               get_default_error_profile)
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
@@ -33,6 +34,21 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
 
 
 __version__ = "0.9.2.1"
+
+
+def error_dist_from_str(ctx, param, value):
+    """Validate the error profile is either None or a list of floats
+    and return it as a list of floats
+    """
+    if value is None:
+        return value
+    try:
+        error_dist = list(map(float, value.split(',')))
+        return error_dist
+    except ValueError:
+        raise click.BadParameter('Error distribution must be a comma '
+                                 'separated list of maximal error '
+                                 'probability per hamming distance')
 
 
 @click.group()
@@ -57,6 +73,7 @@ def deblur_cmds():
 @click.option('--error-dist', '-d', required=False, type=str,
               default=None,
               show_default=False,
+              callback=error_dist_from_str,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account. "
@@ -431,6 +448,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--error-dist', '-d', required=False, type=str,
               default=None,
               show_default=False,
+              callback=error_dist_from_str,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account. "
@@ -513,7 +531,6 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             raise ValueError("Cannot use both --error_dist and --read_error")
 
     logger.info('error_dist is : %s' % error_dist)
-    error_dist = list(map(float, error_dist.split(',')))
 
     # Create output directory
     if not is_worker_thread:
