@@ -84,7 +84,7 @@ class parallelDeblurTests(TestCase):
         orig_seqs.sort()
 
         # test we see all ground truth sequences and no other
-        self.assertItemsEqual(out_seqs, orig_seqs)
+        self.assertEqual(out_seqs, orig_seqs)
 
     def test_parallel_deblur(self):
         """Test parallel deblur using 3 simulated sequence files.
