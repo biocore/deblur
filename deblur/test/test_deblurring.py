@@ -13,7 +13,7 @@ from skbio.parse.sequences import parse_fasta
 import numpy as np
 
 from deblur.sequence import Sequence
-from deblur.deblurring import get_sequences, deblur
+from deblur.deblurring import get_sequences, deblur, get_default_error_profile
 
 
 class DeblurringTests(TestCase):
@@ -28,6 +28,12 @@ class DeblurringTests(TestCase):
                      ("151_5155;size=998;", "---gaggatgcgagatgcgtgg-----"),
                      ("151_527;size=964;", "---acggaggatgatgcgcggt-----"),
                      ("151_5777;size=305;", "---ggagtgcaagattccaggt-----")]
+
+    def test_get_default_error_profile(self):
+        goodprofile = [1, 0.06, 0.02, 0.02, 0.01,
+                       0.005, 0.005, 0.005, 0.001, 0.001,
+                       0.001, 0.0005]
+        self.assertEqual(goodprofile, get_default_error_profile())
 
     def test_get_sequences_error_real_length(self):
         seqs = [("151_9240;size=170;", "----tagggcaagactccatg-----"),

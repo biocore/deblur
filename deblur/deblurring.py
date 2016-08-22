@@ -14,6 +14,16 @@ import logging
 from deblur.sequence import Sequence
 
 
+def get_default_error_profile():
+    """Return the default error profile for deblurring
+    based on illumina run data
+    """
+    error_dist = [1, 0.06, 0.02, 0.02, 0.01,
+                  0.005, 0.005, 0.005, 0.001, 0.001,
+                  0.001, 0.0005]
+    return error_dist
+
+
 def get_sequences(input_seqs):
     """Returns a list of Sequences
 
@@ -79,10 +89,7 @@ def create_error_profile(read_error):
 
 
 def deblur(input_seqs, mean_error=0.005,
-           error_dist=[1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
-                       0.0000025, 0.0000025, 0.0000025, 0.0000025,
-                       0.0000025, 0.0000005, 0.0000005, 0.0000005,
-                       0.0000005],
+           error_dist=None,
            indel_prob=0.01, indel_max=3):
     """Deblur the reads
 
@@ -96,8 +103,8 @@ def deblur(input_seqs, mean_error=0.005,
         Default: 0.005
     error_dist : list of float, optional
         A list of error probabilities. The length of the list determines the
-        amount of hamming distances taken into account. Default: None, computed
-        from mean error and sequence length.
+        amount of hamming distances taken into account. Default: None, use
+        the default error profile (from get_default_error_profile() )
     indel_prob : float, optional
         Indel probability (same for N indels). Default: 0.01
     indel_max : int, optional
@@ -118,6 +125,10 @@ def deblur(input_seqs, mean_error=0.005,
     account
     """
     logger = logging.getLogger(__name__)
+
+    if error_dist is None:
+        error_dist = get_default_error_profile()
+    logger.debug('Using error profile %s' % error_dist)
 
     # Get the sequences
     seqs = get_sequences(input_seqs)
