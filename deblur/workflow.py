@@ -17,12 +17,69 @@ import numpy as np
 import subprocess
 import time
 import warnings
+import io
 
-from skbio.parse.sequences import parse_fasta
+import skbio
 from biom.table import Table
 from biom.util import biom_open, HAVE_H5PY
 
 from deblur.deblurring import deblur
+
+
+sniff_fasta = skbio.io.io_registry.get_sniffer('fasta')
+sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
+
+
+def sequence_generator(input_fp):
+    """Yield (id, sequence) from an input file
+
+    Parameters
+    ----------
+    input_fp : filepath
+        A filepath, which can be any valid fasta or fastq file within the
+        limitations of scikit-bio's IO registry.
+    variant : str
+        One of the fastq variants for quality scores. Acceptable values can be
+        found here [1]_.
+    Notes
+    -----
+    The use of this method is a stopgap to replicate the existing `parse_fasta`
+    functionality while at the same time allowing for fastq support.
+
+    Raises
+    ------
+    skbio.io.FormatIdentificationWarning
+        If the format of the input file cannot be determined.
+
+    Returns
+    -------
+    (str, str)
+        The ID and sequence.
+
+    """
+    kw = {}
+    if sniff_fasta(input_fp)[0]:
+        format = 'fasta'
+    elif sniff_fastq(input_fp)[0]:
+        format = 'fastq'
+
+        # WARNING: the variant is currently forced to illumina 1.8 as the
+        # quality scores are _not_ used in downstream processing. However, if
+        # in the future, quality scores are to be interrogated, it is critical
+        # that this variant parameter be exposed to the user at the command
+        # line. The list of allowable paramters can be found here:
+        # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
+        kw['variant'] = 'illumina1.8'
+    else:
+        raise skbio.io.FormatIdentificationWarning("input_fp does not appear "
+                                                   "to be FASTA or FASTQ.")
+
+    # some of the test code is using file paths, some is using StringIO.
+    if isinstance(input_fp, io.TextIOBase):
+        input_fp.seek(0)
+
+    for record in skbio.read(input_fp, format=format, **kw):
+        yield (record.metadata['id'], str(record))
 
 
 def trim_seqs(input_seqs, trim_len):
@@ -233,8 +290,8 @@ def remove_artifacts_seqs(seqs_fp,
     totalseqs = 0
     okseqs = 0
     badseqs = 0
-    with open(seqs_fp, 'U') as seqs_f, open(output_fp, 'w') as out_f:
-        for label, seq in parse_fasta(seqs_f):
+    with open(output_fp, 'w') as out_f:
+        for label, seq in sequence_generator(seqs_fp):
             totalseqs += 1
             label = label.split()[0]
             if op(label):
@@ -340,7 +397,7 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
                 ' for file %s into dir %s' % (seqs, outdir))
 
     outputs = {}
-    for bits in parse_fasta(seqs):
+    for bits in sequence_generator(seqs):
         sample = bits[0].split('_', 1)[0]
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
@@ -450,20 +507,19 @@ def create_otu_table(output_fp, deblurred_list,
         samplist.append(csampleid)
         csampidx = len(sampset)-1
         # read the fasta file and add to the matrix
-        with open(cfilename, 'U') as f:
-            for chead, cseq in parse_fasta(f):
-                if cseq not in seqdict:
-                    seqdict[cseq] = len(seqlist)
-                    seqlist.append(cseq)
-                cseqidx = seqdict[cseq]
-                cfreq = float(sizeregexp.search(chead).group(0))
-                try:
-                    obs[cseqidx, csampidx] = cfreq
-                except IndexError:
-                    # exception means we ran out of space - add more OTUs
-                    shape = obs.shape
-                    obs.resize((shape[0]*2,  shape[1]))
-                    obs[cseqidx, csampidx] = cfreq
+        for chead, cseq in sequence_generator(cfilename):
+            if cseq not in seqdict:
+                seqdict[cseq] = len(seqlist)
+                seqlist.append(cseq)
+            cseqidx = seqdict[cseq]
+            cfreq = float(sizeregexp.search(chead).group(0))
+            try:
+                obs[cseqidx, csampidx] = cfreq
+            except IndexError:
+                # exception means we ran out of space - add more OTUs
+                shape = obs.shape
+                obs.resize((shape[0]*2,  shape[1]))
+                obs[cseqidx, csampidx] = cfreq
 
     logger.info('for final biom table loaded %d samples, %d unique sequences'
                 % (len(samplist), len(seqlist)))
@@ -558,9 +614,9 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
-    with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
+    with open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
-                input_seqs=parse_fasta(in_f), trim_len=trim_length):
+                input_seqs=sequence_generator(seqs_fp), trim_len=trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
@@ -596,8 +652,8 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
-        seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
-                      error_dist, indel_prob, indel_max)
+        seqs = deblur(sequence_generator(output_msa_fp), read_error,
+                      mean_error, error_dist, indel_prob, indel_max)
         if seqs is None:
             warnings.warn('multiple sequence alignment file %s contains '
                           'no sequences' % output_msa_fp, UserWarning)

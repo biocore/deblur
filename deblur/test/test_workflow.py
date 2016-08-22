@@ -9,13 +9,11 @@
 from unittest import TestCase, main
 from shutil import rmtree
 from tempfile import mkdtemp
-from os import listdir
+from os import listdir, remove
 from types import GeneratorType
 from os.path import join, isfile, abspath, dirname, splitext
 
-from skbio.util import remove_files
-from skbio.parse.sequences import parse_fasta
-from skbio.alignment import SequenceCollection
+import skbio
 from skbio import DNA
 
 from biom import load_table
@@ -31,7 +29,7 @@ from deblur.workflow import (dereplicate_seqs,
                              launch_workflow,
                              split_sequence_file_on_sample_ids_to_files,
                              build_index_sortmerna,
-                             start_log)
+                             start_log, sequence_generator)
 
 
 class workflowTests(TestCase):
@@ -52,6 +50,7 @@ class workflowTests(TestCase):
 
         # the data directory for the workflow test files
         self.test_data_dir = join(dirname(abspath(__file__)), 'data')
+        self.seqs_fq_fp = join(self.test_data_dir, 'seqs.fq')
         self.seqs_s1_fp = join(self.test_data_dir, 'seqs_s1.fasta')
         self.seqs_s2_fp = join(self.test_data_dir, 'seqs_s2.fasta')
         self.seqs_s3_fp = join(self.test_data_dir, 'seqs_s3.fasta')
@@ -65,8 +64,33 @@ class workflowTests(TestCase):
         start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
-        remove_files(self.files_to_remove)
+        for f in self.files_to_remove:
+            remove(f)
         rmtree(self.working_dir)
+
+    def test_sequence_generator_fasta(self):
+        exp_len = 135
+        first_id = "s1_1001203-10"
+        first_few_nucs = "TACGTAGGTGGCAAGCGTTA"
+
+        obs = list(sequence_generator(self.seqs_s1_fp))
+        self.assertEqual(len(obs), exp_len)
+        self.assertEqual(obs[0][0], first_id)
+        self.assertTrue(obs[0][1].startswith(first_few_nucs))
+
+    def test_sequence_generator_fastq(self):
+        exp_len = 2
+        first_id = "foo"
+        first_few_nucs = "GCgc"
+
+        obs = list(sequence_generator(self.seqs_fq_fp))
+        self.assertEqual(len(obs), exp_len)
+        self.assertEqual(obs[0][0], first_id)
+        self.assertTrue(obs[0][1].startswith(first_few_nucs))
+
+    def test_sequence_generator_invalid_format(self):
+        with self.assertRaises(skbio.io.FormatIdentificationWarning):
+            next(sequence_generator(join(self.test_data_dir, 'readme.txt')))
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),
@@ -115,8 +139,7 @@ class workflowTests(TestCase):
                ("seq6;size=2;",
                 "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]
 
-        with open(output_fp, 'U') as out_f:
-            act = [item for item in parse_fasta(out_f)]
+        act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
 
@@ -152,8 +175,7 @@ class workflowTests(TestCase):
                ("seq5;size=1;",
                 "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG")]
 
-        with open(output_fp, 'U') as out_f:
-            act = [item for item in parse_fasta(out_f)]
+        act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
 
@@ -204,9 +226,8 @@ class workflowTests(TestCase):
                                           negate=False,
                                           threads=1)
         obs_seqs = []
-        with open(output_fp, 'U') as output_f:
-            for label, seq in parse_fasta(output_f):
-                obs_seqs.append(label)
+        for label, seq in sequence_generator(output_fp):
+            obs_seqs.append(label)
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_artifacts_seqs_index_prebuilt(self):
@@ -256,9 +277,8 @@ class workflowTests(TestCase):
                                           threads=1)
 
         obs_seqs = []
-        with open(output_fp, 'U') as output_f:
-            for label, seq in parse_fasta(output_f):
-                obs_seqs.append(label)
+        for label, seq in sequence_generator(output_fp):
+            obs_seqs.append(label)
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_artifacts_seqs_negate(self):
@@ -308,9 +328,8 @@ class workflowTests(TestCase):
                                           negate=True,
                                           threads=1)
         obs_seqs = []
-        with open(output_fp, 'U') as output_f:
-            for label, seq in parse_fasta(output_f):
-                obs_seqs.append(label)
+        for label, seq in sequence_generator(output_fp):
+            obs_seqs.append(label)
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_remove_chimeras_denovo_from_seqs(self):
@@ -352,40 +371,44 @@ class workflowTests(TestCase):
             seqs_fp=seqs_fp,
             working_dir=self.working_dir)
         seqs_obs = []
-        with open(output_fp, 'U') as output_f:
-            for label, seq in parse_fasta(output_f):
-                label = label.split()[0]
-                seqs_obs.append(label)
+        for label, seq in sequence_generator(output_fp):
+            label = label.split()[0]
+            seqs_obs.append(label)
         self.assertEqual(seqs_non_chimera, seqs_obs)
 
     def test_multiple_sequence_alignment(self):
         """Test multiple sequence alignment.
         """
-        seqs = [DNA('caccggcggcccggtggtggccattattattgggtctaaag', id='seq_1'),
-                DNA('caccggcggcccgagtggtggccattattattgggtcaagg', id='seq_2'),
-                DNA('caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
-                DNA('aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
-                DNA('caccgggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
-        seqs_col = SequenceCollection(seqs)
+        seqs = [DNA('caccggcggcccggtggtggccattattattgggtctaaag',
+                    metadata={'id': 'seq_1'}, lowercase=True),
+                DNA('caccggcggcccgagtggtggccattattattgggtcaagg',
+                    metadata={'id': 'seq_2'}, lowercase=True),
+                DNA('caccggcggcccgagtgatggccattattattgggtctaaag',
+                    metadata={'id': 'seq_3'}, lowercase=True),
+                DNA('aaccggcggcccaagtggtggccattattattgggtctaaag',
+                    metadata={'id': 'seq_4'}, lowercase=True),
+                DNA('caccgggcccgagtggtggccattattattgggtctaaag',
+                    metadata={'id': 'seq_5'}, lowercase=True)]
+
         seqs_fp = join(self.working_dir, "seqs.fna")
         with open(seqs_fp, 'w') as o:
-            o.write(seqs_col.to_fasta())
+            for seq in seqs:
+                seq.write(o, format='fasta')
         alignment_file = multiple_sequence_alignment(seqs_fp)
-        with open(alignment_file, 'U') as f:
-            aligned_seqs = [DNA(item[1], id=item[0])
-                            for item in parse_fasta(f)]
+        aligned_seqs = [DNA(item[1], metadata={'id': item[0]}, lowercase=True)
+                        for item in sequence_generator(alignment_file)]
 
         align_exp = [
-            DNA(
-                'caccggcggcccg-gtggtggccattattattgggtctaaag', id='seq_1'),
-            DNA(
-                'caccggcggcccgagtggtggccattattattgggtcaagg-', id='seq_2'),
-            DNA(
-                'caccggcggcccgagtgatggccattattattgggtctaaag', id='seq_3'),
-            DNA(
-                'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
-            DNA(
-                'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
+            DNA('caccggcggcccg-gtggtggccattattattgggtctaaag',
+                lowercase=True, metadata={'id': 'seq_1'}),
+            DNA('caccggcggcccgagtggtggccattattattgggtcaagg-',
+                lowercase=True, metadata={'id': 'seq_2'}),
+            DNA('caccggcggcccgagtgatggccattattattgggtctaaag',
+                lowercase=True, metadata={'id': 'seq_3'}),
+            DNA('aaccggcggcccaagtggtggccattattattgggtctaaag',
+                lowercase=True, metadata={'id': 'seq_4'}),
+            DNA('caccg--ggcccgagtggtggccattattattgggtctaaag',
+                lowercase=True, metadata={'id': 'seq_5'})]
         self.assertEqual(aligned_seqs, align_exp)
 
     def test_build_index_sortmerna(self):
@@ -458,8 +481,7 @@ class workflowTests(TestCase):
                                     ref_db_fp, negate, threads, delim)
 
         # get the trimmed ground truth sequences
-        with open(origfilename, 'U') as f:
-            orig_seqs = [item[1] for item in parse_fasta(f)]
+        orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
         output_filename = 'final.biom'
@@ -562,14 +584,13 @@ class workflowTests(TestCase):
         for fn in listdir(output_dir):
             input_fp = join(output_dir, fn)
             sample_file = splitext(fn)[0]
-            with open(input_fp, 'U') as input_f:
-                for label, seq in parse_fasta(input_f):
-                    sample = label.split('_')[0]
-                    self.assertEqual(sample_file, sample)
-                    if sample not in seqs_act:
-                        seqs_act[sample] = [(label, seq)]
-                    else:
-                        seqs_act[sample].append((label, seq))
+            for label, seq in sequence_generator(input_fp):
+                sample = label.split('_')[0]
+                self.assertEqual(sample_file, sample)
+                if sample not in seqs_act:
+                    seqs_act[sample] = [(label, seq)]
+                else:
+                    seqs_act[sample].append((label, seq))
         return seqs_act
 
     def test_split_sequence_file_on_sample_ids_to_files(self):
@@ -600,9 +621,8 @@ class workflowTests(TestCase):
                 for seq in seqs_fasta[sample]:
                     seqs_f.write(">%s\n%s\n" % seq)
         output_dir = mkdtemp()
-        with open(seqs_fp, 'U') as seqs_f:
-            split_sequence_file_on_sample_ids_to_files(seqs=seqs_f,
-                                                       outdir=output_dir)
+        split_sequence_file_on_sample_ids_to_files(seqs=seqs_fp,
+                                                   outdir=output_dir)
         seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
             output_dir=output_dir)
         self.assertEqual(seqs_fasta, seqs_act)

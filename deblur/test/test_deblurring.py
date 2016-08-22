@@ -9,11 +9,11 @@
 from unittest import TestCase, main
 from io import StringIO
 
-from skbio.parse.sequences import parse_fasta
 import numpy as np
 
 from deblur.sequence import Sequence
 from deblur.deblurring import get_sequences, deblur
+from deblur.workflow import sequence_generator
 
 
 class DeblurringTests(TestCase):
@@ -65,8 +65,7 @@ class DeblurringTests(TestCase):
 
     def test_deblur_toy_example(self):
         seqs_f = StringIO(TEST_SEQS_1)
-
-        obs = deblur(parse_fasta(seqs_f))
+        obs = deblur(sequence_generator(seqs_f))
         exp = [
             Sequence("E.Coli;size=1000;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -78,7 +77,7 @@ class DeblurringTests(TestCase):
     def test_deblur(self):
         seqs_f = StringIO(TEST_SEQS_2)
 
-        obs = deblur(parse_fasta(seqs_f))
+        obs = deblur(sequence_generator(seqs_f))
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -93,7 +92,7 @@ class DeblurringTests(TestCase):
                       0.0000005, 0.0000005, 0.0000005, 0.0000005]
         seqs_f = StringIO(TEST_SEQS_2)
 
-        obs = deblur(parse_fasta(seqs_f), error_dist=error_dist)
+        obs = deblur(sequence_generator(seqs_f), error_dist=error_dist)
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -107,7 +106,7 @@ class DeblurringTests(TestCase):
              0.005, 0.005, 0.005, 0.001,
              0.001, 0.001, 0.0005])
         seqs_f = StringIO(TEST_SEQS_2)
-        obs = deblur(parse_fasta(seqs_f), error_dist=error_dist)
+        obs = deblur(sequence_generator(seqs_f), error_dist=error_dist)
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
