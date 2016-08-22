@@ -430,7 +430,16 @@ class workflowTests(TestCase):
             working_dir=self.working_dir)
         self.assertEqual(len(ref_fps), len(ref_db_fp))
 
-    def run_workflow_try(self, simfilename, origfilename, ref_fp, ref_db_fp):
+    def test_build_index_sortmerna_fail(self):
+        """Test functionality of build_index_sortmerna()
+        """
+        with self.assertRaises(RuntimeError):
+            build_index_sortmerna(
+                ref_fp='foo',
+                working_dir=self.working_dir)
+
+    def run_workflow_try(self, simfilename, origfilename,
+                         ref_fp, ref_db_fp, threads=1):
         """Test launching the complete workflow using simulated sequences
         and compare to original ground truth.
 
@@ -440,6 +449,12 @@ class workflowTests(TestCase):
             name of the simulated reads fasta file
         origfilename : str
             name of the fasta file with the ground truth sequences
+        ref_fp : list of str
+            list of the reference database files
+        def_db_fp : list of str
+            list of the indexed database files or None to create them
+        threads : int
+            number of threads to use (default=1)
         """
         seqs_fp = simfilename
         output_fp = self.working_dir
@@ -452,7 +467,6 @@ class workflowTests(TestCase):
         trim_length = 100
         min_size = 2
         negate = False
-        threads = 1
         nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
                                     mean_error=mean_error,
                                     error_dist=error_dist,
@@ -551,6 +565,9 @@ class workflowTests(TestCase):
                               self.orig_s2_fp, ref_fp, ref_db_fp)
         self.run_workflow_try(self.seqs_s3_fp,
                               self.orig_s3_fp, ref_fp, ref_db_fp)
+        self.run_workflow_try(self.seqs_s3_fp,
+                              self.orig_s3_fp, ref_fp, ref_db_fp,
+                              threads=3)
 
     def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
         """Parse output of split_sequence_file_on_sample_ids_to_files()

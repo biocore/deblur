@@ -54,6 +54,12 @@ class DeblurringTests(TestCase):
     def test_get_sequences_error_empty(self):
         self.assertIsNone(get_sequences([]))
 
+    def test_deblur_noseqs(self):
+        """If no sequences supplied, need to return None
+        """
+        res = deblur([])
+        self.assertEqual(res, None)
+
     def test_get_sequences(self):
         exp_seqs = [
             Sequence("151_4447;size=1812;", "---aggatgcgagatgcgtggt-----"),
@@ -85,6 +91,34 @@ class DeblurringTests(TestCase):
         seqs_f = StringIO(TEST_SEQS_2)
 
         obs = deblur(parse_fasta(seqs_f))
+        exp = [
+            Sequence("E.Coli-999;size=720;",
+                     "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
+                     "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
+                     "gcaagcttgagtctcgtagaggggggcagaattccag")]
+
+        self.assertEqual(obs, exp)
+
+    def test_deblur_indel(self):
+        """Test if also removes indel sequences
+        """
+        seqs_f = StringIO(TEST_SEQS_2)
+
+        # add the MSA for the indel
+        seqs = parse_fasta(seqs_f)
+        newseqs = []
+        for chead,cseq in seqs:
+            tseq = cseq[:10] + '-' + cseq[10:]
+            newseqs.append((chead, tseq))
+        # now add a sequence with an A insertion
+        tseq = cseq[:10] + 'A' + cseq[10:]
+        newseqs.append((chead, tseq))
+
+        cheads, seqs = zip(*newseqs)
+        lens = list(map(len, seqs))
+        print(lens)
+
+        obs = deblur(newseqs)
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
