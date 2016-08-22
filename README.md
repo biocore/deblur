@@ -29,5 +29,5 @@ The input to deblur workflow is a demultiplexed FASTA file. The deblur algorithm
 designed to work on individual samples.
 
 ```
-deblur workflow all_samples.fna db.fna output.biom
+deblur workflow --seqs-fp all_samples.fna --ref-fp db.fna --output-dir output
 ```
