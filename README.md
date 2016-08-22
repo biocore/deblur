@@ -2,7 +2,7 @@ Deblur
 ======
 
 [![Build Status](https://travis-ci.org/biocore/deblur.png?branch=master)](https://travis-ci.org/biocore/deblur)
-[![Coverage Status](https://coveralls.io/repos/biocore/deblur/badge.png?branch=master)](https://coveralls.io/r/biocore/deblur)
+[![Coverage Status](https://coveralls.io/repos/github/biocore/deblur/badge.svg?branch=master)](https://coveralls.io/github/biocore/deblur?branch=master)
 
 Deblur is a greedy deconvolution algorithm based on known read error profiles.
 
