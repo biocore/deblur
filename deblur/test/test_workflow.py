@@ -387,7 +387,7 @@ class workflowTests(TestCase):
                 'aaccggcggcccaagtggtggccattattattgggtctaaag', id='seq_4'),
             DNA(
                 'caccg--ggcccgagtggtggccattattattgggtctaaag', id='seq_5')]
-        self.assertItemsEqual(aligned_seqs, align_exp)
+        self.assertEqual(aligned_seqs, align_exp)
 
     def test_build_index_sortmerna(self):
         """Test functionality of build_index_sortmerna()
@@ -482,7 +482,7 @@ class workflowTests(TestCase):
         orig_seqs.sort()
 
         # test we see all ground truth sequences and no other
-        self.assertItemsEqual(outseqs, orig_seqs)
+        self.assertEqual(outseqs, orig_seqs)
 
     def test_get_files_for_table(self):
         filelist = get_files_for_table(self.test_data_dir)
@@ -628,7 +628,7 @@ class workflowTests(TestCase):
                                                        outdir=output_dir)
         seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
             output_dir=output_dir)
-        self.assertDictEqual(seqs_fasta, seqs_act)
+        self.assertEqual(seqs_fasta, seqs_act)
 
 
 if __name__ == '__main__':
