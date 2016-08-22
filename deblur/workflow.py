@@ -41,6 +41,8 @@ def trim_seqs(input_seqs, trim_len):
         The trimmed sequences in (label, sequence) format
     """
     # counters for the number of trimmed and total sequences
+    logger = logging.getLogger(__name__)
+
     okseqs = 0
     totseqs = 0
 
@@ -58,6 +60,9 @@ def trim_seqs(input_seqs, trim_len):
                  % (totseqs-okseqs, totseqs, trim_len)
         logger.warn(errmsg)
         warnings.warn(errmsg, UserWarning)
+    else:
+        logger.debug('trimmed to length %d (%d / %d remaining)'
+                     % (trim_len, okseqs, totseqs))
 
 
 def dereplicate_seqs(seqs_fp,
@@ -453,8 +458,8 @@ def create_otu_table(output_fp, deblurred_list,
     ----------
     output_fp : string
         filepath to final BIOM table
-    deblurred_list : list of string
-        list of file names (including path) of all deblurred
+    deblurred_list : list of (str, str)
+        list of file names (including path), sampleid of all deblurred
         fasta files to add to the table
     outputfasta_fp : str, optional
         name of output fasta file (of all sequences in the table) or None

@@ -517,6 +517,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
 
     # Create output directory
     if not is_worker_thread:
+        logger.info('deblur main program started')
         if exists(output_dir):
             if overwrite:
                 logger.debug('overwrite is on - deleting directory %s' %
@@ -531,6 +532,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         working_dir = join(output_dir, "deblur_working_dir")
         makedirs(working_dir)
     else:
+        logger.info('deblur worker thread started')
         working_dir = join(output_dir, "deblur_working_dir")
 
     # if it's a worker thread, the seqs_fp parameter

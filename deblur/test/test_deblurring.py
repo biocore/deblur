@@ -111,21 +111,28 @@ class DeblurringTests(TestCase):
             tseq = cseq[:10] + '-' + cseq[10:]
             newseqs.append((chead, tseq))
         # now add a sequence with an A insertion
-        tseq = cseq[:10] + 'A' + cseq[10:]
+        tseq = cseq[:10] + 'A' + cseq[10:-1]+'-'
         newseqs.append((chead, tseq))
 
-        cheads, seqs = zip(*newseqs)
-        lens = list(map(len, seqs))
-        print(lens)
+        # cheads, seqs = zip(*newseqs)
+        # lens = list(map(len, seqs))
+        # print(lens)
 
         obs = deblur(newseqs)
+        # remove the '-' (same as in launch_workflow)
+        for s in obs:
+            s.sequence = s.sequence.replace('-', '')
+
+        # the expected output
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
                      "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
-
-        self.assertEqual(obs, exp)
+        # make sure we get 1 sequence as output
+        self.assertEqual(len(obs),1)
+        # and that it is the correct sequence
+        self.assertEqual(obs[0].sequence, exp[0].sequence)
 
     def test_deblur_with_non_default_error_profile(self):
         error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
