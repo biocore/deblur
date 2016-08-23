@@ -399,7 +399,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
 @click.option('--ref-fp', required=False, multiple=True,
-              default=None, show_default=False,
+              default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
               help="Keep all sequences aligning to this FASTA database "
@@ -496,7 +496,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
 
     logger.info('error_dist is : %s' % error_dist)
 
-    if ref_fp is None:
+    if len(ref_fp) == 0:
         if negate:
             ref_fp = [neg_db]
             logger.debug('Using default negative filtering file %s' % ref_fp)
