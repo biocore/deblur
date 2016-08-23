@@ -41,6 +41,8 @@ def error_dist_from_str(ctx, param, value):
     """
     if value is None:
         return value
+    if type(value) != str:
+        return value
     try:
         error_dist = list(map(float, value.split(',')))
         return error_dist
