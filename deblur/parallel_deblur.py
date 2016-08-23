@@ -35,8 +35,8 @@ def deblur_system_call(params, input_fp):
 
     """
     logger = logging.getLogger(__name__)
-    logger.debug('deblur system call params %s, input_fp %s' %
-                 (params, input_fp))
+    logger.debug('[%s] deblur system call params %s, input_fp %s' %
+                 (mp.current_process().name, params, input_fp))
 
     # construct command
     script_name = "deblur"
@@ -48,7 +48,8 @@ def deblur_system_call(params, input_fp):
                '--keep-tmp-files']
     command.extend(params)
 
-    logger.debug('running command %s' % command)
+    logger.debug('[%s] running command %s' % (mp.current_process().name,
+                                              command))
     return _system_call(command)
 
 

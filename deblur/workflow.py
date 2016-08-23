@@ -17,12 +17,67 @@ import numpy as np
 import subprocess
 import time
 import warnings
+import io
 
-from skbio.parse.sequences import parse_fasta
+import skbio
 from biom.table import Table
-from biom.util import biom_open, HAVE_H5PY
+from biom.util import biom_open
 
 from deblur.deblurring import deblur
+
+
+sniff_fasta = skbio.io.io_registry.get_sniffer('fasta')
+sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
+
+
+def sequence_generator(input_fp):
+    """Yield (id, sequence) from an input file
+
+    Parameters
+    ----------
+    input_fp : filepath
+        A filepath, which can be any valid fasta or fastq file within the
+        limitations of scikit-bio's IO registry.
+
+    Notes
+    -----
+    The use of this method is a stopgap to replicate the existing `parse_fasta`
+    functionality while at the same time allowing for fastq support.
+
+    Raises
+    ------
+    skbio.io.FormatIdentificationWarning
+        If the format of the input file cannot be determined.
+
+    Returns
+    -------
+    (str, str)
+        The ID and sequence.
+
+    """
+    kw = {}
+    if sniff_fasta(input_fp)[0]:
+        format = 'fasta'
+    elif sniff_fastq(input_fp)[0]:
+        format = 'fastq'
+
+        # WARNING: the variant is currently forced to illumina 1.8 as the
+        # quality scores are _not_ used in downstream processing. However, if
+        # in the future, quality scores are to be interrogated, it is critical
+        # that this variant parameter be exposed to the user at the command
+        # line. The list of allowable paramters can be found here:
+        # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
+        kw['variant'] = 'illumina1.8'
+    else:
+        raise skbio.io.FormatIdentificationWarning("input_fp does not appear "
+                                                   "to be FASTA or FASTQ.")
+
+    # some of the test code is using file paths, some is using StringIO.
+    if isinstance(input_fp, io.TextIOBase):
+        input_fp.seek(0)
+
+    for record in skbio.read(input_fp, format=format, **kw):
+        yield (record.metadata['id'], str(record))
 
 
 def trim_seqs(input_seqs, trim_len):
@@ -40,10 +95,29 @@ def trim_seqs(input_seqs, trim_len):
     Generator of (str, str)
         The trimmed sequences in (label, sequence) format
     """
+    # counters for the number of trimmed and total sequences
+    logger = logging.getLogger(__name__)
+
+    okseqs = 0
+    totseqs = 0
 
     for label, seq in input_seqs:
+        totseqs += 1
         if len(seq) >= trim_len:
+            okseqs += 1
             yield label, seq[:trim_len]
+
+    if okseqs < 0.01*totseqs:
+        logger = logging.getLogger(__name__)
+        errmsg = 'Vast majority of sequences (%d / %d) are shorter ' \
+                 'than the trim length (%d). ' \
+                 'Are you using the correct -t trim length?' \
+                 % (totseqs-okseqs, totseqs, trim_len)
+        logger.warn(errmsg)
+        warnings.warn(errmsg, UserWarning)
+    else:
+        logger.debug('trimmed to length %d (%d / %d remaining)'
+                     % (trim_len, okseqs, totseqs))
 
 
 def dereplicate_seqs(seqs_fp,
@@ -171,7 +245,7 @@ def remove_artifacts_seqs(seqs_fp,
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
-        logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
+        logger.warn('file %s has size 0, continuing' % seqs_fp)
         return
 
     if coverage_thresh is None:
@@ -233,8 +307,8 @@ def remove_artifacts_seqs(seqs_fp,
     totalseqs = 0
     okseqs = 0
     badseqs = 0
-    with open(seqs_fp, 'U') as seqs_f, open(output_fp, 'w') as out_f:
-        for label, seq in parse_fasta(seqs_f):
+    with open(output_fp, 'w') as out_f:
+        for label, seq in sequence_generator(seqs_fp):
             totalseqs += 1
             label = label.split()[0]
             if op(label):
@@ -324,6 +398,29 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     return output_fp
 
 
+def sample_id_from_read_id(readid):
+    """Get SampleID from the split_libraries_fastq.py output
+    fasta file read header
+
+    Parameters
+    ----------
+    readid : str
+        the fasta file read name
+
+    Returns
+    -------
+    sampleid : str
+        the sample id
+    """
+
+    # get the sampleid_readid field
+    sampleread = readid.split(' ')[0]
+
+    # get the sampleid field
+    sampleid = sampleread.rsplit('_', 1)[0]
+    return sampleid
+
+
 def split_sequence_file_on_sample_ids_to_files(seqs,
                                                outdir):
     """Split FASTA file on sample IDs.
@@ -340,8 +437,10 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
                 ' for file %s into dir %s' % (seqs, outdir))
 
     outputs = {}
-    for bits in parse_fasta(seqs):
-        sample = bits[0].split('_', 1)[0]
+
+    for bits in sequence_generator(seqs):
+        sample = sample_id_from_read_id(bits[0])
+
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
@@ -363,14 +462,8 @@ def write_biom_table(table, biom_fp):
     logger = logging.getLogger(__name__)
     logger.debug('write_biom_table to file %s' % biom_fp)
     with biom_open(biom_fp, 'w') as f:
-        if HAVE_H5PY:
-            logger.debug('saving with h5py')
-            table.to_hdf5(h5grp=f, generated_by="deblur")
-            logger.debug('wrote to hdf5 file %s' % biom_fp)
-        else:
-            logger.debug('no h5py. saving to json')
-            table.to_json(direct_io=f, generated_by="deblur")
-            logger.debug('wrote to json file %s' % biom_fp)
+        table.to_hdf5(h5grp=f, generated_by="deblur")
+        logger.debug('wrote to BIOM file %s' % biom_fp)
 
 
 def get_files_for_table(input_dir,
@@ -416,8 +509,8 @@ def create_otu_table(output_fp, deblurred_list,
     ----------
     output_fp : string
         filepath to final BIOM table
-    deblurred_list : list of string
-        list of file names (including path) of all deblurred
+    deblurred_list : list of (str, str)
+        list of file names (including path), sampleid of all deblurred
         fasta files to add to the table
     outputfasta_fp : str, optional
         name of output fasta file (of all sequences in the table) or None
@@ -450,20 +543,19 @@ def create_otu_table(output_fp, deblurred_list,
         samplist.append(csampleid)
         csampidx = len(sampset)-1
         # read the fasta file and add to the matrix
-        with open(cfilename, 'U') as f:
-            for chead, cseq in parse_fasta(f):
-                if cseq not in seqdict:
-                    seqdict[cseq] = len(seqlist)
-                    seqlist.append(cseq)
-                cseqidx = seqdict[cseq]
-                cfreq = float(sizeregexp.search(chead).group(0))
-                try:
-                    obs[cseqidx, csampidx] = cfreq
-                except IndexError:
-                    # exception means we ran out of space - add more OTUs
-                    shape = obs.shape
-                    obs.resize((shape[0]*2,  shape[1]))
-                    obs[cseqidx, csampidx] = cfreq
+        for chead, cseq in sequence_generator(cfilename):
+            if cseq not in seqdict:
+                seqdict[cseq] = len(seqlist)
+                seqlist.append(cseq)
+            cseqidx = seqdict[cseq]
+            cfreq = float(sizeregexp.search(chead).group(0))
+            try:
+                obs[cseqidx, csampidx] = cfreq
+            except IndexError:
+                # exception means we ran out of space - add more OTUs
+                shape = obs.shape
+                obs.resize((shape[0]*2,  shape[1]))
+                obs[cseqidx, csampidx] = cfreq
 
     logger.info('for final biom table loaded %d samples, %d unique sequences'
                 % (len(samplist), len(seqlist)))
@@ -502,9 +594,9 @@ def create_otu_table(output_fp, deblurred_list,
         logger.info('saved sequence fasta file to %s' % outputfasta_fp)
 
 
-def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
+def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_',
+                    ref_db_fp, negate, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
@@ -514,8 +606,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         a post split library fasta file for debluring
     working_dir: string
         working directory path
-    read_error: float
-        read error rate
     mean_error: float
         mean error for original sequence estimate
     error_dist: list
@@ -537,8 +627,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     threads_per_sample: integer, optional
         number of threads to use for SortMeRNA/mafft/vsearch
         (0 for max available)
-    delim: string, optional
-        delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
         the minimal similarity for a sequence to the database.
         if None, take the defaults (0.65 for negate=False,
@@ -558,9 +646,9 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
-    with open(seqs_fp, 'U') as in_f, open(output_trim_fp, 'w') as out_f:
+    with open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
-                input_seqs=parse_fasta(in_f), trim_len=trim_length):
+                input_seqs=sequence_generator(seqs_fp), trim_len=trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
@@ -596,7 +684,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
-        seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
+        seqs = deblur(sequence_generator(output_msa_fp), mean_error,
                       error_dist, indel_prob, indel_max)
         if seqs is None:
             warnings.warn('multiple sequence alignment file %s contains '

@@ -25,8 +25,8 @@ python setup.py install
 Example usage
 =============
 
-The input to deblur workflow is a demultiplexed FASTA file. The deblur algorithm is
-designed to work on individual samples.
+The input to deblur workflow is a demultiplexed FASTA or FASTQ file. The deblur 
+algorithm is designed to work on individual samples.
 
 ```
 deblur workflow --seqs-fp all_samples.fna --ref-fp db.fna --output-dir output

@@ -11,13 +11,11 @@ from shutil import rmtree
 from tempfile import mkdtemp
 from os.path import join, dirname, abspath
 import logging
-from skbio.util import remove_files
-from skbio.parse.sequences import parse_fasta
-from os import makedirs
+from os import makedirs, remove
 
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (build_index_sortmerna,
-                             start_log)
+                             start_log, sequence_generator)
 
 
 class parallelDeblurTests(TestCase):
@@ -54,7 +52,8 @@ class parallelDeblurTests(TestCase):
         start_log(level=logging.DEBUG, filename=logfilename)
 
     def tearDown(self):
-        remove_files(self.files_to_remove)
+        for f in self.files_to_remove:
+            remove(f)
         rmtree(self.working_dir)
 
     def compare_result(self, simfilename, origfilename, trim_length):
@@ -71,13 +70,11 @@ class parallelDeblurTests(TestCase):
         """
 
         # get the trimmed ground truth sequences
-        with open(origfilename, 'U') as f:
-            orig_seqs = [item[1] for item in parse_fasta(f)]
+        orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
         # get the deblurred fasta file sequences
-        with open(simfilename, 'U') as f:
-            out_seqs = [item[1] for item in parse_fasta(f)]
+        out_seqs = [item[1] for item in sequence_generator(simfilename)]
         out_seqs = [item.upper() for item in out_seqs]
 
         out_seqs.sort()

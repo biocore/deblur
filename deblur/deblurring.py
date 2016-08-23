@@ -14,6 +14,16 @@ import logging
 from deblur.sequence import Sequence
 
 
+def get_default_error_profile():
+    """Return the default error profile for deblurring
+    based on illumina run data
+    """
+    error_dist = [1, 0.06, 0.02, 0.02, 0.01,
+                  0.005, 0.005, 0.005, 0.001, 0.001,
+                  0.001, 0.0005]
+    return error_dist
+
+
 def get_sequences(input_seqs):
     """Returns a list of Sequences
 
@@ -33,7 +43,7 @@ def get_sequences(input_seqs):
         If all the sequences do not have the same length either aligned or
         unaligned.
     """
-    seqs = [Sequence(label, seq) for label, seq in input_seqs]
+    seqs = [Sequence(id, seq) for id, seq in input_seqs]
 
     if len(seqs) == 0:
         logger = logging.getLogger(__name__)
@@ -55,7 +65,8 @@ def get_sequences(input_seqs):
     return seqs
 
 
-def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
+def deblur(input_seqs, mean_error=0.005,
+           error_dist=None,
            indel_prob=0.01, indel_max=3):
     """Deblur the reads
 
@@ -64,15 +75,13 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     input_seqs : iterable of (str, str)
         The list of input sequences in (label, sequence) format. The label
         should include the sequence count in the 'size=X' format.
-    read_error : float, optional
-        The upper bound on the read error rate. Default: 0.05
     mean_error : float, optional
         The mean illumina error, used for original sequence estimate.
         Default: 0.005
     error_dist : list of float, optional
         A list of error probabilities. The length of the list determines the
-        amount of hamming distances taken into account. Default: None, computed
-        from mean error and sequence length.
+        amount of hamming distances taken into account. Default: None, use
+        the default error profile (from get_default_error_profile() )
     indel_prob : float, optional
         Indel probability (same for N indels). Default: 0.01
     indel_max : int, optional
@@ -85,9 +94,7 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
 
     Notes
     -----
-    mean_error is used only for normalizing the peak height before deblurring,
-    whereas read_error is used for calculating the expected number of errors
-    for each position.
+    mean_error is used only for normalizing the peak height before deblurring.
     The array 'error_dist' represents the error distribution, where
     Xi = max frequency of error hamming. The length of this array - 1 limits
     the hamming distance taken into account, i.e. if the length if `error_dist`
@@ -96,6 +103,10 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
     """
     logger = logging.getLogger(__name__)
 
+    if error_dist is None:
+        error_dist = get_default_error_profile()
+    logger.debug('Using error profile %s' % error_dist)
+
     # Get the sequences
     seqs = get_sequences(input_seqs)
     if seqs is None:
@@ -103,15 +114,10 @@ def deblur(input_seqs, read_error=0.05, mean_error=0.005, error_dist=None,
         return None
     logger.info('deblurring %d sequences' % len(seqs))
 
-    # if error_list not supplied, use the default (22 mock mixture setup)
+    # fix the original frequencies of each read error using the
+    # mean error profile
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
-    if error_dist is None:
-        error_dist = np.array(
-            [1.0 / mod_factor, read_error / mod_factor, 0.01, 0.01, 0.01,
-             0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001,
-             0.001])
-    else:
-        error_dist = np.array(error_dist) / mod_factor
+    error_dist = np.array(error_dist) / mod_factor
 
     max_h_dist = len(error_dist)-1
 
