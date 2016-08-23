@@ -20,7 +20,7 @@ import warnings
 
 from skbio.parse.sequences import parse_fasta
 from biom.table import Table
-from biom.util import biom_open, HAVE_H5PY
+from biom.util import biom_open
 
 from deblur.deblurring import deblur
 
@@ -405,14 +405,8 @@ def write_biom_table(table, biom_fp):
     logger = logging.getLogger(__name__)
     logger.debug('write_biom_table to file %s' % biom_fp)
     with biom_open(biom_fp, 'w') as f:
-        if HAVE_H5PY:
-            logger.debug('saving with h5py')
-            table.to_hdf5(h5grp=f, generated_by="deblur")
-            logger.debug('wrote to hdf5 file %s' % biom_fp)
-        else:
-            logger.debug('no h5py. saving to json')
-            table.to_json(direct_io=f, generated_by="deblur")
-            logger.debug('wrote to json file %s' % biom_fp)
+        table.to_hdf5(h5grp=f, generated_by="deblur")
+        logger.debug('wrote to BIOM file %s' % biom_fp)
 
 
 def get_files_for_table(input_dir,
