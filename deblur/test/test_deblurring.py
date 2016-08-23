@@ -12,8 +12,8 @@ from io import StringIO
 import numpy as np
 
 from deblur.sequence import Sequence
-from deblur.deblurring import get_sequences, deblur
 from deblur.workflow import sequence_generator
+from deblur.deblurring import get_sequences, deblur, get_default_error_profile
 
 
 class DeblurringTests(TestCase):
@@ -28,6 +28,12 @@ class DeblurringTests(TestCase):
                      ("151_5155;size=998;", "---gaggatgcgagatgcgtgg-----"),
                      ("151_527;size=964;", "---acggaggatgatgcgcggt-----"),
                      ("151_5777;size=305;", "---ggagtgcaagattccaggt-----")]
+
+    def test_get_default_error_profile(self):
+        goodprofile = [1, 0.06, 0.02, 0.02, 0.01,
+                       0.005, 0.005, 0.005, 0.001, 0.001,
+                       0.001, 0.0005]
+        self.assertEqual(goodprofile, get_default_error_profile())
 
     def test_get_sequences_error_real_length(self):
         seqs = [("151_9240;size=170;", "----tagggcaagactccatg-----"),
@@ -47,6 +53,12 @@ class DeblurringTests(TestCase):
 
     def test_get_sequences_error_empty(self):
         self.assertIsNone(get_sequences([]))
+
+    def test_deblur_noseqs(self):
+        """If no sequences supplied, need to return None
+        """
+        res = deblur([])
+        self.assertEqual(res, None)
 
     def test_get_sequences(self):
         exp_seqs = [
@@ -85,6 +97,37 @@ class DeblurringTests(TestCase):
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
 
         self.assertEqual(obs, exp)
+
+    def test_deblur_indel(self):
+        """Test if also removes indel sequences
+        """
+        seqs_f = StringIO(TEST_SEQS_2)
+
+        # add the MSA for the indel
+        seqs = parse_fasta(seqs_f)
+        newseqs = []
+        for chead, cseq in seqs:
+            tseq = cseq[:10] + '-' + cseq[10:]
+            newseqs.append((chead, tseq))
+        # now add a sequence with an A insertion
+        tseq = cseq[:10] + 'A' + cseq[10:-1]+'-'
+        newseqs.append((chead, tseq))
+
+        obs = deblur(newseqs)
+        # remove the '-' (same as in launch_workflow)
+        for s in obs:
+            s.sequence = s.sequence.replace('-', '')
+
+        # the expected output
+        exp = [
+            Sequence("E.Coli-999;size=720;",
+                     "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
+                     "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
+                     "gcaagcttgagtctcgtagaggggggcagaattccag")]
+        # make sure we get 1 sequence as output
+        self.assertEqual(len(obs), 1)
+        # and that it is the correct sequence
+        self.assertEqual(obs[0].sequence, exp[0].sequence)
 
     def test_deblur_with_non_default_error_profile(self):
         error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,

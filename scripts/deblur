@@ -18,7 +18,7 @@ from glob import glob
 
 from skbio.util import remove_files
 
-from deblur.deblurring import deblur
+from deblur.deblurring import (deblur, get_default_error_profile)
 from deblur.parallel_deblur import parallel_deblur
 from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_seqs,
@@ -34,6 +34,21 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
 __version__ = "0.9.2.1"
 
 
+def error_dist_from_str(ctx, param, value):
+    """Validate the error profile is either None or a list of floats
+    and return it as a list of floats
+    """
+    if value is None:
+        return value
+    try:
+        error_dist = list(map(float, value.split(',')))
+        return error_dist
+    except ValueError:
+        raise click.BadParameter('Error distribution must be a comma '
+                                 'separated list of maximal error '
+                                 'probability per hamming distance')
+
+
 @click.group()
 def deblur_cmds():
     # DEBLUR SEQUENCES COMMAND
@@ -44,13 +59,15 @@ def deblur_cmds():
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              help="Maximal bound on 1 nucleotide read error rate")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
+              show_default=True,
               help="The mean per nucleotide error, used for original "
               "sequence estimate. If "
               "not passed typical illumina error rate is used")
-@click.option('--error-dist', '-d', required=False, type=str, default=None,
+@click.option('--error-dist', '-d', required=False, type=str,
+              default=get_default_error_profile(),
+              show_default=True,
+              callback=error_dist_from_str,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account.")
@@ -69,19 +86,23 @@ def deblur_cmds():
                               dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def deblur_seqs(seqs_fp, read_error, mean_error, error_dist, indel_prob,
+def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
                 indel_max, log_level, log_file):
     """Clean read errors from Illumina reads"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
     logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
 
-    # If the user provided an error_dist value, we map it to a list of floats
-    if error_dist:
-        error_dist = list(map(float, error_dist.split(',')))
+    # set the error distribution
+    if error_dist is None:
+        logger.info('using default error profile')
+        # set to the default illumina read error profile
+        error_dist = get_default_error_profile()
 
-    seqs = deblur(sequence_generator(seqs_fp), read_error, mean_error, 
-                  error_dist, indel_prob, indel_max)
+    logger.info('error_dist is : %s' % error_dist)
+
+    seqs = deblur(sequence_generator(seqs_fp), mean_error, error_dist, 
+                  indel_prob, indel_max)
 
     output_path = "%s.clean" % seqs_fp
     with open(output_path, 'w') as f:
@@ -389,21 +410,18 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True, help="Overwrite output directory if exists.")
-@click.option('--read-error', '-e', required=False, type=float, default=0.05,
-              show_default=True,
-              help="Maximal bound on 1 nucleotide read error rate."
-                   "Required if --eror-dist is not supplied")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
               help="The mean per nucleotide error, used for original "
               "sequence estimate. If "
               "not passed typical illumina error rate is used")
-@click.option('--error-dist', '-d', required=False, type=str, default=None,
+@click.option('--error-dist', '-d', required=False, type=str,
+              default=get_default_error_profile(),
               show_default=True,
+              callback=error_dist_from_str,
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
-                   "number of hamming distances taken into account. "
-                   "This replaces of the --read-error value")
+                   "number of hamming distances taken into account.")
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               show_default=True,
               help='Insertion/deletion (indel) probability '
@@ -427,9 +445,6 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
-@click.option('--delim', required=False, type=str, default='_',
-              show_default=True, help="Delimiter in FASTA labels to separate "
-                                      "sample ID from sequence ID")
 @click.option('--keep-tmp-files', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True,
@@ -454,22 +469,28 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, l
 @click.option('attack_mode', '-A', required=False, type=bool, default=False,
               help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
-             read_error, mean_error, error_dist, indel_prob, indel_max,
+             mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_reads, min_size, negate, threads_per_sample,
-             delim, keep_tmp_files, log_level, log_file, jobs_to_start,
+             keep_tmp_files, log_level, log_file, jobs_to_start,
              is_worker_thread, attack_mode):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
-    logger.info('deblur version %s workflow started on %s' %
+    logger.warn('deblur version %s workflow started on %s' %
                 (__version__, seqs_fp))
-    logger.info('parameters: %s' % locals())
-    # If the user provided an error_dist value, we map it to a list of floats
-    if error_dist:
-        error_dist = list(map(float, error_dist.split(',')))
+    logger.warn('parameters: %s' % locals())
+
+    # set the error distribution
+    if error_dist is None:
+        logger.info('using default error profile')
+        # set to the default illumina read error profile
+        error_dist = get_default_error_profile()
+
+    logger.info('error_dist is : %s' % error_dist)
 
     # Create output directory
     if not is_worker_thread:
+        logger.info('deblur main program started')
         if exists(output_dir):
             if overwrite:
                 logger.debug('overwrite is on - deleting directory %s' %
@@ -484,6 +505,7 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         working_dir = join(output_dir, "deblur_working_dir")
         makedirs(working_dir)
     else:
+        logger.info('deblur worker thread started')
         working_dir = join(output_dir, "deblur_working_dir")
 
     # if it's a worker thread, the seqs_fp parameter
@@ -525,12 +547,11 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
             if isfile(input_fp):
                 deblurred_file_name = launch_workflow(
                     seqs_fp=input_fp, working_dir=working_dir,
-                    read_error=read_error, mean_error=mean_error,
+                    mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
-                    negate=negate, threads_per_sample=threads_per_sample,
-                    delim=delim)
+                    negate=negate, threads_per_sample=threads_per_sample)
             if deblurred_file_name is None:
                 logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
