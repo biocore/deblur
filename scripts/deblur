@@ -359,7 +359,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, 
+def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                      log_file):
     """Generate a BIOM table from a directory of chimera removed fasta files
     Parameters
