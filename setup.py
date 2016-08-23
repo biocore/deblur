@@ -47,7 +47,7 @@ setup(name='deblur',
       extras_require={'test': ["nose >= 0.10.1", "pep8"],
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
       install_requires=['click >= 6', 'numpy >= 1.7',
-                        'scikit-bio >= 0.2.2, < 0.3.0',
+                        'scikit-bio >= 0.5.0, < 0.6.0',
                         'biom-format >= 2.1.3, < 2.2.0',
                         'h5py >= 2.2.0'],
       classifiers=classifiers

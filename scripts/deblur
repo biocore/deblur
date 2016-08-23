@@ -16,7 +16,6 @@ import logging
 import sys
 from glob import glob
 
-from skbio.parse.sequences import parse_fasta
 from skbio.util import remove_files
 
 from deblur.deblurring import (deblur, get_default_error_profile)
@@ -29,7 +28,7 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              build_index_sortmerna,
                              get_files_for_table,
                              create_otu_table,
-                             start_log)
+                             start_log, sequence_generator)
 
 
 __version__ = "0.9.2.1"
@@ -102,9 +101,8 @@ def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
 
     logger.info('error_dist is : %s' % error_dist)
 
-    with open(seqs_fp, 'U') as f:
-        seqs = deblur(parse_fasta(f), mean_error, error_dist,
-                      indel_prob, indel_max)
+    seqs = deblur(sequence_generator(seqs_fp), mean_error, error_dist,
+                  indel_prob, indel_max)
 
     output_path = "%s.clean" % seqs_fp
     with open(output_path, 'w') as f:
@@ -136,8 +134,8 @@ def trim(seqs_fp, output_fp, trim_length, log_level, log_file):
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
     logger.info('deblur deblur_seqs started on file %s' % seqs_fp)
-    with open(seqs_fp, 'U') as in_f, open(output_fp, 'w') as out_f:
-        for label, seq in trim_seqs(parse_fasta(in_f), trim_length):
+    with open(output_fp, 'w') as out_f:
+        for label, seq in trim_seqs(sequence_generator(seqs_fp), trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
 
 
@@ -361,7 +359,8 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, log_file):
+def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
+                     log_file):
     """Generate a BIOM table from a directory of chimera removed fasta files
     Parameters
     ----------
