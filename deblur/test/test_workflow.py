@@ -31,7 +31,9 @@ from deblur.workflow import (dereplicate_seqs,
                              launch_workflow,
                              split_sequence_file_on_sample_ids_to_files,
                              build_index_sortmerna,
-                             start_log)
+                             start_log,
+                             sample_id_from_read_id)
+from deblur.deblurring import get_default_error_profile
 
 
 class workflowTests(TestCase):
@@ -429,7 +431,17 @@ class workflowTests(TestCase):
             working_dir=self.working_dir)
         self.assertEqual(len(ref_fps), len(ref_db_fp))
 
-    def run_workflow_try(self, simfilename, origfilename, ref_fp, ref_db_fp):
+    def test_build_index_sortmerna_fail(self):
+        """Test functionality of build_index_sortmerna()
+        """
+        with self.assertRaises(RuntimeError):
+            build_index_sortmerna(
+                ref_fp='foo',
+                working_dir=self.working_dir)
+
+    def run_workflow_try(self, simfilename, origfilename,
+                         ref_fp, ref_db_fp, threads=1,
+                         trim_length=100):
         """Test launching the complete workflow using simulated sequences
         and compare to original ground truth.
 
@@ -439,23 +451,34 @@ class workflowTests(TestCase):
             name of the simulated reads fasta file
         origfilename : str
             name of the fasta file with the ground truth sequences
+        ref_fp : list of str
+            list of the reference database files
+        def_db_fp : list of str
+            list of the indexed database files or None to create them
+        threads : int
+            number of threads to use (default=1)
+        trim_length : int
+            length of sequences to trim to (default=100)
         """
         seqs_fp = simfilename
         output_fp = self.working_dir
-        read_error = 0.05
         mean_error = 0.005
-        error_dist = None
+        error_dist = get_default_error_profile()
         indel_prob = 0.01
         indel_max = 3
-        trim_length = 100
         min_size = 2
         negate = False
-        threads = 1
-        delim = '_'
-        nochimera = launch_workflow(seqs_fp, output_fp, read_error, mean_error,
-                                    error_dist, indel_prob, indel_max,
-                                    trim_length, min_size, (ref_fp,),
-                                    ref_db_fp, negate, threads, delim)
+        nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
+                                    mean_error=mean_error,
+                                    error_dist=error_dist,
+                                    indel_prob=indel_prob,
+                                    indel_max=indel_max,
+                                    trim_length=trim_length,
+                                    min_size=min_size,
+                                    ref_fp=(ref_fp,),
+                                    ref_db_fp=ref_db_fp,
+                                    negate=negate,
+                                    threads_per_sample=threads)
 
         # get the trimmed ground truth sequences
         with open(origfilename, 'U') as f:
@@ -498,11 +521,13 @@ class workflowTests(TestCase):
                   'testmerge2.fasta.trim.derep.no_artifacts'
                   '.msa.deblur.no_chimeras')
         outfile = join(self.working_dir, 'testmerge.biom')
-        create_otu_table(outfile, [(m1, 'testmerge'), (m2, 'testmerge2')])
+        fasta_outfile = join(self.working_dir, 'testmerge.seq.fa')
+        create_otu_table(outfile, [(m1, 'testmerge'), (m2, 'testmerge2')],
+                         outputfasta_fp=fasta_outfile)
 
         # test the result
         table = load_table(outfile)
-
+        tableids = table.ids(axis='observation')
         # test a sequence present in both
         self.assertEqual(table.get_value_by_ids(
             'TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCG'
@@ -522,6 +547,51 @@ class workflowTests(TestCase):
             'TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTTA'
             'AGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGAGT'
             'GCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge2'), 0)
+        # test the output fasta file
+        allseqs = []
+        with open(fasta_outfile, 'r') as input_f:
+            for label, seq in parse_fasta(input_f):
+                self.assertTrue(seq in tableids)
+                allseqs.append(seq)
+        self.assertEqual(len(allseqs), len(tableids))
+
+        # test minimal read filtering ( minreads>0 )
+        minreads = 7
+        outfile2 = join(self.working_dir, 'testmerge2.biom')
+        create_otu_table(outfile2, [(m1, 'testmerge'), (m2, 'testmerge2')],
+                         minreads=minreads)
+
+        table2 = load_table(outfile2)
+        table2ids = table2.ids(axis='observation')
+        tablesum = table.sum(axis='observation')
+        for idx, cid in enumerate(table.ids(axis='observation')):
+            if tablesum[idx] >= minreads:
+                self.assertIn(cid, table2ids)
+            else:
+                self.assertNotIn(cid, table2ids)
+
+        self.assertEqual(table2.get_value_by_ids(
+            'TACGAGGggggCGAGCGTTGTTCG'
+            'GAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGG'
+            'CTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAAT'
+            'TTCCGGT', 'testmerge2'), 8)
+        # and an otu present only in one
+        self.assertEqual(table2.get_value_by_ids(
+            'TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGAGCGTAGGCGGTTTCTT'
+            'AAGTCTGATGTGAAAGCCCACGGCTCAACCGTGGAGGGTCATTGGAAACTGGGGAACTTGA'
+            'GTGCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge'), 7)
+
+    def test_create_otu_table_same_sampleid(self):
+        # merge the fasta files
+        m1 = join(self.test_data_dir,
+                  'testmerge.fasta.trim.derep.no_artifacts'
+                  '.msa.deblur.no_chimeras')
+        m2 = join(self.test_data_dir,
+                  'testmerge2.fasta.trim.derep.no_artifacts'
+                  '.msa.deblur.no_chimeras')
+        outfile = join(self.working_dir, 'testmerge.biom')
+        with self.assertWarns(UserWarning):
+            create_otu_table(outfile, [(m1, 'testmerge'), (m2, 'testmerge')])
 
     def test_launch_workflow(self):
         """Test launching complete workflow using 3 simulated sequence files.
@@ -543,6 +613,44 @@ class workflowTests(TestCase):
                               self.orig_s2_fp, ref_fp, ref_db_fp)
         self.run_workflow_try(self.seqs_s3_fp,
                               self.orig_s3_fp, ref_fp, ref_db_fp)
+        self.run_workflow_try(self.seqs_s3_fp,
+                              self.orig_s3_fp, ref_fp, ref_db_fp,
+                              threads=3)
+
+    def test_launch_workflow_incorrect_trim(self):
+        """
+        test if we get the warning when trim length
+        is too long
+        """
+        # index the 70% rep. set database
+        ref_fp = join(self.test_data_dir, '70_otus.fasta')
+        ref_db_fp = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
+
+        seqs_fp = self.seqs_s1_fp
+        output_fp = self.working_dir
+        mean_error = 0.005
+        error_dist = get_default_error_profile()
+        indel_prob = 0.01
+        indel_max = 3
+        min_size = 2
+        negate = False
+        # trim length longer than sequences
+        trim_length = 151
+        threads = 1
+        with self.assertWarns(UserWarning):
+            launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
+                            mean_error=mean_error,
+                            error_dist=error_dist,
+                            indel_prob=indel_prob,
+                            indel_max=indel_max,
+                            trim_length=trim_length,
+                            min_size=min_size,
+                            ref_fp=(ref_fp,),
+                            ref_db_fp=ref_db_fp,
+                            negate=negate,
+                            threads_per_sample=threads)
 
     def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
         """Parse output of split_sequence_file_on_sample_ids_to_files()
@@ -571,6 +679,21 @@ class workflowTests(TestCase):
                     else:
                         seqs_act[sample].append((label, seq))
         return seqs_act
+
+    def test_sample_id_from_read_id(self):
+        """Test the fasta readid to sample id
+        used in split_sequence_file_on_sample_ids_to_files
+        """
+        self.assertEqual(sample_id_from_read_id("Samp1_0 M04771:27:000000000"
+                                                "-ARFWH:1:1101:18081:1897 1:"
+                                                "N:0:0 orig_bc=CGTTAAGTCAGC n"
+                                                "ew_bc=CGTTAAGTCAGC bc_diffs="
+                                                "0"), "Samp1")
+        self.assertEqual(sample_id_from_read_id("S1_1_0 M04771:27:000000000"
+                                                "-ARFWH:1:1101:18081:1897 1:"
+                                                "N:0:0 orig_bc=CGTTAAGTCAGC n"
+                                                "ew_bc=CGTTAAGTCAGC bc_diffs="
+                                                "0"), "S1_1")
 
     def test_split_sequence_file_on_sample_ids_to_files(self):
         """Test functionality of split_sequence_file_on_sample_ids_to_files()

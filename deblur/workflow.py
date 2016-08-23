@@ -40,10 +40,29 @@ def trim_seqs(input_seqs, trim_len):
     Generator of (str, str)
         The trimmed sequences in (label, sequence) format
     """
+    # counters for the number of trimmed and total sequences
+    logger = logging.getLogger(__name__)
+
+    okseqs = 0
+    totseqs = 0
 
     for label, seq in input_seqs:
+        totseqs += 1
         if len(seq) >= trim_len:
+            okseqs += 1
             yield label, seq[:trim_len]
+
+    if okseqs < 0.01*totseqs:
+        logger = logging.getLogger(__name__)
+        errmsg = 'Vast majority of sequences (%d / %d) are shorter ' \
+                 'than the trim length (%d). ' \
+                 'Are you using the correct -t trim length?' \
+                 % (totseqs-okseqs, totseqs, trim_len)
+        logger.warn(errmsg)
+        warnings.warn(errmsg, UserWarning)
+    else:
+        logger.debug('trimmed to length %d (%d / %d remaining)'
+                     % (trim_len, okseqs, totseqs))
 
 
 def dereplicate_seqs(seqs_fp,
@@ -171,7 +190,7 @@ def remove_artifacts_seqs(seqs_fp,
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
-        logger.warn('file %s has size 0, continuing' % seqs_fp, UserWarning)
+        logger.warn('file %s has size 0, continuing' % seqs_fp)
         return
 
     if coverage_thresh is None:
@@ -324,6 +343,29 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
     return output_fp
 
 
+def sample_id_from_read_id(readid):
+    """Get SampleID from the split_libraries_fastq.py output
+    fasta file read header
+
+    Parameters
+    ----------
+    readid : str
+        the fasta file read name
+
+    Returns
+    -------
+    sampleid : str
+        the sample id
+    """
+
+    # get the sampleid_readid field
+    sampleread = readid.split(' ')[0]
+
+    # get the sampleid field
+    sampleid = sampleread.rsplit('_', 1)[0]
+    return sampleid
+
+
 def split_sequence_file_on_sample_ids_to_files(seqs,
                                                outdir):
     """Split FASTA file on sample IDs.
@@ -341,7 +383,7 @@ def split_sequence_file_on_sample_ids_to_files(seqs,
 
     outputs = {}
     for bits in parse_fasta(seqs):
-        sample = bits[0].split('_', 1)[0]
+        sample = sample_id_from_read_id(bits[0])
         if sample not in outputs:
             outputs[sample] = open(join(outdir, sample + '.fasta'), 'w')
         outputs[sample].write(">%s\n%s\n" % (bits[0], bits[1]))
@@ -416,8 +458,8 @@ def create_otu_table(output_fp, deblurred_list,
     ----------
     output_fp : string
         filepath to final BIOM table
-    deblurred_list : list of string
-        list of file names (including path) of all deblurred
+    deblurred_list : list of (str, str)
+        list of file names (including path), sampleid of all deblurred
         fasta files to add to the table
     outputfasta_fp : str, optional
         name of output fasta file (of all sequences in the table) or None
@@ -502,9 +544,9 @@ def create_otu_table(output_fp, deblurred_list,
         logger.info('saved sequence fasta file to %s' % outputfasta_fp)
 
 
-def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
+def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1, delim='_',
+                    ref_db_fp, negate, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
@@ -514,8 +556,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
         a post split library fasta file for debluring
     working_dir: string
         working directory path
-    read_error: float
-        read error rate
     mean_error: float
         mean error for original sequence estimate
     error_dist: list
@@ -537,8 +577,6 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     threads_per_sample: integer, optional
         number of threads to use for SortMeRNA/mafft/vsearch
         (0 for max available)
-    delim: string, optional
-        delimiter in FASTA labels to separate sample ID from sequence ID
     sim_thresh: float, optional
         the minimal similarity for a sequence to the database.
         if None, take the defaults (0.65 for negate=False,
@@ -596,7 +634,7 @@ def launch_workflow(seqs_fp, working_dir, read_error, mean_error, error_dist,
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
     with open(output_deblur_fp, 'w') as f:
-        seqs = deblur(parse_fasta(output_msa_fp), read_error, mean_error,
+        seqs = deblur(parse_fasta(output_msa_fp), mean_error,
                       error_dist, indel_prob, indel_max)
         if seqs is None:
             warnings.warn('multiple sequence alignment file %s contains '
