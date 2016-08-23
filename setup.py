@@ -21,7 +21,7 @@ classes = """
     Topic :: Software Development :: Libraries :: Application Frameworks
     Topic :: Software Development :: Libraries :: Python Modules
     Programming Language :: Python
-    Programming Language :: Python :: 3.5
+    Programming Language :: Python :: 2.7
     Programming Language :: Python :: Implementation :: CPython
     Operating System :: POSIX :: Linux
     Operating System :: MacOS :: MacOS X
@@ -43,14 +43,11 @@ setup(name='deblur',
       test_suite='nose.collector',
       packages=['deblur'],
       package_data={},
-      data_files=[('pita', ['deblur/support_files/artifacts.fa',
-                            'deblur/support_files/88_otus.fasta'])],
       scripts=glob('scripts/*'),
       extras_require={'test': ["nose >= 0.10.1", "pep8"],
                       'doc': ["Sphinx >= 1.2.2", "sphinx-bootstrap-theme"]},
       install_requires=['click >= 6', 'numpy >= 1.7',
-                        'scikit-bio >= 0.5.0, < 0.6.0',
-                        'biom-format >= 2.1.3, < 2.2.0',
-                        'h5py >= 2.2.0'],
+                        'scikit-bio >= 0.2.2, < 0.3.0',
+                        'biom-format >= 2.1.3, < 2.2.0'],
       classifiers=classifiers
       )

@@ -30,6 +30,7 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              create_otu_table,
                              start_log, sequence_generator)
 
+from deblur.support_files import pos_db, neg_db
 
 __version__ = "0.9.2.1"
 
@@ -395,12 +396,16 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
-@click.option('--ref-fp', required=True, multiple=True,
+@click.option('--ref-fp', required=False, multiple=True,
+              default=None, show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
               help="Keep all sequences aligning to this FASTA database "
                    "(for multiple databases, use "
-                   "--ref-fp db1.fa --ref-fp db2.fa ..)")
+                   "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
+                   "default for positive filtering is: %s\n"
+                   "default for negative filtering is: %s" %
+                   (pos_db, neg_db))
 @click.option('--ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
@@ -488,6 +493,14 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         error_dist = get_default_error_profile()
 
     logger.info('error_dist is : %s' % error_dist)
+
+    if ref_fp is None:
+        if negate:
+            ref_fp = neg_db
+            logger.debug('Using default negative filtering file %s' % ref_fp)
+        else:
+            ref_fp = pos_db
+            logger.debug('Using default positive filtering file %s' % ref_fp)
 
     # Create output directory
     if not is_worker_thread:
