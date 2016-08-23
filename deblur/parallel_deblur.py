@@ -36,7 +36,7 @@ def deblur_system_call(params, input_fp):
     """
     logger = logging.getLogger(__name__)
     logger.debug('[%s] deblur system call params %s, input_fp %s' %
-                (mp.current_process().name, params, input_fp))
+                 (mp.current_process().name, params, input_fp))
 
     # construct command
     script_name = "deblur"
@@ -49,7 +49,7 @@ def deblur_system_call(params, input_fp):
     command.extend(params)
 
     logger.debug('[%s] running command %s' % (mp.current_process().name,
-                                             command))
+                                              command))
     return _system_call(command)
 
 

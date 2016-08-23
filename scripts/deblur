@@ -101,7 +101,7 @@ def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
 
     logger.info('error_dist is : %s' % error_dist)
 
-    seqs = deblur(sequence_generator(seqs_fp), mean_error, error_dist, 
+    seqs = deblur(sequence_generator(seqs_fp), mean_error, error_dist,
                   indel_prob, indel_max)
 
     output_path = "%s.clean" % seqs_fp
@@ -359,7 +359,8 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, log_file):
+def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level, 
+                     log_file):
     """Generate a BIOM table from a directory of chimera removed fasta files
     Parameters
     ----------
