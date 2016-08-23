@@ -107,7 +107,7 @@ class DeblurringTests(TestCase):
         # add the MSA for the indel
         seqs = parse_fasta(seqs_f)
         newseqs = []
-        for chead,cseq in seqs:
+        for chead, cseq in seqs:
             tseq = cseq[:10] + '-' + cseq[10:]
             newseqs.append((chead, tseq))
         # now add a sequence with an A insertion
@@ -130,7 +130,7 @@ class DeblurringTests(TestCase):
                      "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
         # make sure we get 1 sequence as output
-        self.assertEqual(len(obs),1)
+        self.assertEqual(len(obs), 1)
         # and that it is the correct sequence
         self.assertEqual(obs[0].sequence, exp[0].sequence)
 
