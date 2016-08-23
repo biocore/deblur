@@ -566,9 +566,9 @@ class workflowTests(TestCase):
         tablesum = table.sum(axis='observation')
         for idx, cid in enumerate(table.ids(axis='observation')):
             if tablesum[idx] >= minreads:
-                self.assertTrue(cid in table2ids)
+                self.assertIn(cid, table2ids)
             else:
-                self.assertTrue(cid not in table2ids)
+                self.assertNotIn(cid, table2ids)
 
         self.assertEqual(table2.get_value_by_ids(
             'TACGAGGggggCGAGCGTTGTTCG'
