@@ -104,7 +104,7 @@ class DeblurringTests(TestCase):
         seqs_f = StringIO(TEST_SEQS_2)
 
         # add the MSA for the indel
-        seqs = parse_fasta(seqs_f)
+        seqs = sequence_generator(seqs_f)
         newseqs = []
         for chead, cseq in seqs:
             tseq = cseq[:10] + '-' + cseq[10:]

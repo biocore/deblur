@@ -29,7 +29,7 @@ from deblur.workflow import (dereplicate_seqs,
                              launch_workflow,
                              split_sequence_file_on_sample_ids_to_files,
                              build_index_sortmerna,
-                             start_log, sequence_generator)
+                             start_log, sequence_generator,
                              sample_id_from_read_id)
 from deblur.deblurring import get_default_error_profile
 
@@ -571,10 +571,9 @@ class workflowTests(TestCase):
             'GCAGAAGAGGAGAGTGGAATTCCATGT', 'testmerge2'), 0)
         # test the output fasta file
         allseqs = []
-        with open(fasta_outfile, 'r') as input_f:
-            for label, seq in parse_fasta(input_f):
-                self.assertTrue(seq in tableids)
-                allseqs.append(seq)
+        for label, seq in sequence_generator(fasta_outfile):
+            self.assertTrue(seq in tableids)
+            allseqs.append(seq)
         self.assertEqual(len(allseqs), len(tableids))
 
         # test minimal read filtering ( minreads>0 )
