@@ -33,6 +33,7 @@ from deblur.workflow import (dereplicate_seqs,
                              build_index_sortmerna,
                              start_log,
                              sample_id_from_read_id)
+from deblur.deblurring import get_default_error_profile
 
 
 class workflowTests(TestCase):
@@ -462,9 +463,7 @@ class workflowTests(TestCase):
         seqs_fp = simfilename
         output_fp = self.working_dir
         mean_error = 0.005
-        error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
-                      0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000025,
-                      0.0000005, 0.0000005, 0.0000005, 0.0000005]
+        error_dist = get_default_error_profile()
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
@@ -632,9 +631,7 @@ class workflowTests(TestCase):
         seqs_fp = self.seqs_s1_fp
         output_fp = self.working_dir
         mean_error = 0.005
-        error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
-                      0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000025,
-                      0.0000005, 0.0000005, 0.0000005, 0.0000005]
+        error_dist = get_default_error_profile()
         indel_prob = 0.01
         indel_max = 3
         min_size = 2

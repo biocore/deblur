@@ -114,10 +114,6 @@ class DeblurringTests(TestCase):
         tseq = cseq[:10] + 'A' + cseq[10:-1]+'-'
         newseqs.append((chead, tseq))
 
-        # cheads, seqs = zip(*newseqs)
-        # lens = list(map(len, seqs))
-        # print(lens)
-
         obs = deblur(newseqs)
         # remove the '-' (same as in launch_workflow)
         for s in obs:

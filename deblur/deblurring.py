@@ -65,29 +65,6 @@ def get_sequences(input_seqs):
     return seqs
 
 
-def create_error_profile(read_error):
-    """Create a theoretical read error profile given
-    a maxima error rate
-
-    Parameters
-    ----------
-    read_error : float
-        the upper bound on the hamming one read error
-
-    Results
-    -------
-    error_profile : list of float
-        the predicted theoretical error profile
-        (note for hamming>1 we take the max of
-        read_error^2 and 0.01 since closer to reality)
-    """
-    error_profile = [1.0, read_error, np.max([0.01, np.power(read_error, 2)]),
-                     np.max([0.01, np.power(read_error, 3)]),
-                     0.01, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.001,
-                     0.001, 0.001, 0.001]
-    return error_profile
-
-
 def deblur(input_seqs, mean_error=0.005,
            error_dist=None,
            indel_prob=0.01, indel_max=3):
