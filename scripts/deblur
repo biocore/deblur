@@ -498,10 +498,10 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
 
     if ref_fp is None:
         if negate:
-            ref_fp = neg_db
+            ref_fp = [neg_db]
             logger.debug('Using default negative filtering file %s' % ref_fp)
         else:
-            ref_fp = pos_db
+            ref_fp = [pos_db]
             logger.debug('Using default positive filtering file %s' % ref_fp)
 
     # Create output directory
