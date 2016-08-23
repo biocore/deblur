@@ -9,5 +9,7 @@
 # -----------------------------------------------------------------------------
 import os
 
-pos_db = os.join(os.path.dirname(os.path.abspath(__file__)), '88_otus.fasta')
-neg_db = os.join(os.path.dirname(os.path.abspath(__file__)), 'artifacts.fa')
+pos_db = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      '88_otus.fasta')
+neg_db = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      'artifacts.fa')
