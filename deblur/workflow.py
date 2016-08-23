@@ -38,9 +38,7 @@ def sequence_generator(input_fp):
     input_fp : filepath
         A filepath, which can be any valid fasta or fastq file within the
         limitations of scikit-bio's IO registry.
-    variant : str
-        One of the fastq variants for quality scores. Acceptable values can be
-        found here [1]_.
+
     Notes
     -----
     The use of this method is a stopgap to replicate the existing `parse_fasta`
