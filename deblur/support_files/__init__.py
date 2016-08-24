@@ -9,6 +9,8 @@
 # -----------------------------------------------------------------------------
 import os
 
+__all__ = ['pos_db', 'neg_db']
+
 pos_db = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '88_otus.fasta')
 neg_db = os.path.join(os.path.dirname(os.path.abspath(__file__)),

@@ -16,13 +16,6 @@ import os.path
 class supportFilesTests(TestCase):
     """Test the supporting data files
     """
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_reference_(self):
         """Test if the positive and negative filtering
         reference fasta files exist
