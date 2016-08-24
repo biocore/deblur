@@ -1,0 +1,9 @@
+include README.md
+include COPYING.txt
+include ChangeLog.md
+
+graft deblur
+
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .git
