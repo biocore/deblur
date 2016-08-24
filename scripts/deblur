@@ -467,11 +467,13 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               show_default=True,
               help="indicates this is not the main deblur process "
               "(used by the parallel deblur - do not use manually)")
+@click.option('attack_mode', '-A', required=False, type=bool, default=False,
+               help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_reads, min_size, negate, threads_per_sample,
              keep_tmp_files, log_level, log_file, jobs_to_start,
-             is_worker_thread):
+             is_worker_thread, attack_mode):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
