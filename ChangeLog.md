@@ -1,6 +1,6 @@
 # deblur changelog
 
-## Version 0.1.0-dev  (changes since 0.0.1 go here)
+## Version 0.1.0-dev 
 
 ### Features
 
