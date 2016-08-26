@@ -23,6 +23,7 @@ source activate debenv
 - Install Deblur dependencies:
 ```
 conda install -c biocore VSEARCH MAFFT SortMeRNA numpy
+conda install -c bioconda biom-format
 ```
 
 - Install Deblur:
