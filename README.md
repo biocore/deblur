@@ -10,20 +10,12 @@ Install
 =======
 - Deblur requires Python 3.5. If Python 3.5 is not installed, you can create a conda environment for deblur using:
 
-```
-conda create -n debenv python=3
-```
-
-and activate it using:
+At the moment, the install is a two stage process as we do not currently have deblur staged in a conda channel.
 
 ```
-source activate debenv
-```
-
-- Install Deblur dependencies:
-```
-conda install -c biocore VSEARCH MAFFT SortMeRNA numpy
+conda install -c biocore VSEARCH MAFFT SortMeRNA==2.0 
 conda install -c bioconda biom-format
+pip install deblur
 ```
 
 - Install Deblur:
