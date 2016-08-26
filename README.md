@@ -9,6 +9,16 @@ Deblur is a greedy deconvolution algorithm based on Illumina Miseq/Hiseq error p
 Install
 =======
 - Deblur requires Python 3.5. If Python 3.5 is not installed, you can create a conda environment for deblur using:
+```
+conda create -n deblurenv python=3 numpy
+```
+
+and activate it using:
+```
+source activate deblurenv
+```
+
+(note you will need to activate this environment every time you want to use deblur)
 
 At the moment, the install is a two stage process as we do not currently have deblur staged in a conda channel.
 
