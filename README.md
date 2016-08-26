@@ -51,11 +51,11 @@ and use the split/seqs.fna as the input to the deblur workflow.
 
 Important options
 =================
-- the sequence read length can be specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to (default=150). Note that all reads shorter than this length will be discarded.
+- The sequence read length can be specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to (default=150). Note that all reads shorter than this length will be discarded.
 
 - In order to run in parallel, the number of threads can be specified by the ```-O NNN``` flag (default it 1). Note that running more threads than available cores will not speed up performance.
 
-- to get a full list of options, use:
+- To get a full list of options, use:
 ```
 deblur workflow --help
 ```
