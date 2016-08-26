@@ -16,9 +16,11 @@ for this porting to take place and put under the BSD license.
 Install
 =======
 
+At the moment, the install is a two stage process as we do not currently have deblur staged in a conda channel.
+
 ```
-conda install -c biocore VSEARCH MAFFT SortMeRNA numpy
-python setup.py install
+conda install -c bioconda VSEARCH MAFFT SortMeRNA==2.0 biom-format
+pip install deblur
 ```
 
 
