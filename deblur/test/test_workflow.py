@@ -13,7 +13,6 @@ from os import listdir, remove
 from types import GeneratorType
 from os.path import join, isfile, abspath, dirname, splitext
 
-import skbio
 from skbio import DNA
 
 from biom import load_table
@@ -91,8 +90,14 @@ class workflowTests(TestCase):
         self.assertTrue(obs[0][1].startswith(first_few_nucs))
 
     def test_sequence_generator_invalid_format(self):
-        with self.assertRaises(skbio.io.FormatIdentificationWarning):
-            next(sequence_generator(join(self.test_data_dir, 'readme.txt')))
+        allres = []
+        input_fp = join(self.test_data_dir, 'readme.txt')
+        msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
+        with self.assertWarns(UserWarning) as W:
+            for res in sequence_generator(input_fp):
+                allres.append(res)
+        self.assertEqual(len(allres), 0)
+        self.assertEqual(str(W.warning), msg)
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),

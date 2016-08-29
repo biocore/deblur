@@ -69,8 +69,13 @@ def sequence_generator(input_fp):
         # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
         kw['variant'] = 'illumina1.8'
     else:
-        raise skbio.io.FormatIdentificationWarning("input_fp does not appear "
-                                                   "to be FASTA or FASTQ.")
+        # usually happens when the fasta file is empty
+        # so need to return no sequences (and warn)
+        logger = logging.getLogger(__name__)
+        msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
+        logger.warn(msg)
+        warnings.warn(msg, UserWarning)
+        return
 
     # some of the test code is using file paths, some is using StringIO.
     if isinstance(input_fp, io.TextIOBase):
