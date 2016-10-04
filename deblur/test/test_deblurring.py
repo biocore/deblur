@@ -8,7 +8,9 @@
 
 from unittest import TestCase, main
 from io import StringIO
+from os.path import join, dirname, abspath
 
+import skbio
 import numpy as np
 
 from deblur.sequence import Sequence
@@ -28,6 +30,7 @@ class DeblurringTests(TestCase):
                      ("151_5155;size=998;", "---gaggatgcgagatgcgtgg-----"),
                      ("151_527;size=964;", "---acggaggatgatgcgcggt-----"),
                      ("151_5777;size=305;", "---ggagtgcaagattccaggt-----")]
+        self.test_data_dir = join(dirname(abspath(__file__)), 'data')
 
     def test_get_default_error_profile(self):
         goodprofile = [1, 0.06, 0.02, 0.02, 0.01,
@@ -50,6 +53,11 @@ class DeblurringTests(TestCase):
 
         with self.assertRaises(ValueError):
             get_sequences(seqs)
+
+    def test_get_sequences_empty_file(self):
+        gen = skbio.read(join(self.test_data_dir, 'seqs_empty.fasta'),
+                         format='fasta')
+        self.assertEqual(get_sequences(gen), None)
 
     def test_get_sequences_error_empty(self):
         self.assertIsNone(get_sequences([]))
