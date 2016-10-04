@@ -3,6 +3,7 @@ include COPYING.txt
 include ChangeLog.md
 
 graft deblur
+graft deblur/support_files
 
 global-exclude *.pyc
 global-exclude *.pyo
