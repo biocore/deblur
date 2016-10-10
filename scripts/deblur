@@ -28,7 +28,8 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              build_index_sortmerna,
                              get_files_for_table,
                              create_otu_table,
-                             start_log, sequence_generator)
+                             start_log, sequence_generator,
+                             remove_artifacts_from_biom_table)
 
 from deblur.support_files import pos_db, neg_db
 
@@ -604,6 +605,14 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     samples = get_files_for_table(working_dir)
     create_otu_table(output_fp, samples,
                      outputfasta_fp=outputfasta_fp, minreads=min_reads)
+
+    # if negative mode, also create a biom table with
+    # only 16s sequences
+    if negate:
+        remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
+                                         ref_fp, output_dir,
+                                         ref_db_fp,
+                                         threads=threads_per_sample)
 
     # Clean up
     if not keep_tmp_files:

@@ -22,6 +22,7 @@ import io
 import skbio
 from biom.table import Table
 from biom.util import biom_open
+from biom import load_table
 
 from deblur.deblurring import deblur
 
@@ -205,6 +206,57 @@ def build_index_sortmerna(ref_fp, working_dir):
         logger.debug('file %s indexed' % db)
         all_db.append(db_output)
     return all_db
+
+
+def remove_artifacts_from_biom_table(table,
+                                     fasta_filename,
+                                     ref_fp,
+                                     biom_table_dir,
+                                     ref_db_fp,
+                                     threads=1,
+                                     verbose=False,
+                                     sim_thresh=None,
+                                     coverage_thresh=None):
+    """Remove artifacts from a biom table using SortMeRNA
+
+    Parameters
+    ----------
+    table : biom.Table or str
+        the biom table to remove artifacts from or name of the biom table file
+    fasta_filename : str
+        the fasta file containing all the sequences of the biom table
+    """
+    logger = logging.getLogger(__name__)
+    logger.info('getting 16s sequences from the biom table')
+
+    # remove artifacts from the fasta file. output is in clean_fp fasta file
+    clean_fp = remove_artifacts_seqs(fasta_filename, ref_fp,
+                                     working_dir=biom_table_dir,
+                                     ref_db_fp=ref_db_fp,
+                                     negate=False, threads=threads,
+                                     verbose=verbose,
+                                     sim_thresh=sim_thresh,
+                                     coverage_thresh=coverage_thresh)
+    logger.debug('removed artifacts from sequences input %s'
+                 ' to output %s' % (fasta_filename, clean_fp))
+
+    # read the clean fasta file
+    good_seqs = set()
+    for chead, cseq in sequence_generator(clean_fp):
+        if cseq not in good_seqs:
+            good_seqs.add(cseq)
+    logger.debug('loaded %d sequences from cleaned biom table'
+                 ' fasta file' % len(good_seqs))
+    # if table is a string - load the biom table file it addresses
+    if type(table) == str:
+        logger.debug('loading biom table %s' % table)
+        table = load_table(table)
+
+    # filter and save the biom table
+    table.filter(list(good_seqs), axis='observation')
+    output_fp = join(biom_table_dir, 'final.only16s.biom')
+    write_biom_table(table, output_fp)
+    logger.info('wrote 16s filtered biom table to %s' % output_fp)
 
 
 def remove_artifacts_seqs(seqs_fp,
