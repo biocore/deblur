@@ -43,7 +43,10 @@ def get_sequences(input_seqs):
         If all the sequences do not have the same length either aligned or
         unaligned.
     """
-    seqs = [Sequence(id, seq) for id, seq in input_seqs]
+    try:
+        seqs = [Sequence(id, seq) for id, seq in input_seqs]
+    except:
+        seqs = []
 
     if len(seqs) == 0:
         logger = logging.getLogger(__name__)
