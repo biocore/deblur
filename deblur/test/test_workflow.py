@@ -29,7 +29,8 @@ from deblur.workflow import (dereplicate_seqs,
                              split_sequence_file_on_sample_ids_to_files,
                              build_index_sortmerna,
                              start_log, sequence_generator,
-                             sample_id_from_read_id)
+                             sample_id_from_read_id,
+                             remove_artifacts_from_biom_table)
 from deblur.deblurring import get_default_error_profile
 
 
@@ -185,6 +186,45 @@ class workflowTests(TestCase):
         act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
+
+    def test_remove_artifacts_from_biom_table(self):
+        """ Test remove_artifacts_from_biom_table() function for
+        removing non 16s sequences from a biom table and matching
+        fasta file. This test uses a pre-calculated biom table and
+        fasta file and tests the output only 16s and only artifacts
+        tables
+        s4 dataset is similar to s2 but with two added non-16s
+        sequences (which are not phix/adapter)
+        """
+        # create the positive reference databases
+        pos_ref_fp = join(self.test_data_dir, '70_otus.fasta')
+        pos_ref_db_fp = build_index_sortmerna(
+            ref_fp=(pos_ref_fp,),
+            working_dir=self.working_dir)
+
+        # remove the artifacts from the s4 biom table
+        input_biom_file = join(self.test_data_dir, 'final.s4.biom')
+        input_fasta_file = join(self.test_data_dir, 'final.s4.seqs.fa')
+        remove_artifacts_from_biom_table(input_biom_file,
+                                         input_fasta_file,
+                                         [pos_ref_fp],
+                                         self.working_dir,
+                                         pos_ref_db_fp)
+
+        origfilename = join(self.test_data_dir, 'simset.s2.fasta')
+        trim_length = 150
+        orig_seqs = [item[1] for item in sequence_generator(origfilename)]
+        orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
+
+        no_artifacts_table_name = join(self.working_dir, 'final.only-16s.biom')
+        no_artifacts_table = load_table(no_artifacts_table_name)
+        obs_seqs = no_artifacts_table.ids(axis='observation')
+        self.assertEqual(set(obs_seqs), set(orig_seqs))
+
+        artifacts_table_name = join(self.working_dir, 'final.only-non16s.biom')
+        artifacts_table = load_table(artifacts_table_name)
+        obs_seqs = artifacts_table.ids(axis='observation')
+        self.assertEqual(len(obs_seqs), 2)
 
     def test_remove_artifacts_seqs(self):
         """ Test remove_artifacts_seqs() function for removing
