@@ -609,9 +609,12 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     # if negative mode, also create a biom table with
     # only 16s sequences
     if negate:
+        pos_ref_db_fp = build_index_sortmerna(
+            ref_fp=[pos_db],
+            working_dir=working_dir)
         remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
-                                         ref_fp, output_dir,
-                                         ref_db_fp,
+                                         [pos_db], output_dir,
+                                         pos_ref_db_fp,
                                          threads=threads_per_sample)
 
     # Clean up
