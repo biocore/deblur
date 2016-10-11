@@ -255,13 +255,14 @@ def remove_artifacts_from_biom_table(table_filename,
     artifact_table = table.filter(list(good_seqs),
                                   axis='observation', inplace=False,
                                   invert=True)
-    output_artifact_fp = join(biom_table_dir, 'final.artifacts.biom')
+    output_artifact_fp = join(biom_table_dir, 'final.only-non16s.biom')
     write_biom_table(artifact_table, output_artifact_fp)
     logger.info('wrote artifact only filtered biom table to %s'
                 % output_artifact_fp)
 
+    # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
-    output_fp = join(biom_table_dir, 'final.only16s.biom')
+    output_fp = join(biom_table_dir, 'final.only-16s.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
 
