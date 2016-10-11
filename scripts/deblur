@@ -608,6 +608,8 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
 
     # if negative mode, also create a biom table with
     # only 16s sequences
+    # NOTE: we are using the default 16s database, as we don't have
+    # a parameter to pass the preferred positive database...
     if negate:
         pos_ref_db_fp = build_index_sortmerna(
             ref_fp=[pos_db],

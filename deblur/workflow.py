@@ -208,7 +208,7 @@ def build_index_sortmerna(ref_fp, working_dir):
     return all_db
 
 
-def remove_artifacts_from_biom_table(table,
+def remove_artifacts_from_biom_table(table_filename,
                                      fasta_filename,
                                      ref_fp,
                                      biom_table_dir,
@@ -247,12 +247,19 @@ def remove_artifacts_from_biom_table(table,
             good_seqs.add(cseq)
     logger.debug('loaded %d sequences from cleaned biom table'
                  ' fasta file' % len(good_seqs))
-    # if table is a string - load the biom table file it addresses
-    if type(table) == str:
-        logger.debug('loading biom table %s' % table)
-        table = load_table(table)
 
-    # filter and save the biom table
+    logger.debug('loading biom table %s' % table_filename)
+    table = load_table(table_filename)
+
+    # filter and save the artifact biom table
+    artifact_table = table.filter(list(good_seqs),
+                                  axis='observation', inplace=False,
+                                  invert=True)
+    output_artifact_fp = join(biom_table_dir, 'final.artifacts.biom')
+    write_biom_table(artifact_table, output_artifact_fp)
+    logger.info('wrote artifact only filtered biom table to %s'
+                % output_artifact_fp)
+
     table.filter(list(good_seqs), axis='observation')
     output_fp = join(biom_table_dir, 'final.only16s.biom')
     write_biom_table(table, output_fp)
