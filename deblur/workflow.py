@@ -208,6 +208,38 @@ def build_index_sortmerna(ref_fp, working_dir):
     return all_db
 
 
+def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
+    """Filter samples from biom table that have less than
+    minreads reads total
+
+    Paraneters
+    ----------
+    table : biom.Table
+        the biom table to filter
+    minreads : int (optional)
+        the minimal number of reads in a sample in order to keep it
+    inplace : bool (optional)
+        if True, filter the biom table in place, if false create a new copy
+
+    Returns
+    -------
+    table : biom.Table
+        the filtered biom table
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug('filter_minreads_started. minreads=%d' % minreads)
+    samp_sum = table.sum(axis='sample')
+    samp_ids = table.ids(axis='sample')
+    bad_samples = samp_ids[samp_sum < minreads]
+    if len(bad_samples) > 0:
+        logger.warn('removed %d samples with reads per sample<%d'
+                    % (len(bad_samples), minreads))
+        table.filter(bad_samples, axis='sample', inplace=inplace)
+    else:
+        logger.debug('all samples contain > %d reads' % minreads)
+    return table
+
+
 def remove_artifacts_from_biom_table(table_filename,
                                      fasta_filename,
                                      ref_fp,
@@ -221,8 +253,8 @@ def remove_artifacts_from_biom_table(table_filename,
 
     Parameters
     ----------
-    table : biom.Table or str
-        the biom table to remove artifacts from or name of the biom table file
+    table : str
+        name of the biom table file
     fasta_filename : str
         the fasta file containing all the sequences of the biom table
     """
@@ -255,6 +287,8 @@ def remove_artifacts_from_biom_table(table_filename,
     artifact_table = table.filter(list(good_seqs),
                                   axis='observation', inplace=False,
                                   invert=True)
+    # remove the samples with 0 reads
+    filter_minreads_samples_from_table(artifact_table)
     output_artifact_fp = join(biom_table_dir, 'final.only-non16s.biom')
     write_biom_table(artifact_table, output_artifact_fp)
     logger.info('wrote artifact only filtered biom table to %s'
@@ -262,6 +296,7 @@ def remove_artifacts_from_biom_table(table_filename,
 
     # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
+    filter_minreads_samples_from_table(table)
     output_fp = join(biom_table_dir, 'final.only-16s.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
@@ -644,9 +679,12 @@ def create_otu_table(output_fp, deblurred_list,
                   sample_metadata=None, table_id=None,
                   generated_by="deblur",
                   create_date=datetime.now().isoformat())
+    logger.debug('converted to biom table')
+
+    # remove samples with 0 reads
+    filter_minreads_samples_from_table(table)
 
     # save the merged otu table
-    logger.debug('converted to biom table')
     write_biom_table(table, output_fp)
     logger.info('saved to biom file %s' % output_fp)
 
