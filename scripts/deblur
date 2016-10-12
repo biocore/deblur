@@ -412,21 +412,38 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
-@click.option('--ref-fp', required=False, multiple=True,
+@click.option('--pos-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
-              help="Keep all sequences aligning to this FASTA database "
+              help="Positive (16S) filtering database. "
+                   "Keep all sequences aligning to this FASTA file "
                    "(for multiple databases, use "
                    "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
-                   "default for positive filtering is: %s\n"
-                   "default for negative filtering is: %s" %
-                   (pos_db, neg_db))
-@click.option('--ref-db-fp', required=False, multiple=True,
+                   "default is: %s\n" % pos_db)
+@click.option('--pos-ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
-              help="Keep all sequences aligning to this indexed "
-                   "database. For multiple databases, the order "
+              help="The indexed  version of the positive filtering database. "
+                   "If not supllied, deblur will index the database."
+                   "For multiple databases, the order "
+                   "must follow that of --ref-fp, for example, "
+                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+@click.option('--neg-ref-fp', required=False, multiple=True,
+              default=[], show_default=False,
+              type=click.Path(resolve_path=True, readable=True, exists=True,
+                              file_okay=True),
+              help="Negative (artifacts) filtering database. "
+                   "Keep all sequences aligning to this FASTA file "
+                   "(for multiple databases, use "
+                   "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
+                   "default is: %s\n" % neg_db)
+@click.option('--neg-ref-db-fp', required=False, multiple=True,
+              type=click.Path(resolve_path=True, readable=True, exists=False,
+                              file_okay=True),
+              help="The indexed  version of the negative filtering database. "
+                   "If not supllied, deblur will index the database."
+                   "For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
@@ -490,7 +507,8 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               "(used by the parallel deblur - do not use manually)")
 @click.option('attack_mode', '-A', required=False, type=bool, default=False,
               help="ATTACK MODE (http://xkcd.com/1692)")
-def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
+def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
+             neg_ref_fp, neg_ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_reads, min_size, negate, threads_per_sample,
              keep_tmp_files, log_level, log_file, jobs_to_start,
@@ -511,13 +529,12 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
     logger.info('error_dist is : %s' % error_dist)
 
     # get the default values for the rep_fp if empty
-    if len(ref_fp) == 0:
-        if negate:
-            ref_fp = [neg_db]
-            logger.debug('Using default negative filtering file %s' % ref_fp)
-        else:
-            ref_fp = [pos_db]
-            logger.debug('Using default positive filtering file %s' % ref_fp)
+    if len(pos_ref_fp) == 0:
+        pos_ref_fp = [pos_db]
+        logger.debug('Using default positive filtering file %s' % pos_ref_fp)
+    if len(neg_ref_fp) == 0:
+        neg_ref_fp = [pos_db]
+        logger.debug('Using default negative filtering file %s' % neg_ref_fp)
 
     # Create output directory
     if not is_worker_thread:
@@ -562,13 +579,24 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                     out_dir_split)
         input_file_list = glob('%s/*.fasta' % out_dir_split)
 
-    # Build SortMeRNA indexes
     files_to_remove = []
-    if not ref_db_fp:
-        logger.info('building sortmerna index files')
-        ref_db_fp = build_index_sortmerna(
-            ref_fp=ref_fp,
-            working_dir=working_dir)
+    # Build SortMeRNA indexes
+    if negate:
+        if not neg_ref_db_fp:
+            logger.info('building negative db sortmerna index files')
+            neg_ref_db_fp = build_index_sortmerna(ref_fp=neg_ref_fp,
+                                                  working_dir=working_dir)
+    if not pos_ref_db_fp:
+        logger.info('building positive db sortmerna index files')
+        pos_ref_db_fp = build_index_sortmerna(ref_fp=pos_ref_fp,
+                                              working_dir=working_dir)
+
+    if negate:
+        ref_db_fp = neg_ref_db_fp
+        ref_fp = neg_ref_fp
+    else:
+        ref_db_fp = pos_ref_db_fp
+        ref_fp = pos_ref_fp
 
     # Deblur each sample fasta file
     if jobs_to_start < 2:
@@ -590,7 +618,8 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
         # we're want to start parallel mode - so need to create
         # the thread shell commands
         logger.info('parallel processing per sample fasta files')
-        parallel_deblur(input_file_list, sys.argv, ref_db_fp, jobs_to_start)
+        parallel_deblur(input_file_list, sys.argv, pos_ref_db_fp,
+                        neg_ref_db_fp, jobs_to_start)
 
     if is_worker_thread:
         logger.info('worker thread for %s finished' % seqs_fp)
@@ -607,15 +636,10 @@ def workflow(seqs_fp, output_dir, ref_fp, ref_db_fp, overwrite,
                      outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
     # if negative mode, also create a biom table with
-    # only 16s sequences
-    # NOTE: we are using the default 16s database, as we don't have
-    # a parameter to pass the preferred positive database...
+    # only 16s sequences and with only non-16s sequences
     if negate:
-        pos_ref_db_fp = build_index_sortmerna(
-            ref_fp=[pos_db],
-            working_dir=working_dir)
         remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
-                                         [pos_db], output_dir,
+                                         pos_ref_fp, output_dir,
                                          pos_ref_db_fp,
                                          threads=threads_per_sample)
 

@@ -99,12 +99,12 @@ class parallelDeblurTests(TestCase):
 
         trim_length = 100
         params = ['deblur', 'workflow', '--seqs-fp', 'ignorethis',
-                  '--output-dir', self.working_dir, '--ref-fp', ref_fp,
+                  '--output-dir', self.working_dir, '--pos-ref-fp', ref_fp,
                   '-d', '1,0.06,0.02,0.02,0.01,0.005,0.005,0.005,0.001'
                   ',0.001,0.001,0.0005',
                   '-t', str(trim_length)]
         parallel_deblur([self.seqs_s1_fp, self.seqs_s2_fp, self.seqs_s3_fp],
-                        params, ref_db_fp, jobs_to_start=2)
+                        params, ref_db_fp, None, jobs_to_start=2)
 
         deblur_working_dir = join(self.working_dir, "deblur_working_dir")
 
