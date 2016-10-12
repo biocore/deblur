@@ -425,7 +425,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
               help="The indexed  version of the positive filtering database. "
-                   "If not supllied, deblur will index the database."
+                   "If not supplied, deblur will index the database."
                    "For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
@@ -442,7 +442,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
               help="The indexed  version of the negative filtering database. "
-                   "If not supllied, deblur will index the database."
+                   "If not supplied, deblur will index the database."
                    "For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
