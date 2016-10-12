@@ -234,7 +234,8 @@ def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
     if len(bad_samples) > 0:
         logger.warn('removed %d samples with reads per sample<%d'
                     % (len(bad_samples), minreads))
-        table.filter(bad_samples, axis='sample', inplace=inplace)
+        table = table.filter(bad_samples, axis='sample',
+                             inplace=inplace, invert=True)
     else:
         logger.debug('all samples contain > %d reads' % minreads)
     return table

@@ -30,7 +30,8 @@ from deblur.workflow import (dereplicate_seqs,
                              build_index_sortmerna,
                              start_log, sequence_generator,
                              sample_id_from_read_id,
-                             remove_artifacts_from_biom_table)
+                             remove_artifacts_from_biom_table,
+                             filter_minreads_samples_from_table)
 from deblur.deblurring import get_default_error_profile
 
 
@@ -186,6 +187,33 @@ class workflowTests(TestCase):
         act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
+
+    def test_filter_minreads_samples_from_table(self):
+        """ Test filter_minreads_samples_from_table() function
+        for removal of samples with small number of reads
+        using the s4 dataset biom table
+        """
+        input_biom_file = join(self.test_data_dir, 'final.s4.biom')
+        table = load_table(input_biom_file)
+
+        # test basic filtering with 0 reads does not remove ok sample
+        new_table = filter_minreads_samples_from_table(table)
+        self.assertEqual(new_table.shape[1], 1)
+
+        # test basic filtering with enough reads removes the sample
+        # and also inplace=False works
+        new_table = filter_minreads_samples_from_table(table,
+                                                       minreads=182,
+                                                       inplace=False)
+        self.assertEqual(new_table.shape[1], 0)
+        self.assertEqual(table.shape[1], 1)
+
+        # test basic filtering with enough reads removes the sample
+        # and also inplace=True works
+        filter_minreads_samples_from_table(table,
+                                           minreads=200,
+                                           inplace=True)
+        self.assertEqual(table.shape[1], 0)
 
     def test_remove_artifacts_from_biom_table(self):
         """ Test remove_artifacts_from_biom_table() function for
