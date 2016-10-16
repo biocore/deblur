@@ -274,10 +274,7 @@ def remove_artifacts_from_biom_table(table_filename,
                  ' to output %s' % (fasta_filename, clean_fp))
 
     # read the clean fasta file
-    good_seqs = set()
-    for chead, cseq in sequence_generator(clean_fp):
-        if cseq not in good_seqs:
-            good_seqs.add(cseq)
+    good_seqs = {s for _, s in sequence_generator(clean_fp)}
     logger.debug('loaded %d sequences from cleaned biom table'
                  ' fasta file' % len(good_seqs))
 
