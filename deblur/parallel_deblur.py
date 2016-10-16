@@ -74,7 +74,8 @@ def run_functor(functor, *args, **kwargs):
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
 
-def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
+def parallel_deblur(inputs, params,
+                    pos_ref_db_fp, neg_ref_dp_fp, jobs_to_start=1):
     """Dispatch execution over a pool of processors
 
     This code was adopted from the American Gut project:
@@ -87,8 +88,12 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
     params : list of str
         list of CLI parameters supplied to the deblur workflow
         (argv - first 2 are 'deblur','workflow' and are ignored)
-    ref_db_fp : list of str
-        the indexed sortmerna database (created in the main thread)
+    pos_ref_db_fp : list of str
+        the indexed positive (16s) sortmerna database
+        (created in the main thread)
+    neg_ref_db_fp : list of str
+        the indexed negative (artifacts) sortmerna database
+        (created in the main thread)
     jobs_to_start : int, optional
         The number of processors on the local system to use
 
@@ -101,7 +106,8 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
     logger.info('parallel deblur started for %d inputs' % len(inputs))
 
     # remove the irrelevant parameters
-    remove_param_list = ['-O', '--jobs-to-start', '--seqs-fp', '--ref-db-fp']
+    remove_param_list = ['-O', '--jobs-to-start', '--seqs-fp',
+                         '--pos-ref-db-fp', '--neg-ref-db-fp']
     skipnext = False
     newparams = []
     for carg in params[2:]:
@@ -115,9 +121,14 @@ def parallel_deblur(inputs, params, ref_db_fp, jobs_to_start=1):
 
     # add the ref_db_fp (since it may be not present in the
     # original command parameters)
-    new_ref_db_fp = ','.join(ref_db_fp)
-    newparams.append('--ref-db-fp')
-    newparams.append(new_ref_db_fp)
+    if pos_ref_db_fp is not None:
+        new_pos_ref_db_fp = ','.join(pos_ref_db_fp)
+        newparams.append('--pos-ref-db-fp')
+        newparams.append(new_pos_ref_db_fp)
+    if neg_ref_dp_fp is not None:
+        new_neg_ref_db_fp = ','.join(neg_ref_dp_fp)
+        newparams.append('--neg-ref-db-fp')
+        newparams.append(new_neg_ref_db_fp)
 
     logger.debug('ready for functor %s' % newparams)
     functor = partial(run_functor, deblur_system_call, newparams)
