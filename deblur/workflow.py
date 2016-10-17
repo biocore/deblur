@@ -18,6 +18,7 @@ import subprocess
 import time
 import warnings
 import io
+import os
 
 import skbio
 from biom.table import Table
@@ -566,8 +567,7 @@ def write_biom_table(table, biom_fp):
 
 def get_files_for_table(input_dir,
                         file_end='.trim.derep.no_artifacts'
-                        '.msa.deblur.no_chimeras',
-                        num_extra_name_chars=6):
+                        '.msa.deblur.no_chimeras'):
     """Get a list of files to add to the output table
 
     Parameters:
@@ -577,10 +577,6 @@ def get_files_for_table(input_dir,
     file_end : string
         the ending of all the fasta files to be added to the table
         (default '.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
-    num_extra_name_chars : int (optional)
-        the number of additional characters to remove from the end of the
-        file name to get the sample name
-        default is len('.fasta')=6
 
     Returns
     -------
@@ -592,12 +588,12 @@ def get_files_for_table(input_dir,
     logger = logging.getLogger(__name__)
     logger.debug('get_files_for_table input dir %s, '
                  'file-ending %s' % (input_dir, file_end))
-
     names = []
     for cfile in glob(join(input_dir, "*%s" % file_end)):
         if not isfile(cfile):
             continue
-        sample_id = basename(cfile)[:-(len(file_end) + num_extra_name_chars)]
+        sample_id = basename(cfile)[:-len(file_end)]
+        sample_id = os.path.splitext(sample_id)[0]
         names.append((cfile, sample_id))
 
     logger.debug('found %d files' % len(names))
