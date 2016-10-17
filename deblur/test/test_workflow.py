@@ -602,10 +602,15 @@ class workflowTests(TestCase):
         file2 = join(self.test_data_dir,
                      'testmerge2.fasta.trim.derep.no_artifacts'
                      '.msa.deblur.no_chimeras')
-        self.assertEqual(len(filelist), 2)
-        self.assertTrue(file1 in [filelist[0][0], filelist[1][0]])
-        self.assertTrue(file2 in [filelist[0][0], filelist[1][0]])
-        self.assertTrue('testmerge' in [filelist[0][1], filelist[1][1]])
+        file3 = join(self.test_data_dir,
+                     'testmerge.fastq.trim.derep.no_artifacts'
+                     '.msa.deblur.no_chimeras')
+        self.assertEqual(len(filelist), 3)
+        fnames, sample_names = zip(*filelist)
+        self.assertIn(file1, fnames)
+        self.assertIn(file2, fnames)
+        self.assertIn(file3, fnames)
+        self.assertIn('testmerge', sample_names)
 
     def test_create_otu_table(self):
         # merge the fasta files
