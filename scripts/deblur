@@ -577,7 +577,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                 split_sequence_file_on_sample_ids_to_files(
                     seqs_f,
                     out_dir_split)
-        input_file_list = glob('%s/*.fasta' % out_dir_split)
+        input_file_list = glob('%s/*.fast[aq]' % out_dir_split)
 
     files_to_remove = []
     # Build SortMeRNA indexes

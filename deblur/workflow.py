@@ -565,8 +565,9 @@ def write_biom_table(table, biom_fp):
 
 
 def get_files_for_table(input_dir,
-                        file_end='.fasta.trim.derep.no_artifacts'
-                        '.msa.deblur.no_chimeras'):
+                        file_end='.trim.derep.no_artifacts'
+                        '.msa.deblur.no_chimeras',
+                        num_extra_name_chars=6):
     """Get a list of files to add to the output table
 
     Parameters:
@@ -576,6 +577,10 @@ def get_files_for_table(input_dir,
     file_end : string
         the ending of all the fasta files to be added to the table
         (default '.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras')
+    num_extra_name_chars : int (optional)
+        the number of additional characters to remove from the end of the
+        file name to get the sample name
+        default is len('.fasta')=6
 
     Returns
     -------
@@ -592,7 +597,7 @@ def get_files_for_table(input_dir,
     for cfile in glob(join(input_dir, "*%s" % file_end)):
         if not isfile(cfile):
             continue
-        sample_id = basename(cfile)[:-len(file_end)]
+        sample_id = basename(cfile)[:-(len(file_end) + num_extra_name_chars)]
         names.append((cfile, sample_id))
 
     logger.debug('found %d files' % len(names))
