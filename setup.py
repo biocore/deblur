@@ -15,7 +15,7 @@ __version__ = "0.1.1"
 
 
 classes = """
-    Development Status :: 3 - Beta
+    Development Status :: 4 - Beta
     License :: OSI Approved :: BSD License
     Topic :: Scientific/Engineering :: Bio-Informatics
     Topic :: Software Development :: Libraries :: Application Frameworks
