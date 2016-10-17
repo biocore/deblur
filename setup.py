@@ -11,11 +11,11 @@ from setuptools import setup
 from glob import glob
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 classes = """
-    Development Status :: 3 - Alpha
+    Development Status :: 3 - Beta
     License :: OSI Approved :: BSD License
     Topic :: Scientific/Engineering :: Bio-Informatics
     Topic :: Software Development :: Libraries :: Application Frameworks
