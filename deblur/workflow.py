@@ -629,7 +629,7 @@ def create_otu_table(output_fp, deblurred_list,
     sampset = set()
     samplist = []
     # arbitrary size for the sparse results matrix so we won't run out of space
-    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.int)
+    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.double)
 
     # load the sequences from all samples into a sprase matrix
     for (cfilename, csampleid) in deblurred_list:
