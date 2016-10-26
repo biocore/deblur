@@ -57,6 +57,7 @@ def sequence_generator(input_fp):
         The ID and sequence.
 
     """
+    logger = logging.getLogger(__name__)
     kw = {}
     if sniff_fasta(input_fp)[0]:
         format = 'fasta'
@@ -73,7 +74,6 @@ def sequence_generator(input_fp):
     else:
         # usually happens when the fasta file is empty
         # so need to return no sequences (and warn)
-        logger = logging.getLogger(__name__)
         msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
         logger.warn(msg)
         warnings.warn(msg, UserWarning)
@@ -271,6 +271,10 @@ def remove_artifacts_from_biom_table(table_filename,
                                      verbose=verbose,
                                      sim_thresh=sim_thresh,
                                      coverage_thresh=coverage_thresh)
+    if clean_fp is None:
+        logger.warn("No clean sequences in %s" % fasta_filename)
+        return
+
     logger.debug('removed artifacts from sequences input %s'
                  ' to output %s' % (fasta_filename, clean_fp))
 
@@ -629,7 +633,7 @@ def create_otu_table(output_fp, deblurred_list,
     sampset = set()
     samplist = []
     # arbitrary size for the sparse results matrix so we won't run out of space
-    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.int)
+    obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.double)
 
     # load the sequences from all samples into a sprase matrix
     for (cfilename, csampleid) in deblurred_list:
@@ -673,7 +677,7 @@ def create_otu_table(output_fp, deblurred_list,
         logger.debug('filtering completed')
 
     # convert the matrix to a biom table
-    table = Table(obs, seqlist, samplist,
+    table = Table(obs.tocsr(), seqlist, samplist,
                   observation_metadata=None,
                   sample_metadata=None, table_id=None,
                   generated_by="deblur",
