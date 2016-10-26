@@ -673,7 +673,7 @@ def create_otu_table(output_fp, deblurred_list,
         logger.debug('filtering completed')
 
     # convert the matrix to a biom table
-    table = Table(obs, seqlist, samplist,
+    table = Table(obs.tocsr(), seqlist, samplist,
                   observation_metadata=None,
                   sample_metadata=None, table_id=None,
                   generated_by="deblur",
