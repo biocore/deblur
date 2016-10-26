@@ -58,12 +58,6 @@ def sequence_generator(input_fp):
 
     """
     logger = logging.getLogger(__name__)
-    if not os.path.exists(input_fp):
-        logger.error("%s does not exist" % input_fp)
-        return
-    if os.stat(input_fp) == 0:
-        logger.error("%s is an empty file" % input_fp)
-        return
     kw = {}
     if sniff_fasta(input_fp)[0]:
         format = 'fasta'
