@@ -57,6 +57,13 @@ def sequence_generator(input_fp):
         The ID and sequence.
 
     """
+    logger = logging.getLogger(__name__)
+    if not os.path.exists(input_fp):
+        logger.error("%s does not exist" % input_fp)
+        return
+    if os.stat(input_fp) == 0:
+        logger.error("%s is an empty file" % input_fp)
+        return
     kw = {}
     if sniff_fasta(input_fp)[0]:
         format = 'fasta'
@@ -73,7 +80,6 @@ def sequence_generator(input_fp):
     else:
         # usually happens when the fasta file is empty
         # so need to return no sequences (and warn)
-        logger = logging.getLogger(__name__)
         msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
         logger.warn(msg)
         warnings.warn(msg, UserWarning)
@@ -271,6 +277,10 @@ def remove_artifacts_from_biom_table(table_filename,
                                      verbose=verbose,
                                      sim_thresh=sim_thresh,
                                      coverage_thresh=coverage_thresh)
+    if clean_fp is None:
+        logger.warn("No clean sequences in %s" % fasta_filename)
+        return
+
     logger.debug('removed artifacts from sequences input %s'
                  ' to output %s' % (fasta_filename, clean_fp))
 
