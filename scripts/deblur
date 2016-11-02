@@ -533,7 +533,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         pos_ref_fp = [pos_db]
         logger.debug('Using default positive filtering file %s' % pos_ref_fp)
     if len(neg_ref_fp) == 0:
-        neg_ref_fp = [pos_db]
+        neg_ref_fp = [neg_db]
         logger.debug('Using default negative filtering file %s' % neg_ref_fp)
 
     # Create output directory
