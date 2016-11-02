@@ -1,12 +1,10 @@
 from unittest import TestCase, main
-
 from os.path import join, abspath, dirname
 
-
 from biom import load_table
-import os
 from deblur.workflow import _system_call
 from deblur.workflow import sequence_generator
+from tempfile import mkdtemp
 
 
 class TestScript(TestCase):
@@ -15,14 +13,10 @@ class TestScript(TestCase):
         self.data_dir = join(dirname(abspath(__file__)), 'data')
         self.seqs_fp = join(self.data_dir, 'seqs_s3.fasta')
         self.orig_fp = join(self.data_dir, 'simset.s3.fasta')
-        self.output_dir = 'tmp'
+        self.output_dir = mkdtemp()
         self.output_biom = join(self.output_dir, 'final.biom')
         self.output_seqs = join(self.output_dir, 'final.seqs.fa')
         self.trim_length = 150
-        os.mkdir(self.output_dir)
-
-    def tearDown(self):
-        os.rmdir(self.output_dir)
 
     def test_workflow(self):
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
