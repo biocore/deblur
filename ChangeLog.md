@@ -1,5 +1,16 @@
 # deblur changelog
 
+## Version 0.1.3-dev
+### Features
+
+### Backward-incompatible changes [stable]
+
+### Performance enhancements
+
+### Bug fixes
+* Default negative database not set correctly when not supplied [#98](https://github.com/biocore/deblur/pull/98)
+### Miscellaneous
+
 
 ## Version 0.1.1-dev
 ### Features
