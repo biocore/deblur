@@ -121,11 +121,11 @@ def parallel_deblur(inputs, params,
 
     # add the ref_db_fp (since it may be not present in the
     # original command parameters)
-    if pos_ref_db_fp is not None:
+    if pos_ref_db_fp:
         new_pos_ref_db_fp = ','.join(pos_ref_db_fp)
         newparams.append('--pos-ref-db-fp')
         newparams.append(new_pos_ref_db_fp)
-    if neg_ref_dp_fp is not None:
+    if neg_ref_dp_fp:
         new_neg_ref_db_fp = ','.join(neg_ref_dp_fp)
         newparams.append('--neg-ref-db-fp')
         newparams.append(new_neg_ref_db_fp)

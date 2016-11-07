@@ -18,17 +18,44 @@ class TestScript(TestCase):
         self.output_seqs = join(self.output_dir, 'final.seqs.fa')
         self.trim_length = 150
 
+    def validate_results(self, table_name, orig_fasta_name):
+        res_table = load_table(table_name)
+
+        res_seqs = list(res_table.ids(axis='observation'))
+        exp_seqs = [item[1] for item in sequence_generator(orig_fasta_name)]
+        exp_seqs = list(map(lambda x: x.upper()[:self.trim_length], exp_seqs))
+        self.assertListEqual(res_seqs, exp_seqs)
+
     def test_workflow(self):
+        # test default parameters, negative mode, single thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
                "--trim-length", "150", '-w', '-n']
         sout, serr, res = _system_call(cmd)
-        res_table = load_table(self.output_biom)
+        self.validate_results(self.output_biom, self.orig_fp)
 
-        res_seqs = list(res_table.ids(axis='observation'))
-        exp_seqs = [item[1] for item in sequence_generator(self.orig_fp)]
-        exp_seqs = list(map(lambda x: x.upper()[:self.trim_length], exp_seqs))
-        self.assertListEqual(res_seqs, exp_seqs)
+        # test default parameters, negative mode, multi thread
+        cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
+               "--output-dir", self.output_dir,
+               "--trim-length", "150", '-w', '-n',
+               "-O", "2"]
+        sout, serr, res = _system_call(cmd)
+        self.validate_results(self.output_biom, self.orig_fp)
+
+        # test default parameters, positive mode, single thread
+        cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
+               "--output-dir", self.output_dir,
+               "--trim-length", "150", '-w']
+        sout, serr, res = _system_call(cmd)
+        self.validate_results(self.output_biom, self.orig_fp)
+
+        # test default parameters, positive mode, multi thread
+        cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
+               "--output-dir", self.output_dir,
+               "--trim-length", "150", '-w',
+               "-O", "2"]
+        sout, serr, res = _system_call(cmd)
+        self.validate_results(self.output_biom, self.orig_fp)
 
 
 if __name__ == "__main__":
