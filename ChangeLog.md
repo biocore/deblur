@@ -1,5 +1,15 @@
 # deblur changelog
 
+## Version 0.1.4-dev
+### Features
+
+### Backward-incompatible changes [stable]
+
+### Performance enhancements
+
+### Bug fixes
+
+
 ## Version 0.1.3-dev
 ### Features
 
@@ -8,7 +18,9 @@
 ### Performance enhancements
 
 ### Bug fixes
+* Positive mode using multiple threads failed [#111](https://github.com/biocore/deblur/pull/111)
 * Default negative database not set correctly when not supplied [#98](https://github.com/biocore/deblur/pull/98)
+
 ### Miscellaneous
 
 

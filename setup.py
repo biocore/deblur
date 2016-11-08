@@ -11,7 +11,7 @@ from setuptools import setup
 from glob import glob
 
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 classes = """
