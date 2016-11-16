@@ -582,7 +582,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     '*.fq.gz']
         input_file_list = []
         for pattern in patterns:
-            input_file_list.expand(glob('%s/%s' % (out_dir_split, pattern))
+            input_file_list.extend(glob('%s/%s' % (out_dir_split, pattern)))
 
     files_to_remove = []
     # Build SortMeRNA indexes
