@@ -577,7 +577,12 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                 split_sequence_file_on_sample_ids_to_files(
                     seqs_f,
                     out_dir_split)
-        input_file_list = glob('%s/*.fast[aq]' % out_dir_split)
+
+        patterns = ['*.fast[aq]', '*.fast[aq].gz', '*.fna', '*.fq', '*.fna.gz', 
+                    '*.fq.gz']
+        input_file_list = []
+        for pattern in patterns:
+            input_file_list.expand(glob('%s/%s' % (out_dir_split, pattern))
 
     files_to_remove = []
     # Build SortMeRNA indexes
