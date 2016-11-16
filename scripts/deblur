@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os import makedirs, mkdir
+from os import makedirs, mkdir, remove
 from os.path import join, isfile, exists, isdir
 from shutil import rmtree
 import logging
@@ -650,7 +650,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     if not keep_tmp_files:
         logger.info('Cleaning up temp files')
         for f in files_to_remove:
-            os.remove(f)
+            remove(f)
         rmtree(working_dir)
     else:
         logger.info('Keeping temp files')
