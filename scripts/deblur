@@ -578,7 +578,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     seqs_f,
                     out_dir_split)
 
-        patterns = ['*.fast[aq]', '*.fast[aq].gz', '*.fna', '*.fq', '*.fna.gz', 
+        patterns = ['*.fast[aq]', '*.fast[aq].gz', '*.fna', '*.fq', '*.fna.gz',
                     '*.fq.gz']
         input_file_list = []
         for pattern in patterns:
