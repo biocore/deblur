@@ -31,8 +31,7 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
 
 from deblur.support_files import pos_db, neg_db
 
-__version__ = "0.9.2.1"
-
+__version__ = "0.1.5"
 
 def error_dist_from_str(ctx, param, value):
     """Validate the error profile is either None or a list of floats
