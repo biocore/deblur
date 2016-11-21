@@ -9,14 +9,12 @@
 # ----------------------------------------------------------------------------
 
 import click
-from os import makedirs, mkdir
+from os import makedirs, mkdir, remove
 from os.path import join, isfile, exists, isdir
 from shutil import rmtree
 import logging
 import sys
 from glob import glob
-
-from skbio.util import remove_files
 
 from deblur.deblurring import (deblur, get_default_error_profile)
 from deblur.parallel_deblur import parallel_deblur
@@ -577,7 +575,12 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                 split_sequence_file_on_sample_ids_to_files(
                     seqs_f,
                     out_dir_split)
-        input_file_list = glob('%s/*.fast[aq]' % out_dir_split)
+
+        patterns = ['*.fast[aq]', '*.fast[aq].gz', '*.fna', '*.fq', '*.fna.gz',
+                    '*.fq.gz']
+        input_file_list = []
+        for pattern in patterns:
+            input_file_list.extend(glob('%s/%s' % (out_dir_split, pattern)))
 
     files_to_remove = []
     # Build SortMeRNA indexes
@@ -646,7 +649,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     # Clean up
     if not keep_tmp_files:
         logger.info('Cleaning up temp files')
-        remove_files(files_to_remove, error_on_missing=False)
+        for f in files_to_remove:
+            remove(f)
         rmtree(working_dir)
     else:
         logger.info('Keeping temp files')
