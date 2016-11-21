@@ -30,8 +30,9 @@ from deblur.workflow import (launch_workflow, trim_seqs, dereplicate_seqs,
                              remove_artifacts_from_biom_table)
 
 from deblur.support_files import pos_db, neg_db
+import deblur
 
-__version__ = "0.1.5"
+__version__ = deblur.__version__
 
 
 def error_dist_from_str(ctx, param, value):
