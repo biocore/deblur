@@ -2,6 +2,7 @@
 
 ## Version 0.1.4-dev
 ### Features
+* support for .gz FASTA and FASTQ files [#113](https://github.com/biocore/deblur/pull/113)
 
 ### Backward-incompatible changes [stable]
 
