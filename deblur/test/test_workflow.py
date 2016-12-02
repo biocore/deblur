@@ -56,7 +56,8 @@ class workflowTests(TestCase):
         self.test_data_dir = join(dirname(abspath(__file__)), 'data')
         self.seqs_fq_fp = join(self.test_data_dir, 'seqs.fq')
         self.seqs_fq_bad_fp = join(self.test_data_dir, 'seqs_bad.fq')
-        self.seqs_fq_illumina13_fp = join(self.test_data_dir, 'seqs_illumina1.3.fq')
+        self.seqs_fq_illumina13_fp = join(self.test_data_dir, 
+                                          'seqs_illumina1.3.fq')
         self.seqs_s1_fp = join(self.test_data_dir, 'seqs_s1.fasta')
         self.seqs_s2_fp = join(self.test_data_dir, 'seqs_s2.fasta')
         self.seqs_s3_fp = join(self.test_data_dir, 'seqs_s3.fasta')
