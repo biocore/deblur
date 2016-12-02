@@ -43,6 +43,7 @@ def _get_fastq_variant(input_fp):
             continue
         else:
             variant = v
+            break
 
     if variant is None:
         raise ValueError("Unknown variant, unable to interpret PHRED")
