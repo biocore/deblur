@@ -32,7 +32,7 @@ sniff_fasta = skbio.io.io_registry.get_sniffer('fasta')
 sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
 
 
-def _get_fastq_variant(input_fp)
+def _get_fastq_variant(input_fp):
     # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
     variant = None
     variants = ['illumina1.8', 'illumina1.3', 'solexa', 'sanger']
@@ -648,7 +648,11 @@ def create_otu_table(output_fp, deblurred_list,
     obs = scipy.sparse.dok_matrix((1E9, len(deblurred_list)), dtype=np.double)
 
     # load the sequences from all samples into a sprase matrix
+    sneaking_extensions = {'fasta', 'fastq', 'fna', 'fq', 'fa'}
     for (cfilename, csampleid) in deblurred_list:
+        if csampleid.rsplit('.', 1)[-1] in sneaking_extensions:
+            csampleid = csampleid.rsplit('.', 1)[0]
+
         # test if sample has already been processed
         if csampleid in sampset:
             warnings.warn('sample %s already in table!', UserWarning)
