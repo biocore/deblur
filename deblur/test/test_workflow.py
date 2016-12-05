@@ -31,6 +31,7 @@ from deblur.workflow import (dereplicate_seqs,
                              start_log, sequence_generator,
                              sample_id_from_read_id,
                              remove_artifacts_from_biom_table,
+                             _get_fastq_variant,
                              filter_minreads_samples_from_table)
 from deblur.deblurring import get_default_error_profile
 
@@ -54,6 +55,9 @@ class workflowTests(TestCase):
         # the data directory for the workflow test files
         self.test_data_dir = join(dirname(abspath(__file__)), 'data')
         self.seqs_fq_fp = join(self.test_data_dir, 'seqs.fq')
+        self.seqs_fq_bad_fp = join(self.test_data_dir, 'seqs_bad.fq')
+        self.seqs_fq_illumina13_fp = join(self.test_data_dir,
+                                          'seqs_illumina1.3.fq')
         self.seqs_s1_fp = join(self.test_data_dir, 'seqs_s1.fasta')
         self.seqs_s2_fp = join(self.test_data_dir, 'seqs_s2.fasta')
         self.seqs_s3_fp = join(self.test_data_dir, 'seqs_s3.fasta')
@@ -70,6 +74,18 @@ class workflowTests(TestCase):
         for f in self.files_to_remove:
             remove(f)
         rmtree(self.working_dir)
+
+    def test_get_fastq_variant(self):
+        exp = 'illumina1.8'
+        obs = _get_fastq_variant(self.seqs_fq_fp)
+        self.assertEqual(obs, exp)
+
+        exp = 'illumina1.3'
+        obs = _get_fastq_variant(self.seqs_fq_illumina13_fp)
+        self.assertEqual(obs, exp)
+
+        with self.assertRaises(ValueError):
+            _get_fastq_variant(self.seqs_fq_bad_fp)
 
     def test_sequence_generator_fasta(self):
         exp_len = 135
