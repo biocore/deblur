@@ -24,7 +24,7 @@ import biom
               help="Output OTU summary (.tsv)")
 
 def make_otu_summary(input_biom_fp, output_summary_fp):
-    """Summarize distribution information about each OTU (sequnece) in a Deblur
+    """Summarize distribution information about each OTU (sequence) in a Deblur
     biom table.
     
     Input biom table must be rarefied for results to be meaningful."""
