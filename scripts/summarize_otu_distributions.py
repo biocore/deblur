@@ -14,23 +14,23 @@ import numpy as np
 import biom
 
 @click.command()
-@click.option('--input_table', '-i', required=True,
+@click.option('--input_biom_fp', '-i', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
               file_okay=True), 
               help="Input rarefied OTU table (.biom)")
-@click.option('--output_summary', '-o', required=True,
+@click.option('--output_summary_fp', '-o', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
               file_okay=True), 
               help="Output OTU summary (.tsv)")
 
-def make_otu_summary(input_table, output_summary):
+def make_otu_summary(input_biom_fp, output_summary_fp):
     """Summarize distribution information about each OTU (sequnece) in a Deblur
     biom table.
     
     Input biom table must be rarefied for results to be meaningful."""
 
     # Read OTU table (must be rarefied)
-    table = biom.load_table(input_table)
+    table = biom.load_table(input_biom_fp)
     num_samples = len(table.ids(axis='sample'))
 
     # Get arrays of sample IDs and OTUs (sequences), dicts per OTU of total 
@@ -89,7 +89,7 @@ def make_otu_summary(input_table, output_summary):
                        'list_samples']]
 
     # Write to tsv
-    df_otus.to_csv(output_summary, sep='\t')
+    df_otus.to_csv(output_summary_fp, sep='\t')
 
 if __name__ == '__main__':
     make_otu_summary()
