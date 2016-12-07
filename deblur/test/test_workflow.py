@@ -66,6 +66,7 @@ class workflowTests(TestCase):
         self.orig_s2_fp = join(self.test_data_dir, 'simset.s2.fasta')
         self.orig_s3_fp = join(self.test_data_dir, 'simset.s3.fasta')
 
+        self.no_trim_res = join(self.test_data_dir, 'no_trim_results.fasta')
         self.files_to_remove = []
 
         logfilename = join(self.working_dir, "log.txt")
@@ -765,7 +766,7 @@ class workflowTests(TestCase):
                                     negate=negate,
                                     skip_trim=False,
                                     threads_per_sample=threads)
-        exp = Sequence.read('data/no_trim_results.fasta', format='fasta')
+        exp = Sequence.read(self.no_trim_res, format='fasta')
         res = Sequence.read(output_fp, format='fasta')
         self.assertEqual(exp, res)
 
