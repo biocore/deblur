@@ -777,7 +777,8 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                 out_f.write(">%s\n%s\n" % (label, seq))
         else:
             for label, seq in trim_seqs(
-                    input_seqs=sequence_generator(seqs_fp), trim_len=trim_length):
+                    input_seqs=sequence_generator(seqs_fp),
+                    trim_len=trim_length):
                 out_f.write(">%s\n%s\n" % (label, seq))
 
     # Step 2: Dereplicate sequences
