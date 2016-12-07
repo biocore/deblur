@@ -3,7 +3,7 @@
 
 ## Version 0.1.7-dev
 ### Features
-* Adding command line option in deblur workflow to skip trimming [#120](https://github.com/biocore/deblur/pull/119)
+* Adding command line option in deblur workflow to skip trimming [#124](https://github.com/biocore/deblur/pull/124)
 
 ### Backward-incompatible changes [stable]
 
