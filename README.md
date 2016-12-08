@@ -24,7 +24,19 @@ At the moment, the install is a two stage process as we do not currently have de
 
 - install deblur dependencies
 ```
-conda install -c bioconda VSEARCH MAFFT SortMeRNA==2.0 biom-format
+conda install -c bioconda VSEARCH MAFFT biom-format
+```
+
+for mac OS X:
+
+```
+conda install -c biocore SortMeRNA==2.0
+```
+
+for other operating systems:
+
+```
+conda install -c bioconda SortMeRNA==2.0
 ```
 
 - Install Deblur:
