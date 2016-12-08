@@ -1,5 +1,17 @@
 # deblur changelog
 
+
+## Version 0.1.7-dev
+### Features
+* Adding command line option in deblur workflow to skip trimming [#124](https://github.com/biocore/deblur/pull/124)
+
+### Backward-incompatible changes [stable]
+
+### Performance enhancements
+
+### Bug fixes
+
+
 ## Version 0.1.4-dev
 ### Features
 * support for .gz FASTA and FASTQ files [#113](https://github.com/biocore/deblur/pull/113)

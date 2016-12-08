@@ -17,6 +17,7 @@ from skbio import DNA
 
 from biom import load_table
 import logging
+from skbio import Sequence
 
 from deblur.workflow import (dereplicate_seqs,
                              remove_chimeras_denovo_from_seqs,
@@ -65,6 +66,7 @@ class workflowTests(TestCase):
         self.orig_s2_fp = join(self.test_data_dir, 'simset.s2.fasta')
         self.orig_s3_fp = join(self.test_data_dir, 'simset.s3.fasta')
 
+        self.no_trim_res = join(self.test_data_dir, 'no_trim_results.fasta')
         self.files_to_remove = []
 
         logfilename = join(self.working_dir, "log.txt")
@@ -731,6 +733,42 @@ class workflowTests(TestCase):
         self.run_workflow_try(self.seqs_s3_fp,
                               self.orig_s3_fp, ref_fp, ref_db_fp,
                               threads=3)
+
+    def test_launch_workflow_skip_trim(self):
+        # index the 70% rep. set database
+        ref_fp = join(self.test_data_dir, '70_otus.fasta')
+        ref_db_fp = build_index_sortmerna(
+            ref_fp=(ref_fp,),
+            working_dir=self.working_dir)
+
+        seqs_fp = self.seqs_s1_fp
+        output_fp = self.working_dir
+        mean_error = 0.005
+        error_dist = get_default_error_profile()
+        indel_prob = 0.01
+        indel_max = 3
+        min_size = 2
+        negate = False
+        # trim length longer than sequences
+        trim_length = 150
+        threads = 1
+
+        output_fp = launch_workflow(seqs_fp=seqs_fp,
+                                    working_dir=output_fp,
+                                    mean_error=mean_error,
+                                    error_dist=error_dist,
+                                    indel_prob=indel_prob,
+                                    indel_max=indel_max,
+                                    trim_length=trim_length,
+                                    min_size=min_size,
+                                    ref_fp=(ref_fp,),
+                                    ref_db_fp=ref_db_fp,
+                                    negate=negate,
+                                    skip_trim=False,
+                                    threads_per_sample=threads)
+        exp = Sequence.read(self.no_trim_res, format='fasta')
+        res = Sequence.read(output_fp, format='fasta')
+        self.assertEqual(exp, res)
 
     def test_launch_workflow_incorrect_trim(self):
         """

@@ -467,6 +467,9 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="Maximal indel number")
 @click.option('--trim-length', '-t', required=False, type=int, default=100,
               show_default=True, help="Sequence trim length")
+@click.option('--skip-trimming', '-T', required=False, type=bool, default=False,
+              is_flag=True, show_default=True,
+              help="Skips the sequence trimming step.")
 @click.option('--min-reads', required=False, type=int, default=0,
               show_default=True, help="In final biom table - keep only "
               "sequences appearing at least min-reads in all samples "
@@ -506,7 +509,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="ATTACK MODE (http://xkcd.com/1692)")
 def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
              neg_ref_fp, neg_ref_db_fp, overwrite,
-             mean_error, error_dist, indel_prob, indel_max,
+             mean_error, error_dist, indel_prob, indel_max, skip_trimming,
              trim_length, min_reads, min_size, negate, threads_per_sample,
              keep_tmp_files, log_level, log_file, jobs_to_start,
              is_worker_thread, attack_mode):
@@ -612,7 +615,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
-                    negate=negate, threads_per_sample=threads_per_sample)
+                    negate=negate, threads_per_sample=threads_per_sample,
+                    skip_trim=skip_trimming)
             if deblurred_file_name is None:
                 logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
