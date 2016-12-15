@@ -64,19 +64,24 @@ def verify_amplicon_type(input_fasta_fp, num_seqs, cutoff, seed):
       seed)
     top_kmer = starting_kmer_value_counts.index[0]
     top_kmer_count = starting_kmer_value_counts[0]
-    top_kmer_frac = top_kmer_count/num_seqs
     second_kmer = starting_kmer_value_counts.index[1]
     second_kmer_count = starting_kmer_value_counts[1]
+    third_kmer = starting_kmer_value_counts.index[2]
+    third_kmer_count = starting_kmer_value_counts[2]
+    top_kmer_frac = top_kmer_count/num_seqs
     top2_kmer_frac = (top_kmer_count+second_kmer_count)/num_seqs
+    top3_kmer_frac = (top_kmer_count+second_kmer_count+third_kmer_count)/num_seqs
     if (top_kmer == 'TACG') & (top_kmer_frac > cutoff):
         print('Amplicon type: 16S/515f (%s%% of sequences start with %s)' %
               (round(top_kmer_frac*100, 1), top_kmer))
     elif (top_kmer == 'GTAG') & (top_kmer_frac > cutoff):
         print('Amplicon type: ITS/ITS1f (%s%% of sequences start with %s)' %
               (round(top_kmer_frac*100, 1), top_kmer))
-    elif (top_kmer in ['GCTA', 'GCTC']) & (second_kmer in ['GCTA', 'GCTC']) & (top2_kmer_frac > cutoff):
-        print('Amplicon type: 18S/Euk1391f (%s%% of sequences start with %s or %s)' %
-              (round(top2_kmer_frac*100, 1), top_kmer, second_kmer))
+    elif (top_kmer in ['GCTA', 'GCTC', 'ACAC']) & (second_kmer in ['GCTA', 'GCTC', 
+        'ACAC']) & (third_kmer in ['GCTA', 'GCTC', 'ACAC']) & (
+        top3_kmer_frac > cutoff):
+        print('Amplicon type: 18S/Euk1391f (%s%% of sequences start with %s, %s, or %s)' %
+              (round(top3_kmer_frac*100, 1), top_kmer, second_kmer, third_kmer))
     else:
         print('Could not determine amplicon type'),
         print('(most frequent starting tetramer was %s with %s%%)' %
