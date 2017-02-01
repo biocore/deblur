@@ -76,17 +76,17 @@ deblur workflow --help
 
 Positive and Negative Filtering
 ===============================
-By default, deblur uses positive filtering, keeping only 16S sequences (based on homology to [Greengenes](http://greengenes.secondgenome.com/) [88% representative set](deblur/support_files/88_otus.fasta)). For example:
+Deblur can use two types of filtering on the sequences:
 
-```
-deblur workflow --seqs-fp all_samples.fna --output-dir output
-```
+- negative mode - removes [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. PhiX and Adapter sequences).
 
-Negative filtering can be selected using the '-n' flag. This causes deblurring to keep all sequences except for [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. PhiX and Adapter sequences), so other non-16S sequences are retained. For example:
+- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (GreenGenes 88%)
 
-```
-deblur workflow --seqs-fp all_samples.fna --output-dir output -n
-```
+By default, deblur uses negative mode filtering to remove known artifact (i.e. PhiX and Adapter sequences) prior to denoising. The output of deblur contains two files: final.biom, which includes all sOTUs, and final.only16s.biom, which contains the output of positive filtering of the sOTUs (only sOTUs similar to 16S sequences).
+
+Minimal Reads Filtering
+=======================
+Deblur runs on each sample independently. However, sometimes there is also additional information based on the total number of times an sOTU is observed in all samples (e.g. an sOTU which is observed only in one sample at low read count is more likely to be pcr/read error as opposed to an sOTU present in many samples). The --min-reads option allows to use this information by removing sOTUs with a total read count (across all samples) lower than the given threshold. The default value is set to 10, and should be useful for most cases. However, if all samples in an experiment are expected not to contain the same bacteria, --min-reads can be set to 0 to skip this final filtering step.
 
 Code Development Note
 =====================
