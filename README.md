@@ -49,10 +49,10 @@ Example usage
 
 The input to deblur workflow is a directory of fasta files (1 per sample) or a demultiplexed FASTA or FASTQ file. The output is a biom table with sequences as the OTU ids (final.biom in the output directory).
 
-The simple use case just specifies the input fasta file (or directory) and output directory name:
+The simple use case just specifies the input fasta file (or directory), output directory name and the sequence trim length:
 
 ```
-deblur workflow --seqs-fp all_samples.fna --output-dir output
+deblur workflow --seqs-fp all_samples.fna --output-dir output -t 150
 ```
 
 If starting from a barcode and read file, you can first use the qiime [split_libraries_fastq.py](http://qiime.org/scripts/split_libraries_fastq.html) command (we recommend using -q 19 to remove low quality reads):
@@ -65,7 +65,7 @@ and use the split/seqs.fna as the input to the deblur workflow.
 
 Important options
 =================
-- The sequence read length can be specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to (default=150). Note that all reads shorter than this length will be discarded.
+- The sequence trim length is specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to. Note that all reads shorter than this length will be discarded.
 
 - In order to run in parallel, the number of threads can be specified by the ```-O NNN``` flag (default it 1). Note that running more threads than available cores will not speed up performance.
 
