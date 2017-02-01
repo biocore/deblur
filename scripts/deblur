@@ -119,7 +119,7 @@ def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
 @click.argument('output_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=False,
                                 file_okay=True))
-@click.option('--trim-length', '-t', required=False, type=int, default=100,
+@click.option('--trim-length', '-t', required=True, type=int,
               help="Sequence trim length")
 @click.option('--log-level', required=False,
               type=click.IntRange(1, 5, clamp=True), default=2,
