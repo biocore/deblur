@@ -202,7 +202,7 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
               show_default=True, type=bool,
               help="Discard all sequences aligning to the database "
                    "passed via --ref-fp option")
-@click.option('--threads-per-sample', '-t', required=False, type=int,
+@click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
 @click.option('--log-level', required=False,
