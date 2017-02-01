@@ -198,10 +198,12 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
-@click.option('--negate', '-n', required=False, default=False, is_flag=True,
-              show_default=True, type=bool,
-              help="Discard all sequences aligning to the database "
-                   "passed via --ref-fp option")
+@click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
+              show_default=True,
+              help="Use --negate (i.e. True) to discard all sequences aligning to the "
+              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
+              "(i.e. False) to filter by only keeping sequences similar to ones in "
+              "--pos-ref-fp.")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -417,8 +419,9 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               file_okay=True),
               help="Positive (16S) filtering database. "
                    "Keep all sequences aligning to this FASTA file "
-                   "(for multiple databases, use "
-                   "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
+                   "in the output final.only16s.biom file. (for multiple "
+                   "databases, use "
+                   "--pos-ref-fp db1.fa --pos-ref-fp db2.fa ..)\n"
                    "default is: %s\n" % pos_db)
 @click.option('--pos-ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -426,8 +429,8 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="The indexed  version of the positive filtering database. "
                    "If not supplied, deblur will index the database."
                    "For multiple databases, the order "
-                   "must follow that of --ref-fp, for example, "
-                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+                   "must follow that of --pos-ref-fp, for example, "
+                   "--pos-ref-db-fp db1.idx --pos-ref-db-fp db2.idx ..")
 @click.option('--neg-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -435,7 +438,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="Negative (artifacts) filtering database. "
                    "Drop all sequences aligning to this FASTA file "
                    "(for multiple databases, use "
-                   "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
+                   "--neg-ref-fp db1.fa --neg-ref-fp db2.fa ..)\n"
                    "default is: %s\n" % neg_db)
 @click.option('--neg-ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
@@ -443,8 +446,8 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="The indexed  version of the negative filtering database. "
                    "If not supplied, deblur will index the database."
                    "For multiple databases, the order "
-                   "must follow that of --ref-fp, for example, "
-                   "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
+                   "must follow that of --neg-ref-fp, for example, "
+                   "--neg-ref-db-fp db1.idx --neg-ref-db-fp db2.idx ..")
 @click.option('--overwrite', '-w', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True, help="Overwrite output directory if exists.")
@@ -477,10 +480,12 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Per sample - discard sequences with"
               " an abundance value smaller than min-size")
-@click.option('--negate', '-n', required=False, default=False, is_flag=True,
-              show_default=True, type=bool,
-              help="Discard all sequences aligning to the database "
-                   "passed via --ref-fp option")
+@click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
+              show_default=True,
+              help="Use --negate (i.e. True) to discard all sequences aligning to the "
+              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
+              "(i.e. False) to filter by only keeping sequences similar to ones in "
+              "--pos-ref-fp.")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
