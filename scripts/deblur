@@ -409,6 +409,8 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
+@click.option('--trim-length', '-t', required=True, type=int,
+              show_default=True, help="Sequence trim length")
 @click.option('--pos-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -465,8 +467,6 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--indel-max', required=False, type=int, default=3,
               show_default=True,
               help="Maximal indel number")
-@click.option('--trim-length', '-t', required=True, type=int,
-              show_default=True, help="Sequence trim length")
 @click.option('--skip-trimming', '-T', required=False, type=bool, default=False,
               is_flag=True, show_default=True,
               help="Skips the sequence trimming step.")
