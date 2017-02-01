@@ -4,7 +4,7 @@ Deblur
 [![Build Status](https://travis-ci.org/biocore/deblur.png?branch=master)](https://travis-ci.org/biocore/deblur)
 [![Coverage Status](https://coveralls.io/repos/github/biocore/deblur/badge.svg?branch=master)](https://coveralls.io/github/biocore/deblur?branch=master)
 
-Deblur is a greedy deconvolution algorithm based on Illumina Miseq/Hiseq error profiles.
+Deblur is a greedy deconvolution algorithm for amplicon sequencing based on Illumina Miseq/Hiseq error profiles.
 
 Install
 =======
