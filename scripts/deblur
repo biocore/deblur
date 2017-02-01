@@ -431,7 +431,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
               help="Negative (artifacts) filtering database. "
-                   "Keep all sequences aligning to this FASTA file "
+                   "Drop all sequences aligning to this FASTA file "
                    "(for multiple databases, use "
                    "--ref-fp db1.fa --ref-fp db2.fa ..)\n"
                    "default is: %s\n" % neg_db)
