@@ -470,7 +470,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--skip-trimming', '-T', required=False, type=bool, default=False,
               is_flag=True, show_default=True,
               help="Skips the sequence trimming step.")
-@click.option('--min-reads', required=False, type=int, default=0,
+@click.option('--min-reads', required=False, type=int, default=10,
               show_default=True, help="In final biom table - keep only "
               "sequences appearing at least min-reads in all samples "
               "combined.")
