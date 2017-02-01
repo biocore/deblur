@@ -1,6 +1,21 @@
 # deblur changelog
 
 
+## Version 0.1.8-dev
+### Features
+Updated docs
+
+### Backward-incompatible changes [stable]
+Change --min-reads default value to 10 (was 0)
+Remove --trim-length default value (was 100) and set as required parameter
+Set --negate (negative mode) default value to True and add --only-pos option to skip negative mode
+
+### Performance enhancements
+
+### Bug fixes
+rename --threads shortcut to -a (was -t) in remove_artifacts CLI
+
+
 ## Version 0.1.7-dev
 ### Features
 * Adding command line option in deblur workflow to skip trimming [#124](https://github.com/biocore/deblur/pull/124)
