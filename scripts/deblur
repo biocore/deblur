@@ -358,7 +358,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
 @click.argument('output_biom_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
-@click.option('--min-reads', required=False, type=int, default=0,
+@click.option('--min-reads', required=False, type=int, default=10,
               show_default=True, help="In final biom table - keep only "
               "sequences appearing at least min-reads in all samples "
               "combined.")
