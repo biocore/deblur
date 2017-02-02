@@ -480,12 +480,6 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--min-size', required=False, type=int, default=2,
               show_default=True, help="Per sample - discard sequences with"
               " an abundance value smaller than min-size")
-@click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
-              show_default=True,
-              help="Use --negate (i.e. True) to discard all sequences aligning to the "
-              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
-              "(i.e. False) to filter by only keeping sequences similar to ones in "
-              "--pos-ref-fp.")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -515,7 +509,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
              neg_ref_fp, neg_ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_reads, min_size, negate, threads_per_sample,
+             trim_length, min_reads, min_size, threads_per_sample,
              keep_tmp_files, log_level, log_file, jobs_to_start,
              is_worker_thread, attack_mode):
     """Launch deblur workflow"""
@@ -591,22 +585,17 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
 
     files_to_remove = []
     # Build SortMeRNA indexes
-    if negate:
-        if not neg_ref_db_fp:
-            logger.info('building negative db sortmerna index files')
-            neg_ref_db_fp = build_index_sortmerna(ref_fp=neg_ref_fp,
-                                                  working_dir=working_dir)
+    if not neg_ref_db_fp:
+        logger.info('building negative db sortmerna index files')
+        neg_ref_db_fp = build_index_sortmerna(ref_fp=neg_ref_fp,
+                                              working_dir=working_dir)
     if not pos_ref_db_fp:
         logger.info('building positive db sortmerna index files')
         pos_ref_db_fp = build_index_sortmerna(ref_fp=pos_ref_fp,
                                               working_dir=working_dir)
 
-    if negate:
-        ref_db_fp = neg_ref_db_fp
-        ref_fp = neg_ref_fp
-    else:
-        ref_db_fp = pos_ref_db_fp
-        ref_fp = pos_ref_fp
+    ref_db_fp = neg_ref_db_fp
+    ref_fp = neg_ref_fp
 
     # Deblur each sample fasta file
     if jobs_to_start < 2:
@@ -620,7 +609,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
-                    negate=negate, threads_per_sample=threads_per_sample)
+                    threads_per_sample=threads_per_sample)
             if deblurred_file_name is None:
                 logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
@@ -647,11 +636,10 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
 
     # if negative mode, also create a biom table with
     # only 16s sequences and with only non-16s sequences
-    if negate:
-        remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
-                                         pos_ref_fp, output_dir,
-                                         pos_ref_db_fp,
-                                         threads=threads_per_sample)
+    remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
+                                     pos_ref_fp, output_dir,
+                                     pos_ref_db_fp,
+                                     threads=threads_per_sample)
 
     # Clean up
     if not keep_tmp_files:

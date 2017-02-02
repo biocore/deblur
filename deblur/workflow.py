@@ -719,7 +719,7 @@ def create_otu_table(output_fp, deblurred_list,
 
 def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1,
+                    ref_db_fp, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
@@ -745,8 +745,6 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         filepath(s) to FASTA reference database for artifact removal
     ref_db_fp: tuple
         filepath(s) to SortMeRNA indexed database for artifact removal
-    negate: boolean
-        discard all sequences aligning to the ref_fp database
     threads_per_sample: integer, optional
         number of threads to use for SortMeRNA/mafft/vsearch
         (0 for max available)
@@ -789,7 +787,7 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                                             ref_fp=ref_fp,
                                             working_dir=working_dir,
                                             ref_db_fp=ref_db_fp,
-                                            negate=negate,
+                                            negate=True,
                                             threads=threads_per_sample,
                                             sim_thresh=sim_thresh)
     if not output_artif_fp:

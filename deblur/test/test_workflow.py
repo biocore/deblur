@@ -581,7 +581,7 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
+        # negate = False
         nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
                                     mean_error=mean_error,
                                     error_dist=error_dist,
@@ -591,7 +591,6 @@ class workflowTests(TestCase):
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
-                                    negate=negate,
                                     threads_per_sample=threads)
 
         # get the trimmed ground truth sequences
@@ -748,7 +747,7 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
+        # negate = False
         # trim length longer than sequences
         trim_length = -1
         threads = 1
@@ -763,7 +762,6 @@ class workflowTests(TestCase):
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
-                                    negate=negate,
                                     threads_per_sample=threads)
         exp = Sequence.read(self.no_trim_res, format='fasta')
         res = Sequence.read(output_fp, format='fasta')
@@ -787,7 +785,7 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
+        # negate = False
         # trim length longer than sequences
         trim_length = 151
         threads = 1
@@ -801,7 +799,6 @@ class workflowTests(TestCase):
                             min_size=min_size,
                             ref_fp=(ref_fp,),
                             ref_db_fp=ref_db_fp,
-                            negate=negate,
                             threads_per_sample=threads)
 
     def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):
