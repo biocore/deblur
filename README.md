@@ -24,19 +24,7 @@ At the moment, the install is a two stage process as we do not currently have de
 
 - install deblur dependencies
 ```
-conda install -c bioconda VSEARCH MAFFT biom-format
-```
-
-for mac OS X:
-
-```
-conda install -c biocore SortMeRNA==2.0
-```
-
-for other operating systems:
-
-```
-conda install -c bioconda SortMeRNA==2.0
+conda install -c bioconda VSEARCH MAFFT biom-format SortMeRNA==2.0
 ```
 
 - Install Deblur:
@@ -65,7 +53,7 @@ and use the split/seqs.fna as the input to the deblur workflow.
 
 Important options
 =================
-- The sequence trim length is specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to. Note that all reads shorter than this length will be discarded.
+- Since deblur cannot associate together sequences with different lengths, trimming is automaticallly performed as the first step in the deblur pipeline. The sequence trim length is specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to. Note that all reads shorter than this length will be discarded.
 
 - In order to run in parallel, the number of threads can be specified by the ```-O NNN``` flag (default it 1). Note that running more threads than available cores will not speed up performance.
 
@@ -80,13 +68,13 @@ Deblur can use two types of filtering on the sequences:
 
 - negative mode - removes [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. PhiX and Adapter sequences).
 
-- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (GreenGenes 88%)
+- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (Greengenes 88%)
 
 By default, deblur uses negative mode filtering to remove known artifact (i.e. PhiX and Adapter sequences) prior to denoising. The output of deblur contains two files: final.biom, which includes all sOTUs, and final.only16s.biom, which contains the output of positive filtering of the sOTUs (only sOTUs similar to 16S sequences).
 
 Minimal Reads Filtering
 =======================
-Deblur runs on each sample independently. However, sometimes there is also additional information based on the total number of times an sOTU is observed in all samples (e.g. an sOTU which is observed only in one sample at low read count is more likely to be pcr/read error as opposed to an sOTU present in many samples). The --min-reads option allows to use this information by removing sOTUs with a total read count (across all samples) lower than the given threshold. The default value is set to 10, and should be useful for most cases. However, if all samples in an experiment are expected not to contain the same bacteria, --min-reads can be set to 0 to skip this final filtering step.
+Deblur runs on each sample independently. However, sometimes there is also additional information based on the total number of times an sOTU is observed in all samples (e.g. an sOTU which is observed only in one sample at low read count is more likely to be pcr/read error as opposed to an sOTU present in many samples). The --min-reads option allows to use this information by removing sOTUs with a total read count (across all samples) lower than the given threshold. The default value is set to 10, and should be useful for most cases. However, if such filtering is not wanted (e.g. if all samples in an experiment are expected not to contain the same bacteria, so no additional information is gained by combining the information from multiple samples), --min-reads can be set to 0 to skip this final filtering step.
 
 Code Development Note
 =====================
