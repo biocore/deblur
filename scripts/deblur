@@ -359,7 +359,7 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
 @click.option('--min-reads', required=False, type=int, default=10,
-              show_default=True, help="In final biom table - keep only "
+              show_default=True, help="In output biom table - keep only "
               "sequences appearing at least min-reads in all samples "
               "combined.")
 @click.option('--file_type', required=False, type=str,
@@ -383,16 +383,17 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
     seqs_fp : str
       the path to the directory containing the chimera removed fasta files
     output_biom_fp : str
-      the path where to save the output biom table file ('final.biom')
+      the path where to save the output biom table files
+      ('all.biom', 'positive-match.biom', 'positive-nonmatch.biom')
     file_type : str
       the files type to add to the table
       (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras',
       can be '.fasta' or '.fa' if needed)
     """
     start_log(level=log_level * 10, filename=log_file)
-    output_filename = 'final.biom'
+    output_filename = 'all.biom'
     output_fp = join(output_biom_fp, output_filename)
-    outputfasta_filename = 'final.seq.fa'
+    outputfasta_filename = 'all.seq.fa'
     outputfasta_fp = join(output_biom_fp, outputfasta_filename)
 
     samples = get_files_for_table(seqs_fp, file_type)
@@ -421,7 +422,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               file_okay=True),
               help="Positive (16S) filtering database. "
                    "Keep all sequences aligning to this FASTA file "
-                   "in the output final.only16s.biom file. (for multiple "
+                   "in the output positive-match.biom file. (for multiple "
                    "databases, use "
                    "--pos-ref-fp db1.fa --pos-ref-fp db2.fa ..)\n"
                    "default is: %s\n" % pos_db)
@@ -473,7 +474,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               show_default=True,
               help="Maximal indel number")
 @click.option('--min-reads', required=False, type=int, default=10,
-              show_default=True, help="In final biom table - keep only "
+              show_default=True, help="In output biom table - keep only "
               "sequences appearing at least min-reads in all samples "
               "combined.")
 @click.option('--min-size', required=False, type=int, default=2,
@@ -635,9 +636,9 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         return
 
     # Merge chimera cleaned fasta files to a single biom table
-    output_filename = 'final.biom'
+    output_filename = 'all.biom'
     output_fp = join(output_dir, output_filename)
-    outputfasta_filename = 'final.seqs.fa'
+    outputfasta_filename = 'all.seqs.fa'
     outputfasta_fp = join(output_dir, outputfasta_filename)
 
     samples = get_files_for_table(working_dir)

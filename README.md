@@ -35,7 +35,13 @@ pip install deblur
 Example usage
 =============
 
-The input to deblur workflow is a directory of fasta files (1 per sample) or a demultiplexed FASTA or FASTQ file. The output is a biom table with sequences as the OTU ids (final.biom in the output directory).
+The input to deblur workflow is a directory of fasta files (1 per sample) or a demultiplexed FASTA or FASTQ file. The output are three biom tables (in the output directory) with sequences as the OTU ids:
+
+- all.biom : contains all deblurred reads.
+
+- positive-match.biom : contains only deblurred reads matching the positive filtering database (default is only 16S reads)
+
+- positive-nonmatch.biom : contains only deblurred reads not matching the positive filtering database (default is all non-16S reads)
 
 The simple use case just specifies the input fasta file (or directory), output directory name and the sequence trim length:
 
@@ -64,13 +70,15 @@ deblur workflow --help
 
 Positive and Negative Filtering
 ===============================
-Deblur can use two types of filtering on the sequences:
+Deblur uses two types of filtering on the sequences:
 
 - negative mode - removes [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. sequences aligning to PhiX or Adapter with >=95% identity and coverage).
 
-- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (e-value<=10 for Greengenes 88% rep. set)
+- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (e-value<=10 for Greengenes 88% rep. set). Note that deblur also outputs a biom table without this positive filtering step.
 
-By default, deblur uses negative mode filtering to remove known artifact (i.e. PhiX and Adapter sequences) prior to denoising. The output of deblur contains two files: final.biom, which includes all sOTUs, and final.only16s.biom, which contains the output of positive filtering of the sOTUs (only sOTUs similar to 16S sequences).
+The fasta files for both of these filtering steps can be supplied via the --neg-ref-fp and --pos-ref-fp options, and by default are supplied for 16S sequences.
+
+Deblur uses negative mode filtering to remove known artifact (i.e. PhiX and Adapter sequences) prior to denoising. The output of deblur contains three files: all.biom, which includes all sOTUs, positive-match.biom, which contains the output of positive filtering of the sOTUs (default only sOTUs similar to 16S sequences), and positive-nonmatch.biom, which contains only sOTUs failing the positive filtering (default only non-16S sOTUs).
 
 Minimal Reads Filtering
 =======================

@@ -15,8 +15,8 @@ class TestScript(TestCase):
         self.orig_fp = join(self.data_dir, 'simset.s3.fasta')
         self.orig_one_seq_fp = join(self.data_dir, 'simset.s5.fasta')
         self.output_dir = mkdtemp()
-        self.output_biom = join(self.output_dir, 'final.biom')
-        self.output_seqs = join(self.output_dir, 'final.seqs.fa')
+        self.output_biom = join(self.output_dir, 'all.biom')
+        self.output_seqs = join(self.output_dir, 'all.seqs.fa')
         self.trim_length = 150
 
     def validate_results(self, table_name, orig_fasta_name):

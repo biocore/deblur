@@ -305,7 +305,7 @@ def remove_artifacts_from_biom_table(table_filename,
                                   invert=True)
     # remove the samples with 0 reads
     filter_minreads_samples_from_table(artifact_table)
-    output_artifact_fp = join(biom_table_dir, 'final.only-non16s.biom')
+    output_artifact_fp = join(biom_table_dir, 'positive-nonmatch.biom')
     write_biom_table(artifact_table, output_artifact_fp)
     logger.info('wrote artifact only filtered biom table to %s'
                 % output_artifact_fp)
@@ -313,7 +313,7 @@ def remove_artifacts_from_biom_table(table_filename,
     # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
     filter_minreads_samples_from_table(table)
-    output_fp = join(biom_table_dir, 'final.only-16s.biom')
+    output_fp = join(biom_table_dir, 'positive-match.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
 
@@ -624,7 +624,7 @@ def create_otu_table(output_fp, deblurred_list,
     Parameters
     ----------
     output_fp : string
-        filepath to final BIOM table
+        filepath to output BIOM table
     deblurred_list : list of (str, str)
         list of file names (including path), sampleid of all deblurred
         fasta files to add to the table
@@ -677,7 +677,7 @@ def create_otu_table(output_fp, deblurred_list,
                 obs.resize((shape[0]*2,  shape[1]))
                 obs[cseqidx, csampidx] = cfreq
 
-    logger.info('for final biom table loaded %d samples, %d unique sequences'
+    logger.info('for output biom table loaded %d samples, %d unique sequences'
                 % (len(samplist), len(seqlist)))
 
     # and now make the sparse matrix the real size

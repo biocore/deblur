@@ -262,12 +262,12 @@ class workflowTests(TestCase):
         orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        no_artifacts_table_name = join(self.working_dir, 'final.only-16s.biom')
+        no_artifacts_table_name = join(self.working_dir, 'positive-match.biom')
         no_artifacts_table = load_table(no_artifacts_table_name)
         obs_seqs = no_artifacts_table.ids(axis='observation')
         self.assertEqual(set(obs_seqs), set(orig_seqs))
 
-        artifacts_table_name = join(self.working_dir, 'final.only-non16s.biom')
+        artifacts_table_name = join(self.working_dir, 'positive-nonmatch.biom')
         artifacts_table = load_table(artifacts_table_name)
         obs_seqs = artifacts_table.ids(axis='observation')
         self.assertEqual(len(obs_seqs), 2)
@@ -598,7 +598,7 @@ class workflowTests(TestCase):
         orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        output_filename = 'final.biom'
+        output_filename = 'all.biom'
         output_table_fp = join(output_fp, output_filename)
 
         create_otu_table(output_table_fp, [(nochimera, seqs_fp)])
