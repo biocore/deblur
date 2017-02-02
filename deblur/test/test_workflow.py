@@ -750,7 +750,7 @@ class workflowTests(TestCase):
         min_size = 2
         negate = False
         # trim length longer than sequences
-        trim_length = 150
+        trim_length = -1
         threads = 1
 
         output_fp = launch_workflow(seqs_fp=seqs_fp,
@@ -764,7 +764,6 @@ class workflowTests(TestCase):
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
                                     negate=negate,
-                                    skip_trim=False,
                                     threads_per_sample=threads)
         exp = Sequence.read(self.no_trim_res, format='fasta')
         res = Sequence.read(output_fp, format='fasta')
