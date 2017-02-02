@@ -66,9 +66,9 @@ Positive and Negative Filtering
 ===============================
 Deblur can use two types of filtering on the sequences:
 
-- negative mode - removes [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. PhiX and Adapter sequences).
+- negative mode - removes [known artifact sequences](deblur/support_files/artifacts.fa) (i.e. sequences aligning to PhiX or Adapter with >=95% identity and coverage).
 
-- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (Greengenes 88%)
+- positive mode - keeps only sequences similar to [known 16S sequences](deblur/support_files/88_otus.fasta) (e-value<=10 for Greengenes 88% rep. set)
 
 By default, deblur uses negative mode filtering to remove known artifact (i.e. PhiX and Adapter sequences) prior to denoising. The output of deblur contains two files: final.biom, which includes all sOTUs, and final.only16s.biom, which contains the output of positive filtering of the sOTUs (only sOTUs similar to 16S sequences).
 
