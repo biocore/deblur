@@ -262,12 +262,12 @@ class workflowTests(TestCase):
         orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        no_artifacts_table_name = join(self.working_dir, 'positive-match.biom')
+        no_artifacts_table_name = join(self.working_dir, 'reference-hit.biom')
         no_artifacts_table = load_table(no_artifacts_table_name)
         obs_seqs = no_artifacts_table.ids(axis='observation')
         self.assertEqual(set(obs_seqs), set(orig_seqs))
 
-        artifacts_table_name = join(self.working_dir, 'positive-nonmatch.biom')
+        artifacts_table_name = join(self.working_dir, 'reference-non-hit.biom')
         artifacts_table = load_table(artifacts_table_name)
         obs_seqs = artifacts_table.ids(axis='observation')
         self.assertEqual(len(obs_seqs), 2)
@@ -377,7 +377,7 @@ class workflowTests(TestCase):
     def test_remove_artifacts_seqs_negate(self):
         """ Test remove_artifacts_seqs() function for removing
             sequences matching to a reference database
-            using SortMeRNA (negate option).
+            using SortMeRNA.
         """
         seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
                 ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
@@ -581,7 +581,6 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        # negate = False
         nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
                                     mean_error=mean_error,
                                     error_dist=error_dist,
@@ -747,7 +746,6 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        # negate = False
         # trim length longer than sequences
         trim_length = -1
         threads = 1
@@ -785,7 +783,6 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        # negate = False
         # trim length longer than sequences
         trim_length = 151
         threads = 1

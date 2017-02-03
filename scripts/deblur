@@ -384,7 +384,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
       the path to the directory containing the chimera removed fasta files
     output_biom_fp : str
       the path where to save the output biom table files
-      ('all.biom', 'positive-match.biom', 'positive-nonmatch.biom')
+      ('all.biom', 'reference-hit.biom', 'reference-non-hit.biom')
     file_type : str
       the files type to add to the table
       (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras',
@@ -422,7 +422,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               file_okay=True),
               help="Positive (16S) filtering database. "
                    "Keep all sequences aligning to this FASTA file "
-                   "in the output positive-match.biom file. (for multiple "
+                   "in the output file reference-hit.biom. (for multiple "
                    "databases, use "
                    "--pos-ref-fp db1.fa --pos-ref-fp db2.fa ..)\n"
                    "default is: %s\n" % pos_db)

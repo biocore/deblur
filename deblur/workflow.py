@@ -305,7 +305,7 @@ def remove_artifacts_from_biom_table(table_filename,
                                   invert=True)
     # remove the samples with 0 reads
     filter_minreads_samples_from_table(artifact_table)
-    output_artifact_fp = join(biom_table_dir, 'positive-nonmatch.biom')
+    output_artifact_fp = join(biom_table_dir, 'reference-non-hit.biom')
     write_biom_table(artifact_table, output_artifact_fp)
     logger.info('wrote artifact only filtered biom table to %s'
                 % output_artifact_fp)
@@ -313,7 +313,7 @@ def remove_artifacts_from_biom_table(table_filename,
     # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
     filter_minreads_samples_from_table(table)
-    output_fp = join(biom_table_dir, 'positive-match.biom')
+    output_fp = join(biom_table_dir, 'reference-hit.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
 
