@@ -11,11 +11,12 @@ class TestScript(TestCase):
 
     def setUp(self):
         self.data_dir = join(dirname(abspath(__file__)), 'data')
-        self.seqs_fp = join(self.data_dir, 'seqs_s3.fasta')
+        self.seqs_fp = join(self.data_dir, 'seqs_s5.fasta')
         self.orig_fp = join(self.data_dir, 'simset.s3.fasta')
+        self.orig_one_seq_fp = join(self.data_dir, 'simset.s5.fasta')
         self.output_dir = mkdtemp()
-        self.output_biom = join(self.output_dir, 'final.biom')
-        self.output_seqs = join(self.output_dir, 'final.seqs.fa')
+        self.output_biom = join(self.output_dir, 'all.biom')
+        self.output_seqs = join(self.output_dir, 'all.seqs.fa')
         self.trim_length = 150
 
     def validate_results(self, table_name, orig_fasta_name):
@@ -30,24 +31,24 @@ class TestScript(TestCase):
         # test default parameters, negative mode, single thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
-               "--trim-length", "150", '-w', '-n']
+               "--trim-length", "150", '-w']
         sout, serr, res = _system_call(cmd)
-        self.validate_results(self.output_biom, self.orig_fp)
+        self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
         # test default parameters, negative mode, multi thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
-               "--trim-length", "150", '-w', '-n',
+               "--trim-length", "150", '-w',
                "-O", "2"]
         sout, serr, res = _system_call(cmd)
-        self.validate_results(self.output_biom, self.orig_fp)
+        self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
         # test default parameters, positive mode, single thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
                "--trim-length", "150", '-w']
         sout, serr, res = _system_call(cmd)
-        self.validate_results(self.output_biom, self.orig_fp)
+        self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
         # test default parameters, positive mode, multi thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
@@ -55,8 +56,14 @@ class TestScript(TestCase):
                "--trim-length", "150", '-w',
                "-O", "2"]
         sout, serr, res = _system_call(cmd)
-        self.validate_results(self.output_biom, self.orig_fp)
+        self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
+        # test default parameters except min-reads set to 0, negative mode, single thread
+        cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
+               "--output-dir", self.output_dir,
+               "--trim-length", "150", '-w', '--min-reads', '0']
+        sout, serr, res = _system_call(cmd)
+        self.validate_results(self.output_biom, self.orig_fp)
 
 if __name__ == "__main__":
     main()

@@ -262,12 +262,12 @@ class workflowTests(TestCase):
         orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        no_artifacts_table_name = join(self.working_dir, 'final.only-16s.biom')
+        no_artifacts_table_name = join(self.working_dir, 'reference-hit.biom')
         no_artifacts_table = load_table(no_artifacts_table_name)
         obs_seqs = no_artifacts_table.ids(axis='observation')
         self.assertEqual(set(obs_seqs), set(orig_seqs))
 
-        artifacts_table_name = join(self.working_dir, 'final.only-non16s.biom')
+        artifacts_table_name = join(self.working_dir, 'reference-non-hit.biom')
         artifacts_table = load_table(artifacts_table_name)
         obs_seqs = artifacts_table.ids(axis='observation')
         self.assertEqual(len(obs_seqs), 2)
@@ -377,7 +377,7 @@ class workflowTests(TestCase):
     def test_remove_artifacts_seqs_negate(self):
         """ Test remove_artifacts_seqs() function for removing
             sequences matching to a reference database
-            using SortMeRNA (negate option).
+            using SortMeRNA.
         """
         seqs = [("seq1", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAAACGTCC"),
                 ("seq2", "CCTAAAACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"),
@@ -581,7 +581,6 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
         nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
                                     mean_error=mean_error,
                                     error_dist=error_dist,
@@ -591,14 +590,13 @@ class workflowTests(TestCase):
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
-                                    negate=negate,
                                     threads_per_sample=threads)
 
         # get the trimmed ground truth sequences
         orig_seqs = [item[1] for item in sequence_generator(origfilename)]
         orig_seqs = [item[:trim_length].upper() for item in orig_seqs]
 
-        output_filename = 'final.biom'
+        output_filename = 'all.biom'
         output_table_fp = join(output_fp, output_filename)
 
         create_otu_table(output_table_fp, [(nochimera, seqs_fp)])
@@ -748,9 +746,8 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
         # trim length longer than sequences
-        trim_length = 150
+        trim_length = -1
         threads = 1
 
         output_fp = launch_workflow(seqs_fp=seqs_fp,
@@ -763,8 +760,6 @@ class workflowTests(TestCase):
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
-                                    negate=negate,
-                                    skip_trim=False,
                                     threads_per_sample=threads)
         exp = Sequence.read(self.no_trim_res, format='fasta')
         res = Sequence.read(output_fp, format='fasta')
@@ -788,7 +783,6 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
-        negate = False
         # trim length longer than sequences
         trim_length = 151
         threads = 1
@@ -802,7 +796,6 @@ class workflowTests(TestCase):
                             min_size=min_size,
                             ref_fp=(ref_fp,),
                             ref_db_fp=ref_db_fp,
-                            negate=negate,
                             threads_per_sample=threads)
 
     def get_seqs_act_split_sequence_on_sample_ids(self, output_dir):

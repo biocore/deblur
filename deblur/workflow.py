@@ -305,7 +305,7 @@ def remove_artifacts_from_biom_table(table_filename,
                                   invert=True)
     # remove the samples with 0 reads
     filter_minreads_samples_from_table(artifact_table)
-    output_artifact_fp = join(biom_table_dir, 'final.only-non16s.biom')
+    output_artifact_fp = join(biom_table_dir, 'reference-non-hit.biom')
     write_biom_table(artifact_table, output_artifact_fp)
     logger.info('wrote artifact only filtered biom table to %s'
                 % output_artifact_fp)
@@ -313,7 +313,7 @@ def remove_artifacts_from_biom_table(table_filename,
     # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
     filter_minreads_samples_from_table(table)
-    output_fp = join(biom_table_dir, 'final.only-16s.biom')
+    output_fp = join(biom_table_dir, 'reference-hit.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
 
@@ -624,7 +624,7 @@ def create_otu_table(output_fp, deblurred_list,
     Parameters
     ----------
     output_fp : string
-        filepath to final BIOM table
+        filepath to output BIOM table
     deblurred_list : list of (str, str)
         list of file names (including path), sampleid of all deblurred
         fasta files to add to the table
@@ -677,7 +677,7 @@ def create_otu_table(output_fp, deblurred_list,
                 obs.resize((shape[0]*2,  shape[1]))
                 obs[cseqidx, csampidx] = cfreq
 
-    logger.info('for final biom table loaded %d samples, %d unique sequences'
+    logger.info('for output biom table loaded %d samples, %d unique sequences'
                 % (len(samplist), len(seqlist)))
 
     # and now make the sparse matrix the real size
@@ -719,8 +719,8 @@ def create_otu_table(output_fp, deblurred_list,
 
 def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                     indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, negate, threads_per_sample=1,
-                    sim_thresh=None, coverage_thresh=None, skip_trim=False):
+                    ref_db_fp, threads_per_sample=1,
+                    sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
     Parameters
@@ -745,8 +745,6 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         filepath(s) to FASTA reference database for artifact removal
     ref_db_fp: tuple
         filepath(s) to SortMeRNA indexed database for artifact removal
-    negate: boolean
-        discard all sequences aligning to the ref_fp database
     threads_per_sample: integer, optional
         number of threads to use for SortMeRNA/mafft/vsearch
         (0 for max available)
@@ -757,8 +755,6 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
     coverage_thresh: float, optional
         the minimal coverage for alignment of a sequence to the database.
         if None, take the defaults (0.3 for negate=False, 0.95 for negate=True)
-    skip_trim: bool, optional
-        Specifies if the trimming step should be skipped or not.
 
     Return
     ------
@@ -771,13 +767,14 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
-    if not skip_trim:
+    if trim_length > 0:
         with open(output_trim_fp, 'w') as out_f:
             for label, seq in trim_seqs(
                     input_seqs=sequence_generator(seqs_fp),
                     trim_len=trim_length):
                 out_f.write(">%s\n%s\n" % (label, seq))
     else:
+        # If trim length is -1, files are already trimmed
         os.symlink(seqs_fp, output_trim_fp)
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
@@ -790,7 +787,7 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                                             ref_fp=ref_fp,
                                             working_dir=working_dir,
                                             ref_db_fp=ref_db_fp,
-                                            negate=negate,
+                                            negate=True,
                                             threads=threads_per_sample,
                                             sim_thresh=sim_thresh)
     if not output_artif_fp:
