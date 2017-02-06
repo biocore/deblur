@@ -563,6 +563,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         # if seqs_fp is a dir, use the fasta files in it,
         # otherwise, assume its a post split-libraries fasta file
         # and split it to fasta file per sample
+        created_split_dir = None
         if isdir(seqs_fp):
             logger.info('processing directory %s' % seqs_fp)
             out_dir_split = seqs_fp
@@ -572,6 +573,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
             logger.info('splitting file %s to per sample fasta. '
                         'output %s' % (seqs_fp, out_dir_split))
             mkdir(out_dir_split)
+            created_split_dir = out_dir_split
             with open(seqs_fp, 'U') as seqs_f:
                 split_sequence_file_on_sample_ids_to_files(
                     seqs_f,
@@ -647,6 +649,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         for f in files_to_remove:
             remove(f)
         rmtree(working_dir)
+        if created_split_dir is not None:
+            rmtree(created_split_dir)
     else:
         logger.info('Keeping temp files')
     logger.info('deblur workflow finished')
