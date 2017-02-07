@@ -804,15 +804,15 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         return None
     # Step 4: Multiple sequence alignment
     if num_seqs_left > 1:
-            output_msa_fp = join(working_dir,
-                                 "%s.msa" % basename(output_artif_fp))
-            alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-                                                    threads=threads_per_sample)
-            if not alignment:
-                warnings.warn('Problem performing multiple sequence alignment '
-                              'on file %s' % seqs_fp, UserWarning)
-                logger.warning('msa failed. aborting')
-                return None
+        output_msa_fp = join(working_dir,
+                             "%s.msa" % basename(output_artif_fp))
+        alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+                                                threads=threads_per_sample)
+        if not alignment:
+            warnings.warn('Problem performing multiple sequence alignment '
+                          'on file %s' % seqs_fp, UserWarning)
+            logger.warning('msa failed. aborting')
+            return None
     else:
         # only one sequence after remove artifacts (but could be many reads)
         # no need to run MSA - just use the pre-msa file as input for next step
