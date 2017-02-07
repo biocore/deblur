@@ -612,8 +612,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                     threads_per_sample=threads_per_sample)
-            if deblurred_file_name is None:
-                logger.warn('deblurring failed for file %s' % input_fp)
+                if deblurred_file_name is None:
+                    logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
     else:
         # we're want to start parallel mode - so need to create
