@@ -51,6 +51,7 @@ def error_dist_from_str(ctx, param, value):
 
 
 @click.group()
+@click.version_option(version=__version__)
 def deblur_cmds():
     # DEBLUR SEQUENCES COMMAND
     pass
