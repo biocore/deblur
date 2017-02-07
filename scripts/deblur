@@ -201,9 +201,9 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
 @click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
               show_default=True,
               help="Use --negate (i.e. True) to discard all sequences aligning to the "
-              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
+              "database passed via --ref-fp option. Alternatively, use --only-pos "
               "(i.e. False) to filter by only keeping sequences similar to ones in "
-              "--pos-ref-fp.")
+              "--ref-fp.")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
