@@ -96,6 +96,7 @@ cd ~/.matplotlib
 echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
 ```
 
+- "Too many open files" : This error indicates deblur is trying to split a single fasta/q file into per-sample files, and the OS does not allow so many open simultaneous open files. Current solution is to use the qiime1.9 command split_sequence_file_on_sample_ids.py or the equivalent qiime2 command to split the single fasta/q file into a directory of per sample fasta/q files and then run deblur with this directory as the input to deblur (--seqs-fp).
 
 Code Development Note
 =====================
