@@ -277,13 +277,13 @@ def remove_artifacts_from_biom_table(table_filename,
     logger.info('getting 16s sequences from the biom table')
 
     # remove artifacts from the fasta file. output is in clean_fp fasta file
-    clean_fp = remove_artifacts_seqs(fasta_filename, ref_fp,
-                                     working_dir=biom_table_dir,
-                                     ref_db_fp=ref_db_fp,
-                                     negate=False, threads=threads,
-                                     verbose=verbose,
-                                     sim_thresh=sim_thresh,
-                                     coverage_thresh=coverage_thresh)
+    clean_fp, num_seqs_left = remove_artifacts_seqs(fasta_filename, ref_fp,
+                                                    working_dir=biom_table_dir,
+                                                    ref_db_fp=ref_db_fp,
+                                                    negate=False, threads=threads,
+                                                    verbose=verbose,
+                                                    sim_thresh=sim_thresh,
+                                                    coverage_thresh=coverage_thresh)
     if clean_fp is None:
         logger.warn("No clean sequences in %s" % fasta_filename)
         return
@@ -356,13 +356,20 @@ def remove_artifacts_seqs(seqs_fp,
         for alignments for keeping the sequence
         if Nonr, the default values used are 0.3 for negate=False,
         0.95 for negate=True
+
+    Returns
+    -------
+    output_fp : str
+        Name of the artifact removed fasta file
+    okseqs : int
+        The number of sequences left after artifact removal
     """
     logger = logging.getLogger(__name__)
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
         logger.warn('file %s has size 0, continuing' % seqs_fp)
-        return
+        return None, 0
 
     if coverage_thresh is None:
         if negate:
@@ -395,7 +402,7 @@ def remove_artifacts_seqs(seqs_fp,
             logger.error('sortmerna error on file %s' % seqs_fp)
             logger.error('stdout : %s' % sout)
             logger.error('stderr : %s' % serr)
-            return output_fp
+            return output_fp, 0
 
         with open('%s.blast' % blast_output, 'r') as bfl:
             for line in bfl:
@@ -434,7 +441,7 @@ def remove_artifacts_seqs(seqs_fp,
                 badseqs += 1
     logger.info('total sequences %d, passing sequences %d, '
                 'failing sequences %d' % (totalseqs, okseqs, badseqs))
-    return output_fp
+    return output_fp, okseqs
 
 
 def multiple_sequence_alignment(seqs_fp, threads=1):
@@ -783,29 +790,39 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                      output_fp=output_derep_fp,
                      min_size=min_size, threads=threads_per_sample)
     # Step 3: Remove artifacts
-    output_artif_fp = remove_artifacts_seqs(seqs_fp=output_derep_fp,
-                                            ref_fp=ref_fp,
-                                            working_dir=working_dir,
-                                            ref_db_fp=ref_db_fp,
-                                            negate=True,
-                                            threads=threads_per_sample,
-                                            sim_thresh=sim_thresh)
+    output_artif_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=output_derep_fp,
+                                                           ref_fp=ref_fp,
+                                                           working_dir=working_dir,
+                                                           ref_db_fp=ref_db_fp,
+                                                           negate=True,
+                                                           threads=threads_per_sample,
+                                                           sim_thresh=sim_thresh)
     if not output_artif_fp:
         warnings.warn('Problem removing artifacts from file %s' %
                       seqs_fp, UserWarning)
         logger.warning('remove artifacts failed, aborting')
         return None
     # Step 4: Multiple sequence alignment
-    output_msa_fp = join(working_dir,
-                         "%s.msa" % basename(output_artif_fp))
-    alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
-                                            threads=threads_per_sample)
-    if not alignment:
-        warnings.warn('Problem performing multiple sequence alignment '
-                      'on file %s' % seqs_fp, UserWarning)
-        logger.warning('msa failed. aborting')
+    if num_seqs_left > 1:
+        output_msa_fp = join(working_dir,
+                             "%s.msa" % basename(output_artif_fp))
+        alignment = multiple_sequence_alignment(seqs_fp=output_artif_fp,
+                                                threads=threads_per_sample)
+        if not alignment:
+            warnings.warn('Problem performing multiple sequence alignment '
+                          'on file %s' % seqs_fp, UserWarning)
+            logger.warning('msa failed. aborting')
+            return None
+    elif num_seqs_left == 1:
+        # only one sequence after remove artifacts (but could be many reads)
+        # no need to run MSA - just use the pre-msa file as input for next step
+        output_msa_fp = output_artif_fp
+    else:
+        err_msg = 'No sequences left after artifact removal in '
+        'file %s' % seqs_fp
+        warnings.warn(err_msg, UserWarning)
+        logger.warning(err_msg)
         return None
-
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))

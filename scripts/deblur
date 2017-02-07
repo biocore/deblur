@@ -51,6 +51,7 @@ def error_dist_from_str(ctx, param, value):
 
 
 @click.group()
+@click.version_option(version=__version__)
 def deblur_cmds():
     # DEBLUR SEQUENCES COMMAND
     pass
@@ -201,9 +202,9 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
 @click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
               show_default=True,
               help="Use --negate (i.e. True) to discard all sequences aligning to the "
-              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
+              "database passed via --ref-fp option. Alternatively, use --only-pos "
               "(i.e. False) to filter by only keeping sequences similar to ones in "
-              "--pos-ref-fp.")
+              "--ref-fp.")
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -527,6 +528,11 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
 
     logger.info('error_dist is : %s' % error_dist)
 
+    # Store the name of the split dir if we create it,
+    # None if we didn't create a split dir
+    # (used for deleting it at the end)
+    created_split_dir = None
+
     # get the default values for the rep_fp if empty
     if len(pos_ref_fp) == 0:
         pos_ref_fp = [pos_db]
@@ -572,6 +578,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
             logger.info('splitting file %s to per sample fasta. '
                         'output %s' % (seqs_fp, out_dir_split))
             mkdir(out_dir_split)
+            created_split_dir = out_dir_split
             with open(seqs_fp, 'U') as seqs_f:
                 split_sequence_file_on_sample_ids_to_files(
                     seqs_f,
@@ -610,8 +617,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     indel_max=indel_max, trim_length=trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                     threads_per_sample=threads_per_sample)
-            if deblurred_file_name is None:
-                logger.warn('deblurring failed for file %s' % input_fp)
+                if deblurred_file_name is None:
+                    logger.warn('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
     else:
         # we're want to start parallel mode - so need to create
@@ -647,6 +654,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         for f in files_to_remove:
             remove(f)
         rmtree(working_dir)
+        if created_split_dir is not None:
+            rmtree(created_split_dir)
     else:
         logger.info('Keeping temp files')
     logger.info('deblur workflow finished')
