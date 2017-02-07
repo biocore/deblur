@@ -813,10 +813,16 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                           'on file %s' % seqs_fp, UserWarning)
             logger.warning('msa failed. aborting')
             return None
-    else:
+    elif num_seqs_left == 1:
         # only one sequence after remove artifacts (but could be many reads)
         # no need to run MSA - just use the pre-msa file as input for next step
         output_msa_fp = output_artif_fp
+    else:
+        err_msg = 'No sequences left after artifact removal in '
+        'file %s' % seqs_fp
+        warnings.warn(err_msg, UserWarning)
+        logger.warning(err_msg)
+        return None
     # Step 5: Launch deblur
     output_deblur_fp = join(working_dir,
                             "%s.deblur" % basename(output_msa_fp))
