@@ -528,6 +528,11 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
 
     logger.info('error_dist is : %s' % error_dist)
 
+    # Store the name of the split dir if we create it,
+    # None if we didn't create a split dir
+    # (used for deleting it at the end)
+    created_split_dir = None
+
     # get the default values for the rep_fp if empty
     if len(pos_ref_fp) == 0:
         pos_ref_fp = [pos_db]
@@ -564,7 +569,6 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
         # if seqs_fp is a dir, use the fasta files in it,
         # otherwise, assume its a post split-libraries fasta file
         # and split it to fasta file per sample
-        created_split_dir = None
         if isdir(seqs_fp):
             logger.info('processing directory %s' % seqs_fp)
             out_dir_split = seqs_fp
