@@ -312,12 +312,12 @@ class workflowTests(TestCase):
         ref_db_fp = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
-        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                          ref_fp=(ref_fp,),
-                                          working_dir=self.working_dir,
-                                          ref_db_fp=ref_db_fp,
-                                          negate=False,
-                                          threads=1)
+        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                         ref_fp=(ref_fp,),
+                                                         working_dir=self.working_dir,
+                                                         ref_db_fp=ref_db_fp,
+                                                         negate=False,
+                                                         threads=1)
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
             obs_seqs.append(label)
@@ -362,12 +362,12 @@ class workflowTests(TestCase):
         # build index
         sortmerna_db = build_index_sortmerna([ref_fp], self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                          ref_fp=(ref_fp,),
-                                          working_dir=self.working_dir,
-                                          ref_db_fp=sortmerna_db,
-                                          negate=False,
-                                          threads=1)
+        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                         ref_fp=(ref_fp,),
+                                                         working_dir=self.working_dir,
+                                                         ref_db_fp=sortmerna_db,
+                                                         negate=False,
+                                                         threads=1)
 
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
@@ -414,12 +414,12 @@ class workflowTests(TestCase):
         self.files_to_remove.append(ref_fp)
         ref_db_fp = build_index_sortmerna([ref_fp], self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-        output_fp = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                          ref_fp=(ref_fp,),
-                                          working_dir=self.working_dir,
-                                          ref_db_fp=ref_db_fp,
-                                          negate=True,
-                                          threads=1)
+        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                         ref_fp=(ref_fp,),
+                                                         working_dir=self.working_dir,
+                                                         ref_db_fp=ref_db_fp,
+                                                         negate=True,
+                                                         threads=1)
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
             obs_seqs.append(label)
