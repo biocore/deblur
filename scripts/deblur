@@ -199,12 +199,12 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
-@click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
-              show_default=True,
-              help="Use --negate (i.e. True) to discard all sequences aligning to the "
-              "database passed via --ref-fp option. Alternatively, use --only-pos "
-              "(i.e. False) to filter by only keeping sequences similar to ones in "
-              "--ref-fp.")
+@click.option('--negate/--only-pos', '-n/', required=False, default=True,
+              is_flag=True, show_default=True,
+              help=("Use --negate (i.e. True) to discard all sequences "
+                    "aligning to the database passed via --neg-ref-fp option. "
+                    "Alternatively, use --only-pos (i.e. False) to filter by "
+                    "only keeping sequences similar to ones in --pos-ref-fp."))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -407,47 +407,55 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--seqs-fp', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True, dir_okay=True),
-              help="Demultiplexed FASTA file including all samples, "
-              "or a directory of .fasta files")
+              help=("Either a Demultiplexed FASTA or FASTQ file including all "
+                    "samples, or a directory of per-sample FASTA or FASTQ "
+                    "files. Gzip'd files are acceptable (e.g., .fastq.gz)."))
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
 @click.option('--trim-length', '-t', required=True, type=int,
-              show_default=True, help="Sequence trim length. All reads shorted than "
-              "the trim-length will be discarded. If all reads are already trimmed "
-              " to the same length, can supply -1 to skip the trimming.")
+              show_default=True,
+              help=("Sequence trim length. All reads shorter than the "
+                    "trim-length will be discarded. A value of -1 can be "
+                    "specified to skip trimming; this assumes all sequences "
+                    "have an identical length."))
 @click.option('--pos-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
-              help="Positive (16S) filtering database. "
-                   "Keep all sequences aligning to this FASTA file "
-                   "in the output file reference-hit.biom. (for multiple "
-                   "databases, use "
-                   "--pos-ref-fp db1.fa --pos-ref-fp db2.fa ..)\n"
-                   "default is: %s\n" % pos_db)
+              help=("Positive reference filtering database. "
+                    "Keep all sequences permissively aligning to any sequence "
+                    "in this FASTA file; these results are stored in the "
+                    "reference-hit.biom output file. This defaults to the "
+                    "Greengenes 13_8 OTUs at 88% identity. An e-value "
+                    "threshold of 10 is used with SortMeRNA against the "
+                    "reference. For multiple databases, specify the argument "
+                    "multiple times, e.g., --pos-ref-fp db1.fa "
+                    "--pos-ref-fp db2.fa"))
 @click.option('--pos-ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
-              help="The indexed  version of the positive filtering database. "
-                   "If not supplied, deblur will index the database."
-                   "For multiple databases, the order "
-                   "must follow that of --pos-ref-fp, for example, "
-                   "--pos-ref-db-fp db1.idx --pos-ref-db-fp db2.idx ..")
+              help=("An indexed version of the positive filtering database. "
+                    "This can be useful to avoid incurring the expense of "
+                    "reindexing on every run. If not supplied, deblur will "
+                    "index the database. For multiple databases, the order "
+                    "must follow that of --pos-ref-fp, for example, "
+                    "--pos-ref-db-fp db1.idx --pos-ref-db-fp db2.idx .."))
 @click.option('--neg-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
                               file_okay=True),
-              help="Negative (artifacts) filtering database. "
-                   "Drop all sequences aligning to this FASTA file "
-                   "(for multiple databases, use "
-                   "--neg-ref-fp db1.fa --neg-ref-fp db2.fa ..)\n"
-                   "default is: %s\n" % neg_db)
+              help=("Negative (artifacts) filtering database. "
+                    "Drop all sequences which align to any record in this "
+                    "FASTA file. This defaults to a database composed of "
+                    "multiple PhiX genomes and known Illumina adapters. "
+                    "For multiple databases, specify the argument mutiple "
+                    "times, e.g., --neg-ref-fp db1.fa --neg-ref-fp db2.fa"))
 @click.option('--neg-ref-db-fp', required=False, multiple=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               file_okay=True),
-              help="The indexed  version of the negative filtering database. "
+              help="An indexed version of the negative filtering database. "
                    "If not supplied, deblur will index the database."
                    "For multiple databases, the order "
                    "must follow that of --neg-ref-fp, for example, "
@@ -457,30 +465,32 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               show_default=True, help="Overwrite output directory if exists.")
 @click.option('--mean-error', '-m', required=False, type=float, default=0.005,
               show_default=True,
-              help="The mean per nucleotide error, used for original "
-              "sequence estimate. If "
-              "not passed typical illumina error rate is used")
+              help=("The mean per nucleotide error rate, used for original "
+                    "sequence estimate. If not passed typical illumina error "
+                    "rate is used."))
 @click.option('--error-dist', '-d', required=False, type=str,
               default=get_default_error_profile(),
               show_default=True,
               callback=error_dist_from_str,
               help="A comma separated list of error probabilities for each "
-                   "hamming distance. The length of the list determines the "
-                   "number of hamming distances taken into account.")
+                   "Hamming distance. The length of the list determines the "
+                   "number of Hamming distances taken into account.")
 @click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
               show_default=True,
-              help='Insertion/deletion (indel) probability '
-                   '(same for N indels)')
+              help=('Insertion/deletion (indel) probability. This probability '
+                    'consistent for multiple indels; there is not an added '
+                    'elongation penalty.'))
 @click.option('--indel-max', required=False, type=int, default=3,
               show_default=True,
-              help="Maximal indel number")
+              help="Maximum number of allowed indels.")
 @click.option('--min-reads', required=False, type=int, default=10,
-              show_default=True, help="In output biom table - keep only "
-              "sequences appearing at least min-reads in all samples "
-              "combined.")
+              show_default=True,
+              help=("Keep only the sequences which appear at least "
+                    "min-reads study wide (as opposed to per-sample)."))
 @click.option('--min-size', required=False, type=int, default=2,
-              show_default=True, help="Per sample - discard sequences with"
-              " an abundance value smaller than min-size")
+              show_default=True,
+              help=("Keep only sequences which appear at least min-size times "
+                    "per-sample (as opposed to study wide)."))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -503,16 +513,14 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--is-worker-thread', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True,
-              help="indicates this is not the main deblur process "
-              "(used by the parallel deblur - do not use manually)")
-@click.option('attack_mode', '-A', required=False, type=bool, default=False,
-              help="ATTACK MODE (http://xkcd.com/1692)")
+              help=("indicates this is not the main deblur process "
+                    "(used by the parallel deblur - do not use manually)"))
 def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
              neg_ref_fp, neg_ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
              trim_length, min_reads, min_size, threads_per_sample,
              keep_tmp_files, log_level, log_file, jobs_to_start,
-             is_worker_thread, attack_mode):
+             is_worker_thread):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
