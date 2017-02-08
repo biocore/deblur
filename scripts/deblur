@@ -408,7 +408,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               file_okay=True, dir_okay=True),
               help=("Either a Demultiplexed FASTA or FASTQ file including all "
                     "samples, or a directory of per-sample FASTA or FASTQ "
-                    "files. Gzip'd files are acceptable (e.g., .fastq.gz).")
+                    "files. Gzip'd files are acceptable (e.g., .fastq.gz)."))
 @click.option('--output-dir', required=True,
               type=click.Path(resolve_path=True, readable=True, exists=False,
                               dir_okay=True),
@@ -418,7 +418,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help=("Sequence trim length. All reads shorter than the "
                     "trim-length will be discarded. A value of -1 can be "
                     "specified to skip trimming; this assumes all sequences "
-                    "have an identical length.")
+                    "have an identical length."))
 @click.option('--pos-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -512,8 +512,8 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 @click.option('--is-worker-thread', required=False, type=bool, default=False,
               is_flag=True,
               show_default=True,
-              help="indicates this is not the main deblur process "
-              "(used by the parallel deblur - do not use manually)")
+              help=("indicates this is not the main deblur process "
+                    "(used by the parallel deblur - do not use manually)"))
 def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
              neg_ref_fp, neg_ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
