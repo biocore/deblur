@@ -139,7 +139,7 @@ class workflowTests(TestCase):
                 ("seq6", "ggatgcgagatgcgtggtgatt"),
                 ("seq7", "agggcgagattcctagtgga--")]
         with self.assertRaises(ValueError):
-            trim_seqs(seqs, -2)
+            list(trim_seqs(seqs, -2))
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),

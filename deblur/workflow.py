@@ -108,7 +108,7 @@ def trim_seqs(input_seqs, trim_len):
     input_seqs : iterable of (str, str)
         The list of input sequences in (label, sequence) format
     trim_len : int
-        Sequence trimming length
+        Sequence trimming length. Specify a value of -1 to disable trimming.
 
     Returns
     -------
@@ -121,9 +121,16 @@ def trim_seqs(input_seqs, trim_len):
     okseqs = 0
     totseqs = 0
 
+    if trim_len < -1:
+        raise ValueError("Invalid trim_len: %d" % trim_len)
+
     for label, seq in input_seqs:
         totseqs += 1
-        if len(seq) >= trim_len:
+
+        if trim_len == -1:
+            okseqs += 1
+            yield label, seq
+        elif len(seq) >= trim_len:
             okseqs += 1
             yield label, seq[:trim_len]
 
