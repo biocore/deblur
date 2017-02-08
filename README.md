@@ -36,7 +36,7 @@ If you are running Deblur directly, we recommend focusing on the `workflow` subc
 deblur workflow --help
 ```
 
-As a simple example, let's specify an input FASTA file, an output path and a sequence trim length of 150. This command will trim all sequences in `all_samples.fna` to 150nt in length; any read that is shorter will be omitted. This execution mode assumes that `all_samples.fna` is demultiplexed such that the sequence IDs are compatible with QIIME 1.9.1. On completion, a new directory `output` will be created with multiple output files corresponding to the reference databases (see the Input and Output Files section for more detail). 
+As a simple example, let's specify an input FASTA file, an output path and a sequence trim length of 150. This command will trim all sequences in `all_samples.fna` to 150nt in length; any read that is shorter will be omitted. This execution mode assumes that `all_samples.fna` is demultiplexed such that the sequence IDs are compatible with QIIME 1.9.1. On completion, a new directory `output` will be created with multiple output files (see the Input and Output Files section for more detail). 
 
 ```
 deblur workflow --seqs-fp all_samples.fna --output-dir output -t 150
@@ -59,7 +59,7 @@ The input to Deblur workflow is a directory of FASTA or FASTQ files (1 per sampl
 
 - reference-non-hit.biom : contains only Deblurred reads that did not align to the positive filtering database. Negative filtering is also appied to this table, so by default, PhiX and adapter are removed.
 
-- all.biom : contains all Deblurred reads. No filtering against the negative database is performed, meaning that by default, PhiX and adapter sequence will be present in this file. This file is a superset of the union of "reference-hit.biom", "reference-non-hit.biom" and all of the sequences which recruit to the negative reference database which is by default composed of PhiX and adapter.
+- all.biom : contains all Deblurred reads. This file represents the union of the "reference-hit.biom" and "reference-non-hit.biom" tables.
 
 Important options
 =================
