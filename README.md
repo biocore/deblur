@@ -86,6 +86,20 @@ Minimal Reads Filtering
 
 Deblur runs on each sample independently. However, sometimes there is also additional information based on the total number of times an sOTU is observed in all samples (e.g. an sOTU which is observed only in one sample at low read count is more likely to be pcr/read error as opposed to an sOTU present in many samples). The --min-reads option allows to use this information by removing sOTUs with a total read count (across all samples) lower than the given threshold. The default value is set to 10, and should be useful for most cases. However, if such filtering is not wanted (e.g. if all samples in an experiment are expected not to contain the same bacteria, so no additional information is gained by combining the information from multiple samples), --min-reads can be set to 0 to skip this final filtering step.
 
+Troubleshooting
+===============
+- Mac users: if you get the following error:
+
+RuntimeError: Python is not installed as a framework. The Mac OS X backend will not be able to function correctly if Python is not installed as a framework. See the Python documentation for more information on installing Python as a framework on Mac OS X. Please either reinstall Python as a framework, or try one of the other backends. If you are Working with Matplotlib in a virtual enviroment see 'Working with Matplotlib in Virtual environments' in the Matplotlib FAQ
+
+You can solve it by the following commands:
+```
+cd ~/.matplotlib
+echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
+```
+
+- "Too many open files" : This error indicates deblur is trying to split a single fasta/q file into per-sample files, and the OS does not allow so many open simultaneous open files. Current solution is to use the qiime1.9 command split_sequence_file_on_sample_ids.py or the equivalent qiime2 command to split the single fasta/q file into a directory of per sample fasta/q files and then run deblur with this directory as the input to deblur (--seqs-fp).
+
 Code Development Note
 =====================
 
