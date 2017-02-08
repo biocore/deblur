@@ -119,6 +119,28 @@ class workflowTests(TestCase):
         self.assertEqual(len(allres), 0)
         self.assertEqual(str(W.warning), msg)
 
+    def test_trim_seqs_notrim(self):
+        seqs = [("seq1", "tagggcaagactccatggtatga"),
+                ("seq2", "cggaggcgagatgcgtggta"),
+                ("seq3", "tactagcaagattcctggtaaagga"),
+                ("seq4", "aggatgcgagatgcgtg"),
+                ("seq5", "gagtgcgagatgcgtggtgagg"),
+                ("seq6", "ggatgcgagatgcgtggtgatt"),
+                ("seq7", "agggcgagattcctagtgga--")]
+        obs = trim_seqs(seqs, -1)
+        self.assertEqual(list(obs), seqs)
+
+    def test_trim_seqs_notrim_outofbounds(self):
+        seqs = [("seq1", "tagggcaagactccatggtatga"),
+                ("seq2", "cggaggcgagatgcgtggta"),
+                ("seq3", "tactagcaagattcctggtaaagga"),
+                ("seq4", "aggatgcgagatgcgtg"),
+                ("seq5", "gagtgcgagatgcgtggtgagg"),
+                ("seq6", "ggatgcgagatgcgtggtgatt"),
+                ("seq7", "agggcgagattcctagtgga--")]
+        with self.assertRaises(ValueError):
+            list(trim_seqs(seqs, -2))
+
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),
                 ("seq2", "cggaggcgagatgcgtggta"),
