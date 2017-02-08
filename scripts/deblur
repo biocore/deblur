@@ -198,12 +198,12 @@ def dereplicate(seqs_fp, output_fp, min_size, log_level, log_file):
                    "database. For multiple databases, the order "
                    "must follow that of --ref-fp, for example, "
                    "--ref-db-fp db1.idx --ref-db-fp db2.idx ..")
-@click.option('--negate/--only-pos', '-n/', required=False, default=True, is_flag=True,
-              show_default=True,
-              help="Use --negate (i.e. True) to discard all sequences aligning to the "
-              "database passed via --neg-ref-fp option. Alternatively, use --only-pos "
-              "(i.e. False) to filter by only keeping sequences similar to ones in "
-              "--pos-ref-fp.")
+@click.option('--negate/--only-pos', '-n/', required=False, default=True,
+              is_flag=True, show_default=True,
+              help=("Use --negate (i.e. True) to discard all sequences "
+                    "aligning to the database passed via --neg-ref-fp option. "
+                    "Alternatively, use --only-pos (i.e. False) to filter by "
+                    "only keeping sequences similar to ones in --pos-ref-fp."))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -414,7 +414,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                               dir_okay=True),
               help="Directory path to store output including BIOM table")
 @click.option('--trim-length', '-t', required=True, type=int,
-              show_default=True, 
+              show_default=True,
               help=("Sequence trim length. All reads shorter than the "
                     "trim-length will be discarded. A value of -1 can be "
                     "specified to skip trimming; this assumes all sequences "
@@ -483,11 +483,11 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               show_default=True,
               help="Maximum number of allowed indels.")
 @click.option('--min-reads', required=False, type=int, default=10,
-              show_default=True, 
+              show_default=True,
               help=("Keep only the sequences which appear at least "
                     "min-reads study wide (as opposed to per-sample)."))
 @click.option('--min-size', required=False, type=int, default=2,
-              show_default=True, 
+              show_default=True,
               help=("Keep only sequences which appear at least min-size times "
                     "per-sample (as opposed to study wide)."))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
