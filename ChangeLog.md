@@ -1,6 +1,9 @@
 # deblur changelog
 
-## Version 0.1.9-dev
+## Version 1.0
+
+Official version 1.0. Released on 9 February 2017.
+
 ### Features
 * Updated documentation to improve clarity on examples, file inputs and file outputs.
 * Delete tmp files and split directory in deblur output directory
