@@ -1,5 +1,19 @@
 # deblur changelog
 
+## Version 0.1.9-dev
+### Features
+Updated docs
+Delete tmp files and split directory in deblur output directory
+
+### Backward-incompatible changes [stable]
+Remove the --skip-trimming flag and use --trim-length=-1 instead
+Remove the --negate flag, always output results of only negative, hits to positive database and non-hits to positive database
+Change output file names to all.biom, all.seqs.fa, reference-non-hit.biom, reference-non-hit.seqs.fa, reference-hit.biom, reference-hit.seqs.fa
+
+### Performance enhancements
+
+### Bug fixes
+
 
 ## Version 0.1.8-dev
 ### Features
