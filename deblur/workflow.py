@@ -421,7 +421,8 @@ def remove_artifacts_seqs(seqs_fp,
             logger.error('stderr : %s' % serr)
             return output_fp, 0, []
 
-        with open('%s.blast' % blast_output, 'r') as bfl:
+        blast_output_filename = '%s.blast' % blast_output
+        with open(blast_output_filename, 'r') as bfl:
             for line in bfl:
                 line = line.strip().split('\t')
                 # if * means no match
@@ -458,7 +459,7 @@ def remove_artifacts_seqs(seqs_fp,
                 badseqs += 1
     logger.info('total sequences %d, passing sequences %d, '
                 'failing sequences %d' % (totalseqs, okseqs, badseqs))
-    return output_fp, okseqs, [blast_output]
+    return output_fp, okseqs, [blast_output_filename]
 
 
 def multiple_sequence_alignment(seqs_fp, threads=1):
