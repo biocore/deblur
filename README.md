@@ -61,6 +61,8 @@ The input to Deblur workflow is a directory of FASTA or FASTQ files (1 per sampl
 
 - all.biom : contains all Deblurred reads. This file represents the union of the "reference-hit.biom" and "reference-non-hit.biom" tables.
 
+- all.seqs.fa : a fasta file containing all the sequences in all.biom
+
 Important options
 =================
 
