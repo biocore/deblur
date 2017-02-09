@@ -263,7 +263,7 @@ def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
 
 
 def fasta_from_biom(table, fasta_file_name):
-    '''Save squences from a biom table to a fasta file
+    '''Save sequences from a biom table to a fasta file
 
     Parameters
     ----------
