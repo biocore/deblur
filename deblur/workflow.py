@@ -262,6 +262,25 @@ def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
     return table
 
 
+def fasta_from_biom(table, fasta_file_name):
+    '''Save squences from a biom table to a fasta file
+
+    Parameters
+    ----------
+    table : biom.Table
+        The biom table containing the sequences
+    fasta_file_name : str
+        Name of the fasta output file
+    '''
+    logger = logging.getLogger(__name__)
+    logger.debug('saving biom table sequences to fasta file %s' % fasta_file_name)
+
+    with open(fasta_file_name, 'w') as f:
+        for cseq in table.ids(axis='observation'):
+            f.write('>%s\n%s\n' % (cseq, cseq))
+    logger.info('saved biom table sequences to fasta file %s' % fasta_file_name)
+
+
 def remove_artifacts_from_biom_table(table_filename,
                                      fasta_filename,
                                      ref_fp,
@@ -317,17 +336,25 @@ def remove_artifacts_from_biom_table(table_filename,
                                   invert=True)
     # remove the samples with 0 reads
     filter_minreads_samples_from_table(artifact_table)
-    output_artifact_fp = join(biom_table_dir, 'reference-non-hit.biom')
-    write_biom_table(artifact_table, output_artifact_fp)
+    output_nomatch_fp = join(biom_table_dir, 'reference-non-hit.biom')
+    write_biom_table(artifact_table, output_nomatch_fp)
     logger.info('wrote artifact only filtered biom table to %s'
-                % output_artifact_fp)
+                % output_nomatch_fp)
+    # and save the reference-non-hit fasta file
+    output_nomatch_fasta_fp = join(biom_table_dir, 'reference-non-hit.seqs.fa')
+    fasta_from_biom(artifact_table, output_nomatch_fasta_fp)
 
     # filter and save the only 16s biom table
     table.filter(list(good_seqs), axis='observation')
+    # remove the samples with 0 reads
     filter_minreads_samples_from_table(table)
     output_fp = join(biom_table_dir, 'reference-hit.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
+    # and save the reference-non-hit fasta file
+    output_match_fasta_fp = join(biom_table_dir, 'reference-hit.seqs.fa')
+    fasta_from_biom(table, output_match_fasta_fp)
+
     # we also don't need the cleaned fasta file
     tmp_files.append(clean_fp)
     return tmp_files
