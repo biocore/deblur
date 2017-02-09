@@ -279,21 +279,26 @@ def remove_artifacts_from_biom_table(table_filename,
         name of the biom table file
     fasta_filename : str
         the fasta file containing all the sequences of the biom table
+
+    Returns
+    -------
+    tmp_files : list of str
+        The temp files created during the artifact removal step
     """
     logger = logging.getLogger(__name__)
     logger.info('getting 16s sequences from the biom table')
 
     # remove artifacts from the fasta file. output is in clean_fp fasta file
-    clean_fp, num_seqs_left = remove_artifacts_seqs(fasta_filename, ref_fp,
-                                                    working_dir=biom_table_dir,
-                                                    ref_db_fp=ref_db_fp,
-                                                    negate=False, threads=threads,
-                                                    verbose=verbose,
-                                                    sim_thresh=sim_thresh,
-                                                    coverage_thresh=coverage_thresh)
+    clean_fp, num_seqs_left, tmp_files = remove_artifacts_seqs(fasta_filename, ref_fp,
+                                                               working_dir=biom_table_dir,
+                                                               ref_db_fp=ref_db_fp,
+                                                               negate=False, threads=threads,
+                                                               verbose=verbose,
+                                                               sim_thresh=sim_thresh,
+                                                               coverage_thresh=coverage_thresh)
     if clean_fp is None:
         logger.warn("No clean sequences in %s" % fasta_filename)
-        return
+        return tmp_files
 
     logger.debug('removed artifacts from sequences input %s'
                  ' to output %s' % (fasta_filename, clean_fp))
@@ -323,6 +328,9 @@ def remove_artifacts_from_biom_table(table_filename,
     output_fp = join(biom_table_dir, 'reference-hit.biom')
     write_biom_table(table, output_fp)
     logger.info('wrote 16s filtered biom table to %s' % output_fp)
+    # we also don't need the cleaned fasta file
+    tmp_files.append(clean_fp)
+    return tmp_files
 
 
 def remove_artifacts_seqs(seqs_fp,
@@ -370,13 +378,15 @@ def remove_artifacts_seqs(seqs_fp,
         Name of the artifact removed fasta file
     okseqs : int
         The number of sequences left after artifact removal
+    tmp_files : list of str
+        Names of the tmp files created
     """
     logger = logging.getLogger(__name__)
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
         logger.warn('file %s has size 0, continuing' % seqs_fp)
-        return None, 0
+        return None, 0, []
 
     if coverage_thresh is None:
         if negate:
@@ -409,7 +419,7 @@ def remove_artifacts_seqs(seqs_fp,
             logger.error('sortmerna error on file %s' % seqs_fp)
             logger.error('stdout : %s' % sout)
             logger.error('stderr : %s' % serr)
-            return output_fp, 0
+            return output_fp, 0, []
 
         with open('%s.blast' % blast_output, 'r') as bfl:
             for line in bfl:
@@ -448,7 +458,7 @@ def remove_artifacts_seqs(seqs_fp,
                 badseqs += 1
     logger.info('total sequences %d, passing sequences %d, '
                 'failing sequences %d' % (totalseqs, okseqs, badseqs))
-    return output_fp, okseqs
+    return output_fp, okseqs, [blast_output]
 
 
 def multiple_sequence_alignment(seqs_fp, threads=1):
@@ -797,13 +807,13 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                      output_fp=output_derep_fp,
                      min_size=min_size, threads=threads_per_sample)
     # Step 3: Remove artifacts
-    output_artif_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=output_derep_fp,
-                                                           ref_fp=ref_fp,
-                                                           working_dir=working_dir,
-                                                           ref_db_fp=ref_db_fp,
-                                                           negate=True,
-                                                           threads=threads_per_sample,
-                                                           sim_thresh=sim_thresh)
+    output_artif_fp, num_seqs_left, _ = remove_artifacts_seqs(seqs_fp=output_derep_fp,
+                                                              ref_fp=ref_fp,
+                                                              working_dir=working_dir,
+                                                              ref_db_fp=ref_db_fp,
+                                                              negate=True,
+                                                              threads=threads_per_sample,
+                                                              sim_thresh=sim_thresh)
     if not output_artif_fp:
         warnings.warn('Problem removing artifacts from file %s' %
                       seqs_fp, UserWarning)
