@@ -57,9 +57,15 @@ The input to Deblur workflow is a directory of FASTA or FASTQ files (1 per sampl
 
 - reference-hit.biom : contains only Deblurred reads matching the positive filtering database. By default, a reference composed of 16S sequences is used, and this resulting table will contain only those reads which recruit at a coarse level to it will be retained. Reads are also filtered against the negative reference, which by default will remove any read which appears to be PhiX or adapter.
 
+- reference-hit.seqs.fa : a fasta file containing all the sequences in reference-hit.biom
+
 - reference-non-hit.biom : contains only Deblurred reads that did not align to the positive filtering database. Negative filtering is also appied to this table, so by default, PhiX and adapter are removed.
 
+- reference-non-hit.seqs.fa : a fasta file containing all the sequences in reference-non-hit.biom
+
 - all.biom : contains all Deblurred reads. This file represents the union of the "reference-hit.biom" and "reference-non-hit.biom" tables.
+
+- all.seqs.fa : a fasta file containing all the sequences in all.biom
 
 Important options
 =================

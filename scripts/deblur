@@ -649,12 +649,15 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     create_otu_table(output_fp, samples,
                      outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
-    # if negative mode, also create a biom table with
-    # only 16s sequences and with only non-16s sequences
-    remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
-                                     pos_ref_fp, output_dir,
-                                     pos_ref_db_fp,
-                                     threads=threads_per_sample)
+    # also create biom tables with
+    # only sequences matching the pos_ref_fp sequences (reference-hit.biom)
+    # and only sequences not matching the pos_ref_fp sequences (reference-non-hit.biom)
+    tmp_files = remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
+                                                 pos_ref_fp, output_dir,
+                                                 pos_ref_db_fp,
+                                                 threads=threads_per_sample)
+    # add the temporary files for the filtering to the remove list
+    files_to_remove.extend(tmp_files)
 
     # Clean up
     if not keep_tmp_files:

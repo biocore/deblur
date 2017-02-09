@@ -33,7 +33,8 @@ from deblur.workflow import (dereplicate_seqs,
                              sample_id_from_read_id,
                              remove_artifacts_from_biom_table,
                              _get_fastq_variant,
-                             filter_minreads_samples_from_table)
+                             filter_minreads_samples_from_table,
+                             fasta_from_biom)
 from deblur.deblurring import get_default_error_profile
 
 
@@ -273,11 +274,11 @@ class workflowTests(TestCase):
         # remove the artifacts from the s4 biom table
         input_biom_file = join(self.test_data_dir, 'final.s4.biom')
         input_fasta_file = join(self.test_data_dir, 'final.s4.seqs.fa')
-        remove_artifacts_from_biom_table(input_biom_file,
-                                         input_fasta_file,
-                                         [pos_ref_fp],
-                                         self.working_dir,
-                                         pos_ref_db_fp)
+        tmp_files = remove_artifacts_from_biom_table(input_biom_file,
+                                                     input_fasta_file,
+                                                     [pos_ref_fp],
+                                                     self.working_dir,
+                                                     pos_ref_db_fp)
 
         origfilename = join(self.test_data_dir, 'simset.s2.fasta')
         trim_length = 150
@@ -288,11 +289,27 @@ class workflowTests(TestCase):
         no_artifacts_table = load_table(no_artifacts_table_name)
         obs_seqs = no_artifacts_table.ids(axis='observation')
         self.assertEqual(set(obs_seqs), set(orig_seqs))
+        # test the fasta file
+        no_artifacts_fasta_name = join(self.working_dir, 'reference-hit.seqs.fa')
+        fasta_seqs = [item[1] for item in sequence_generator(no_artifacts_fasta_name)]
+        self.assertEqual(set(fasta_seqs), set(orig_seqs))
 
+        # test the non-hit output biom
         artifacts_table_name = join(self.working_dir, 'reference-non-hit.biom')
         artifacts_table = load_table(artifacts_table_name)
         obs_seqs = artifacts_table.ids(axis='observation')
+        artifact_seqs = ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaatttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt',
+                         'AACAATGGGGGCAAGCGTTAATCATAATGGCTTAAAGAATTCGTAGAATtatatatattatatatatatTAGAGTTAATAAATATTAATTAAAGAATTATAACAATGGGGGCAAGCGTTAATCATAATGGCTTAAAGAATTCGTAGAATT']
+        artifact_seqs = [item[:trim_length].upper() for item in artifact_seqs]
+        obs_seqs = [item[:trim_length].upper() for item in obs_seqs]
+        self.assertEqual(set(obs_seqs), set(artifact_seqs))
+        # test the fasta file
+        artifacts_fasta_name = join(self.working_dir, 'reference-non-hit.seqs.fa')
+        fasta_seqs = [item[1].upper() for item in sequence_generator(artifacts_fasta_name)]
+        self.assertEqual(set(fasta_seqs), set(artifact_seqs))
+
         self.assertEqual(len(obs_seqs), 2)
+        self.assertEqual(len(tmp_files), 2)
 
     def test_remove_artifacts_seqs(self):
         """ Test remove_artifacts_seqs() function for removing
@@ -334,16 +351,18 @@ class workflowTests(TestCase):
         ref_db_fp = build_index_sortmerna(
             ref_fp=(ref_fp,),
             working_dir=self.working_dir)
-        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                                         ref_fp=(ref_fp,),
-                                                         working_dir=self.working_dir,
-                                                         ref_db_fp=ref_db_fp,
-                                                         negate=False,
-                                                         threads=1)
+        output_fp, num_seqs_left, tmp_files = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                                    ref_fp=(ref_fp,),
+                                                                    working_dir=self.working_dir,
+                                                                    ref_db_fp=ref_db_fp,
+                                                                    negate=False,
+                                                                    threads=1)
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
             obs_seqs.append(label)
         self.assertEqual(obs_seqs, exp_seqs)
+        # validate it creates one tmp file
+        self.assertEqual(len(tmp_files), 1)
 
     def test_remove_artifacts_seqs_index_prebuilt(self):
         """ Test remove_artifacts_seqs() function for removing
@@ -384,12 +403,12 @@ class workflowTests(TestCase):
         # build index
         sortmerna_db = build_index_sortmerna([ref_fp], self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                                         ref_fp=(ref_fp,),
-                                                         working_dir=self.working_dir,
-                                                         ref_db_fp=sortmerna_db,
-                                                         negate=False,
-                                                         threads=1)
+        output_fp, num_seqs_left, _ = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                            ref_fp=(ref_fp,),
+                                                            working_dir=self.working_dir,
+                                                            ref_db_fp=sortmerna_db,
+                                                            negate=False,
+                                                            threads=1)
 
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
@@ -436,12 +455,12 @@ class workflowTests(TestCase):
         self.files_to_remove.append(ref_fp)
         ref_db_fp = build_index_sortmerna([ref_fp], self.working_dir)
         output_fp = join(self.working_dir, "seqs_filtered.fasta")
-        output_fp, num_seqs_left = remove_artifacts_seqs(seqs_fp=seqs_fp,
-                                                         ref_fp=(ref_fp,),
-                                                         working_dir=self.working_dir,
-                                                         ref_db_fp=ref_db_fp,
-                                                         negate=True,
-                                                         threads=1)
+        output_fp, num_seqs_left, _ = remove_artifacts_seqs(seqs_fp=seqs_fp,
+                                                            ref_fp=(ref_fp,),
+                                                            working_dir=self.working_dir,
+                                                            ref_db_fp=ref_db_fp,
+                                                            negate=True,
+                                                            threads=1)
         obs_seqs = []
         for label, seq in sequence_generator(output_fp):
             obs_seqs.append(label)
@@ -895,6 +914,19 @@ class workflowTests(TestCase):
         seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
             output_dir=output_dir)
         self.assertEqual(seqs_fasta, seqs_act)
+
+    def test_fasta_from_biom(self):
+        '''Test the fasta file from biom table function fasta_from_biom()
+        '''
+        input_biom_file = join(self.test_data_dir, 'final.s4.biom')
+        table = load_table(input_biom_file)
+        output_fasta = join(self.working_dir, 'final.s4.seqs.fa')
+        fasta_from_biom(table, output_fasta)
+        self.assertTrue(isfile(output_fasta))
+        table_seqs = table.ids(axis='observation')
+        expected = [(seq, seq) for seq in table_seqs]
+        written_seqs = [item for item in sequence_generator(output_fasta)]
+        self.assertListEqual(written_seqs, expected)
 
 
 if __name__ == '__main__':
