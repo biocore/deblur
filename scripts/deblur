@@ -649,8 +649,9 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     create_otu_table(output_fp, samples,
                      outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
-    # also create a biom table with
-    # only 16s sequences and with only non-16s sequences
+    # also create biom tables with
+    # only sequences matching the pos_ref_fp sequences (reference-hit.biom)
+    # and only sequences not matching the pos_ref_fp sequences (reference-non-hit.biom)
     tmp_files = remove_artifacts_from_biom_table(output_fp, outputfasta_fp,
                                                  pos_ref_fp, output_dir,
                                                  pos_ref_db_fp,
