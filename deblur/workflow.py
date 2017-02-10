@@ -819,15 +819,11 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
 
     # Step 1: Trim sequences to specified length
     output_trim_fp = join(working_dir, "%s.trim" % basename(seqs_fp))
-    if trim_length > 0:
-        with open(output_trim_fp, 'w') as out_f:
-            for label, seq in trim_seqs(
-                    input_seqs=sequence_generator(seqs_fp),
-                    trim_len=trim_length):
-                out_f.write(">%s\n%s\n" % (label, seq))
-    else:
-        # If trim length is -1, files are already trimmed
-        os.symlink(seqs_fp, output_trim_fp)
+    with open(output_trim_fp, 'w') as out_f:
+        for label, seq in trim_seqs(
+                input_seqs=sequence_generator(seqs_fp),
+                trim_len=trim_length):
+            out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
                            "%s.derep" % basename(output_trim_fp))
