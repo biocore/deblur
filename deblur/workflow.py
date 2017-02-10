@@ -863,8 +863,8 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         # no need to run MSA - just use the pre-msa file as input for next step
         output_msa_fp = output_artif_fp
     else:
-        err_msg = 'No sequences left after artifact removal in '
-        'file %s' % seqs_fp
+        err_msg = ('No sequences left after artifact removal in '
+                   'file %s' % seqs_fp)
         warnings.warn(err_msg, UserWarning)
         logger.warning(err_msg)
         return None
