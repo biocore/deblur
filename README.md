@@ -22,8 +22,10 @@ source activate deblurenv
 
 Install Deblur dependencies and Deblur itself:
 ```
-conda install -c bioconda -c biocore VSEARCH MAFFT biom-format SortMeRNA==2.0 deblur
+conda install -c bioconda -c biocore VSEARCH=2.0.3 MAFFT=7.221 biom-format SortMeRNA==2.0 deblur
 ```
+
+N.B. Some dependencies are version restricted at the moment but for different reasons. SortMeRNA 2.1 has a different output format which Deblur is not compatible with yet. VSEARCH 2.0.3 and MAFFT 7.221 yield slightly different results in testing than their respective latest versions (at the time of release of Deblur 1.0.0). A review of their changelogs did not reveal any remarkable notes (e.g., bugs) about the reasons for the differences. In testing, the differences affected <0.1% of the sOTUs. As a precaution, we are advising the use of these specific versions for consistency with the manuscript. 
 
 Example usage
 =============

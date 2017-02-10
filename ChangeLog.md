@@ -1,34 +1,24 @@
 # deblur changelog
 
-## Version 0.1.9-dev
+## Version 1.0
+
+Official version 1.0. Released on 9 February 2017.
+
 ### Features
-Updated docs
-Delete tmp files and split directory in deblur output directory
+* Updated documentation to improve clarity on examples, file inputs and file outputs.
+* Delete tmp files and split directory in deblur output directory
 
 ### Backward-incompatible changes [stable]
-Remove the --skip-trimming flag and use --trim-length=-1 instead
-Remove the --negate flag, always output results of only negative, hits to positive database and non-hits to positive database
-Change output file names to all.biom, all.seqs.fa, reference-non-hit.biom, reference-non-hit.seqs.fa, reference-hit.biom, reference-hit.seqs.fa
+* Removed the --skip-trimming flag and use --trim-length=-1 instead
+* The trim length parameter is now required.
+* Negative mode is always run. What that means is that an output is always generated with reads matching the negative database removed (an unfiltered output is still generated). By default, this means that any read which appears to be PhiX or Adapter will be filtered out.
+* Change output file names to all.biom, all.seqs.fa, reference-non-hit.biom, reference-non-hit.seqs.fa, reference-hit.biom, reference-hit.seqs.fa. The term "reference" in this case refers to sequences which recruited (hit) to the positive database or failed to recruit (non-hit). Recruitment is performed using SortMeRNA and a sequence is retained if it aligns with an e-value of 10 or less (i.e., a coarse filter). 
+* Changed --min-reads default value to 10 (was 0) in accordance with the manuscript. 
+* Renamed --threads shortcut to -a (was -t) in remove_artifacts CLI
 
 ### Performance enhancements
 
 ### Bug fixes
-
-
-## Version 0.1.8-dev
-### Features
-Updated docs
-
-### Backward-incompatible changes [stable]
-Change --min-reads default value to 10 (was 0)
-Remove --trim-length default value (was 100) and set as required parameter
-Set --negate (negative mode) default value to True and add --only-pos option to skip negative mode
-
-### Performance enhancements
-
-### Bug fixes
-rename --threads shortcut to -a (was -t) in remove_artifacts CLI
-
 
 ## Version 0.1.7-dev
 ### Features
@@ -81,7 +71,7 @@ rename --threads shortcut to -a (was -t) in remove_artifacts CLI
 ### Miscellaneous
 
 ## Version 0.1.0-dev
-First release
+* First release
 
 ### Features
 
