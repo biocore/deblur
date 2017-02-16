@@ -166,6 +166,7 @@ class DeblurringTests(TestCase):
 
         self.assertEqual(obs, exp)
 
+
 TEST_SEQS_1 = """>E.Coli;size=1000;
 tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggtttgt
 taagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactggcaagctt
@@ -175,6 +176,7 @@ aacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggtttgt
 taagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactggcaagctt
 gagtctcgtagaggggggcagaattccag
 """
+
 
 TEST_SEQS_2 = """>E.Coli-999;size=720;
 TACGGAGGGTGCAAGCGTTAATCGGAATTACTGGGCGTAAAGCGCACGCAGGCGGTTTGTTAAGTCAGATGTGAAATCC
