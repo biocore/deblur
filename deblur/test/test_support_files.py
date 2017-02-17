@@ -25,5 +25,6 @@ class supportFilesTests(TestCase):
         # the negative filtering fasta file
         self.assertTrue(os.path.isfile(neg_db))
 
+
 if __name__ == '__main__':
     main()

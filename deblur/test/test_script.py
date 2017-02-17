@@ -65,5 +65,6 @@ class TestScript(TestCase):
         sout, serr, res = _system_call(cmd)
         self.validate_results(self.output_biom, self.orig_fp)
 
+
 if __name__ == "__main__":
     main()

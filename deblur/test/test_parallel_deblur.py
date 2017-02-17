@@ -123,5 +123,6 @@ class parallelDeblurTests(TestCase):
                        '.msa.deblur.no_chimeras')
         self.compare_result(deb3res, self.orig_s3_fp, trim_length=trim_length)
 
+
 if __name__ == '__main__':
     main()
