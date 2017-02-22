@@ -439,7 +439,7 @@ def remove_artifacts_seqs(seqs_fp,
         params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' %
                   (db, ref_db_fp[i]),
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
-                  '--print_all_reads', '-v', '-e', '10']
+                  '--print_all_reads', '-v']
 
         sout, serr, res = _system_call(params)
         if not res == 0:
@@ -456,7 +456,6 @@ def remove_artifacts_seqs(seqs_fp,
                 if line[1] == '*':
                     continue
                 # check if % identity[2] and coverage[13] are large enough
-                # note e-value is [10]
                 if (float(line[2]) >= sim_thresh) and \
                    (float(line[13]) >= coverage_thresh):
                     aligned_seq_ids.add(line[0])
