@@ -396,7 +396,7 @@ def remove_artifacts_seqs(seqs_fp,
     coverage_thresh: float, optional
         The minimal coverage threshold (between 0 and 1)
         for alignments for keeping the sequence
-        if None, the default values used are 0.6 for negate=False,
+        if None, the default values used are 0.5 for negate=False,
         0.95 for negate=True
 
     Returns
@@ -419,7 +419,7 @@ def remove_artifacts_seqs(seqs_fp,
         if negate:
             coverage_thresh = 0.95 * 100
         else:
-            coverage_thresh = 0.6 * 100
+            coverage_thresh = 0.5 * 100
 
     if sim_thresh is None:
         if negate:
