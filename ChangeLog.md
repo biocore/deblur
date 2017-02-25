@@ -11,7 +11,7 @@ Changes since version 1.0.0 go here.
 ### Performance enhancements
 
 ### Bug fixes
-
+* Filtering thresholds for the reference database were not in use. What this means is that, in some cases, highly artifactual sequence could filter through. Specifically, no coverage and similarity thresholds were used with SortMeRNA for the postive reference filter. These are now set to 60 and 65 respectively. In addition, the e-value threshold used is now the SortMeRNA default of 1. Please see [issue #139](https://github.com/biocore/deblur/issues/139) for further discussion in addition for the rational behind the parameter values picked.
 
 ## Version 1.0
 

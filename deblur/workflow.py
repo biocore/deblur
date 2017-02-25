@@ -396,7 +396,7 @@ def remove_artifacts_seqs(seqs_fp,
     coverage_thresh: float, optional
         The minimal coverage threshold (between 0 and 1)
         for alignments for keeping the sequence
-        if Nonr, the default values used are 0.3 for negate=False,
+        if None, the default values used are 0.5 for negate=False,
         0.95 for negate=True
 
     Returns
@@ -417,15 +417,15 @@ def remove_artifacts_seqs(seqs_fp,
 
     if coverage_thresh is None:
         if negate:
-            coverage_thresh = 0.95
+            coverage_thresh = 0.95 * 100
         else:
-            coverage_thresh = 0.3
+            coverage_thresh = 0.5 * 100
 
     if sim_thresh is None:
         if negate:
-            sim_thresh = 0.95
+            sim_thresh = 0.95 * 100
         else:
-            sim_thresh = 0.65
+            sim_thresh = 0.65 * 100
 
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
@@ -439,7 +439,7 @@ def remove_artifacts_seqs(seqs_fp,
         params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' %
                   (db, ref_db_fp[i]),
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
-                  '--print_all_reads', '-v', '-e', '10']
+                  '--print_all_reads', '-v']
 
         sout, serr, res = _system_call(params)
         if not res == 0:
@@ -456,14 +456,9 @@ def remove_artifacts_seqs(seqs_fp,
                 if line[1] == '*':
                     continue
                 # check if % identity[2] and coverage[13] are large enough
-                # note e-value is [10]
-                if negate:
-                    if (float(line[2]) >= sim_thresh*100) and \
-                       (float(line[13]) >= coverage_thresh*100):
-                        aligned_seq_ids.add(line[0])
-                else:
-                    if float(line[10]) <= 10:
-                        aligned_seq_ids.add(line[0])
+                if (float(line[2]) >= sim_thresh) and \
+                   (float(line[13]) >= coverage_thresh):
+                    aligned_seq_ids.add(line[0])
 
     if negate:
         def op(x): return x not in aligned_seq_ids
