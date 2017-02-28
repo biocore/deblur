@@ -1,8 +1,8 @@
 # deblur changelog
 
-## Version 1.0.0-dev
+## Version 1.0.1
 
-Changes since version 1.0.0 go here.
+Official version 1.0.1 Released on 28 February 2017.
 
 ### Features
 
