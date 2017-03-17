@@ -9,7 +9,7 @@
 ### Performance enhancements
 
 ### Bug fixes
-E-value thresholding removed in favor of a bitscore threshold which is scaled based on the length of the query sequence. This is to make each query sequence independent of each other on assessment against the positive filtering database.
+E-value thresholding removed in favor of a bitscore threshold which is scaled based on the length of the query sequence. This is to make each query sequence independent of each other on assessment against the positive filtering database. Please see [PR #146](https://github.com/biocore/deblur/pull/146) for further details.
 
 ## Version 1.0.1
 
