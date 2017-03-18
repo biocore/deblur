@@ -427,6 +427,9 @@ def remove_artifacts_seqs(seqs_fp,
         else:
             sim_thresh = 0.65 * 100
 
+    # the minimal average bitscore per nucleotide
+    bitscore_thresh = 0.65
+
     output_fp = join(working_dir,
                      "%s.no_artifacts" % basename(seqs_fp))
     blast_output = join(working_dir,
@@ -436,10 +439,12 @@ def remove_artifacts_seqs(seqs_fp,
         logger.debug('running on ref_fp %s working dir %s refdb_fp %s seqs %s'
                      % (db, working_dir, ref_db_fp[i], seqs_fp))
         # run SortMeRNA
+        # we use -e 100 to remove E-value based filtering by sortmerna
+        # since we use bitscore/identity/coverage filtering instead
         params = ['sortmerna', '--reads', seqs_fp, '--ref', '%s,%s' %
                   (db, ref_db_fp[i]),
                   '--aligned', blast_output, '--blast', '3', '--best', '1',
-                  '--print_all_reads', '-v']
+                  '--print_all_reads', '-v', '-e', '100']
 
         sout, serr, res = _system_call(params)
         if not res == 0:
@@ -457,7 +462,8 @@ def remove_artifacts_seqs(seqs_fp,
                     continue
                 # check if % identity[2] and coverage[13] are large enough
                 if (float(line[2]) >= sim_thresh) and \
-                   (float(line[13]) >= coverage_thresh):
+                   (float(line[13]) >= coverage_thresh) and \
+                   (float(line[11]) >= bitscore_thresh * len(line[0])):
                     aligned_seq_ids.add(line[0])
 
     if negate:
