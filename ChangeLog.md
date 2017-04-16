@@ -105,4 +105,6 @@ Official version 1.0. Released on 9 February 2017.
 
 ### Bug fixes
 
+* Fixed an issue where support files were not being distributed, see [issue #82](https://github.com/biocore/deblur/pull/82)
+
 ### Miscellaneous
