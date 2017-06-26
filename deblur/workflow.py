@@ -516,7 +516,7 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
         logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
     msa_fp = seqs_fp + '.msa'
-    params = ['mafft', '--quiet', '--parttree', '--auto',
+    params = ['mafft', '--quiet', '--preservecase', '--parttree', '--auto',
               '--thread', str(threads), seqs_fp]
     sout, serr, res = _system_call(params, stdoutfilename=msa_fp)
     if not res == 0:
