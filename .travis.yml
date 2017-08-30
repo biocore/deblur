@@ -11,7 +11,7 @@ before_install:
 install:
   - conda create --yes -n env_name python=$PYTHON_VERSION pip numpy scipy nose flake8 h5py
   - source activate env_name
-  - conda install --yes -c bioconda VSEARCH=2.0.3 MAFFT=7.221 SortMeRNA=2.0
+  - conda install --yes -c bioconda VSEARCH=2.0.3 MAFFT=7.310 SortMeRNA=2.0
   - pip install coveralls
   - pip install --process-dependency-links .
 script:
