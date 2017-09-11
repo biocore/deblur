@@ -420,6 +420,10 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
                     "trim-length will be discarded. A value of -1 can be "
                     "specified to skip trimming; this assumes all sequences "
                     "have an identical length."))
+@click.option('--left-trim-length', '-t', required=False, type=int,
+              show_default=True, default=0)
+              help=("Trim the first N bases from every sequence. A value of 0 "
+                    "disables this trim."))
 @click.option('--pos-ref-fp', required=False, multiple=True,
               default=[], show_default=False,
               type=click.Path(resolve_path=True, readable=True, exists=True,
@@ -518,9 +522,9 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
 def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
              neg_ref_fp, neg_ref_db_fp, overwrite,
              mean_error, error_dist, indel_prob, indel_max,
-             trim_length, min_reads, min_size, threads_per_sample,
-             keep_tmp_files, log_level, log_file, jobs_to_start,
-             is_worker_thread):
+             trim_length, left_trim_length, min_reads, min_size, 
+             threads_per_sample, keep_tmp_files, log_level, log_file, 
+             jobs_to_start, is_worker_thread):
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
@@ -623,6 +627,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     mean_error=mean_error,
                     error_dist=error_dist, indel_prob=indel_prob,
                     indel_max=indel_max, trim_length=trim_length,
+                    left_trim_length=left_trim_length,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                     threads_per_sample=threads_per_sample)
                 if deblurred_file_name is None:

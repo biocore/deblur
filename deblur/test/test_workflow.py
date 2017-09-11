@@ -128,7 +128,7 @@ class workflowTests(TestCase):
                 ("seq5", "gagtgcgagatgcgtggtgagg"),
                 ("seq6", "ggatgcgagatgcgtggtgatt"),
                 ("seq7", "agggcgagattcctagtgga--")]
-        obs = trim_seqs(seqs, -1)
+        obs = trim_seqs(seqs, -1, 0)
         self.assertEqual(list(obs), seqs)
 
     def test_trim_seqs_notrim_outofbounds(self):
@@ -140,7 +140,7 @@ class workflowTests(TestCase):
                 ("seq6", "ggatgcgagatgcgtggtgatt"),
                 ("seq7", "agggcgagattcctagtgga--")]
         with self.assertRaises(ValueError):
-            list(trim_seqs(seqs, -2))
+            list(trim_seqs(seqs, -2, 0))
 
     def test_trim_seqs(self):
         seqs = [("seq1", "tagggcaagactccatggtatga"),
@@ -150,7 +150,7 @@ class workflowTests(TestCase):
                 ("seq5", "gagtgcgagatgcgtggtgagg"),
                 ("seq6", "ggatgcgagatgcgtggtgatt"),
                 ("seq7", "agggcgagattcctagtgga--")]
-        obs = trim_seqs(seqs, 20)
+        obs = trim_seqs(seqs, 20, 0)
 
         self.assertTrue(isinstance(obs, GeneratorType))
 
@@ -160,6 +160,26 @@ class workflowTests(TestCase):
                ("seq5", "gagtgcgagatgcgtggtga"),
                ("seq6", "ggatgcgagatgcgtggtga"),
                ("seq7", "agggcgagattcctagtgga")]
+        self.assertEqual(list(obs), exp)
+
+    def test_trim_seqs_left(self):
+        seqs = [("seq1", "tagggcaagactccatggtatga"),
+                ("seq2", "cggaggcgagatgcgtggta"),
+                ("seq3", "tactagcaagattcctggtaaagga"),
+                ("seq4", "aggatgcgagatgcgtg"),
+                ("seq5", "gagtgcgagatgcgtggtgagg"),
+                ("seq6", "ggatgcgagatgcgtggtgatt"),
+                ("seq7", "agggcgagattcctagtgga--")]
+        obs = trim_seqs(seqs, 20, 5)
+
+        self.assertTrue(isinstance(obs, GeneratorType))
+
+        exp = [("seq1", "caagactccatggta"),
+               ("seq2", "gcgagatgcgtggta"),
+               ("seq3", "gcaagattcctggta"),
+               ("seq5", "cgagatgcgtggtga"),
+               ("seq6", "cgagatgcgtggtga"),
+               ("seq7", "gagattcctagtgga")]
         self.assertEqual(list(obs), exp)
 
     def test_dereplicate_seqs_remove_singletons(self):
@@ -622,12 +642,14 @@ class workflowTests(TestCase):
         indel_prob = 0.01
         indel_max = 3
         min_size = 2
+        left_trim_length = 0
         nochimera = launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
                                     mean_error=mean_error,
                                     error_dist=error_dist,
                                     indel_prob=indel_prob,
                                     indel_max=indel_max,
                                     trim_length=trim_length,
+                                    left_trim_length=left_trim_length,
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
@@ -789,6 +811,7 @@ class workflowTests(TestCase):
         min_size = 2
         # trim length longer than sequences
         trim_length = -1
+        left_trim_length = 0
         threads = 1
 
         output_fp = launch_workflow(seqs_fp=seqs_fp,
@@ -798,6 +821,7 @@ class workflowTests(TestCase):
                                     indel_prob=indel_prob,
                                     indel_max=indel_max,
                                     trim_length=trim_length,
+                                    left_trim_length=left_trim_length,
                                     min_size=min_size,
                                     ref_fp=(ref_fp,),
                                     ref_db_fp=ref_db_fp,
@@ -826,6 +850,7 @@ class workflowTests(TestCase):
         min_size = 2
         # trim length longer than sequences
         trim_length = 151
+        left_trim_length = 0
         threads = 1
         with self.assertWarns(UserWarning):
             launch_workflow(seqs_fp=seqs_fp, working_dir=output_fp,
@@ -834,6 +859,7 @@ class workflowTests(TestCase):
                             indel_prob=indel_prob,
                             indel_max=indel_max,
                             trim_length=trim_length,
+                            left_trim_length=left_trim_length,
                             min_size=min_size,
                             ref_fp=(ref_fp,),
                             ref_db_fp=ref_db_fp,

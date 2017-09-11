@@ -100,7 +100,7 @@ def sequence_generator(input_fp):
         yield (record.metadata['id'], str(record))
 
 
-def trim_seqs(input_seqs, trim_len):
+def trim_seqs(input_seqs, trim_len, left_trim_len):
     """Trim FASTA sequences to specified length.
 
     Parameters
@@ -109,6 +109,9 @@ def trim_seqs(input_seqs, trim_len):
         The list of input sequences in (label, sequence) format
     trim_len : int
         Sequence trimming length. Specify a value of -1 to disable trimming.
+    left_trim_len : int
+        Sequence trimming from the 5' end. A value of 0 will disable this trim.
+
 
     Returns
     -------
@@ -132,7 +135,7 @@ def trim_seqs(input_seqs, trim_len):
             yield label, seq
         elif len(seq) >= trim_len:
             okseqs += 1
-            yield label, seq[:trim_len]
+            yield label, seq[left_trim_len:trim_len]
 
     if okseqs < 0.01*totseqs:
         logger = logging.getLogger(__name__)
@@ -771,8 +774,8 @@ def create_otu_table(output_fp, deblurred_list,
 
 
 def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
-                    indel_prob, indel_max, trim_length, min_size, ref_fp,
-                    ref_db_fp, threads_per_sample=1,
+                    indel_prob, indel_max, trim_length, left_trim_length,
+                    min_size, ref_fp, ref_db_fp, threads_per_sample=1,
                     sim_thresh=None, coverage_thresh=None):
     """Launch full deblur workflow for a single post split-libraries fasta file
 
@@ -792,6 +795,8 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         maximal indel number
     trim_length: integer
         sequence trim length
+    left_trim_length: integer
+        trim the first n reads
     min_size: integer
         upper limit on sequence abundance (discard sequences below limit)
     ref_fp: tuple
@@ -823,7 +828,8 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
     with open(output_trim_fp, 'w') as out_f:
         for label, seq in trim_seqs(
                 input_seqs=sequence_generator(seqs_fp),
-                trim_len=trim_length):
+                trim_len=trim_length,
+                left_trim_len=left_trim_length):
             out_f.write(">%s\n%s\n" % (label, seq))
     # Step 2: Dereplicate sequences
     output_derep_fp = join(working_dir,
