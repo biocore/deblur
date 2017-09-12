@@ -4,6 +4,8 @@
 
 ### Features
 
+* Added `--left-trim-length` to allow for trimming nucleotides on the 5' end of each sequence. Please see [issue #154](https://github.com/biocore/deblur/issues/154) for more information.
+
 ### Backward-incompatible changes [stable]
 
 ### Performance enhancements
