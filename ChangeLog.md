@@ -10,7 +10,7 @@
 
 ### Performance enhancements
 * Updated MAFFT version requirement from 7.221 to 7.310.
-* Updatedd vsearch version requirement from 2.0.3 to >= 2.0.3
+* Updated vsearch version requirement from 2.0.3 to >= 2.0.3
 
 ### Bug fixes
 
