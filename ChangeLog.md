@@ -1,18 +1,16 @@
 # deblur changelog
 
-## Version 1.0.3-dev
+## Version 1.0.3
+
+Official version 1.0.3 Released on 19 October 2017.
 
 ### Features
 
 * Added `--left-trim-length` to allow for trimming nucleotides on the 5' end of each sequence. Please see [issue #154](https://github.com/biocore/deblur/issues/154) for more information.
 
-### Backward-incompatible changes [stable]
-
 ### Performance enhancements
 * Updated MAFFT version requirement from 7.221 to 7.310.
 * Updated vsearch version requirement from 2.0.3 to >= 2.0.3
-
-### Bug fixes
 
 ## Version 1.0.2
 
