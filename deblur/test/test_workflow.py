@@ -8,7 +8,7 @@
 
 from unittest import TestCase, main
 from shutil import rmtree
-from tempfile import mkdtemp
+from tempfile import mkdtemp, NamedTemporaryFile
 from os import listdir, remove
 from types import GeneratorType
 from os.path import join, isfile, abspath, dirname, splitext
@@ -34,7 +34,8 @@ from deblur.workflow import (dereplicate_seqs,
                              remove_artifacts_from_biom_table,
                              _get_fastq_variant,
                              filter_minreads_samples_from_table,
-                             fasta_from_biom)
+                             fasta_from_biom,
+                             upper_fasta)
 from deblur.deblurring import get_default_error_profile
 
 
@@ -212,6 +213,28 @@ class workflowTests(TestCase):
         act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
+
+    def test_upper_fasta(self):
+        fasta = (">Seq1\nAAGtttcA\n"
+                 ">Seq2\nAAAAGCcA\n"
+                 ">Seq3\nAAGTGCAA\n")
+        fasta_exp = (">Seq1\nAAGTTTCA\n"
+                 ">Seq2\nAAAAGCCA\n"
+                 ">Seq3\nAAGTGCAA\n")
+
+        in_fa = join(self.working_dir, "seqs_lower.fasta")
+
+        with open(in_fa, 'w') as f:
+            f.write(fasta)
+
+        upper_fasta(in_fa)
+
+        with open(in_fa) as f:
+            fasta_out = f.read()
+
+        remove(in_fa)
+
+        self.assertEqual(fasta_exp, fasta_out)
 
     def test_dereplicate_seqs(self):
         """ Test dereplicate_seqs() method functionality,

@@ -19,6 +19,8 @@ import time
 import warnings
 import io
 import os
+import tempfile
+import shutil
 
 import skbio
 from biom.table import Table
@@ -567,7 +569,23 @@ def remove_chimeras_denovo_from_seqs(seqs_fp, working_dir, threads=1):
         logger.error('problem with chimera removal for file %s' % seqs_fp)
         logger.debug('stdout : %s' % sout)
         logger.debug('stderr : %s' % serr)
+
+    upper_fasta(output_fp)
+
     return output_fp
+
+
+def upper_fasta(fp):
+    with open(fp) as f:
+        o_f = tempfile.NamedTemporaryFile(delete=False)
+        with open(o_f.name, 'w') as o:
+            for line in f:
+                if line.startswith('>'):
+                    o.write(line)
+                else:
+                    o.write(line.upper())
+        shutil.copy2(o.name, fp)
+        os.remove(o_f.name)
 
 
 def sample_id_from_read_id(readid):
