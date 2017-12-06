@@ -530,6 +530,69 @@ class workflowTests(TestCase):
             seqs_obs.append(label)
         self.assertEqual(seqs_non_chimera, seqs_obs)
 
+    def test_remove_chimeras_denovo_from_seqs_lower(self):
+        """ Test remove_chimeras_denovo_from_seqs() method functionality.
+            Remove chimeric sequences from a FASTA file using the UCHIME
+            algorithm, implemented in VSEARCH.
+        """
+        seqs = [("s1_104;size=2;", "GTGCCAGCCGCCGCGGTAATACCCGCAGCTCAAGTGGTG"
+                                   "GTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTT"
+                                   "GTAAATCCCTGGGTAAATCGGGAAGCTTAACTTTCCGAC"
+                                   "TTCCGAGGAGACTGTCAAACTTGGGACCGGGAG"),
+                ("s1_106;size=2;", "GTGTCAGCCGCCGCGGTAATACCAGCTCTCCGAGTGGTG"
+                                   "TGGATGTTTATTGGGCCTAAAGCGTCCGTAGCCGGCTGC"
+                                   "GCAAGTCTGTCGGGAAATCCGCACGCCTAACGTGCGGGC"
+                                   "GTCCGGCGGAAACTGCGTGGCTTGGGACCGGAA"),
+                ("s1_1;size=9;", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAA"
+                                 "ACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"
+                                 "CGCTTAACGATCCGATTCTGGGGAGACTGCAAAGCTTGGGA"
+                                 "CCGGGCGAGGTTAGAGGTACTCTCGGG"),
+                ("s1_20;size=9;", "TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAA"
+                                  "AACGTTCGTAGCCGGTTTGATAAATCCTTGGGTAAATCGG"
+                                  "GAAGCTTAACTTTCCGATTCCGAGGAGACTGTCAAACTTG"
+                                  "GGACCGGGAGAGGCTAGAGGTACTTCTGGG"),
+                ("s1_40;size=8;", "TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAA"
+                                  "AGCATCCGTAGCTGGCTAGGTTAGTCCCCTGTTAAATCCA"
+                                  "CCGAATTAATCGTTGGATGCGGGGGATACTGCTTGGCTAG"
+                                  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+                ("s1_60;size=8;", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAA"
+                                  "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
+                                  "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
+                                  "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
+        names_non_chimera = ["s1_1;size=9;", "s1_20;size=9;",
+                            "s1_40;size=8;", "s1_60;size=8;"]
+        seqs_non_chimera = [("TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAA"
+                             "ACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"
+                             "CGCTTAACGATCCGATTCTGGGGAGACTGCAAAGCTTGGGA"
+                             "CCGGGCGAGGTTAGAGGTACTCTCGGG"),
+                            ("TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAA"
+                             "AACGTTCGTAGCCGGTTTGATAAATCCTTGGGTAAATCGG"
+                             "GAAGCTTAACTTTCCGATTCCGAGGAGACTGTCAAACTTG"
+                             "GGACCGGGAGAGGCTAGAGGTACTTCTGGG"),
+                            ("TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAA"
+                             "AGCATCCGTAGCTGGCTAGGTTAGTCCCCTGTTAAATCCA"
+                             "CCGAATTAATCGTTGGATGCGGGGGATACTGCTTGGCTAG"
+                             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+                            ("TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAA"
+                             "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
+                             "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
+                             "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+        output_fp = remove_chimeras_denovo_from_seqs(
+            seqs_fp=seqs_fp,
+            working_dir=self.working_dir)
+        names_obs = []
+        seqs_obs = []
+        for label, seq in sequence_generator(output_fp):
+            label = label.split()[0]
+            names_obs.append(label)
+            seqs_obs.append(seq)
+        self.assertEqual(names_non_chimera, names_obs)
+        self.assertEqual(seqs_non_chimera, seqs_obs)
+
     def test_multiple_sequence_alignment(self):
         """Test multiple sequence alignment.
         """
