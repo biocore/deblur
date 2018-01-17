@@ -96,15 +96,16 @@ Deblur runs on each sample independently. However, sometimes there is also addit
 
 Troubleshooting
 ===============
-- Mac users: if you get the following error:
 
-RuntimeError: Python is not installed as a framework. The Mac OS X backend will not be able to function correctly if Python is not installed as a framework. See the Python documentation for more information on installing Python as a framework on Mac OS X. Please either reinstall Python as a framework, or try one of the other backends. If you are Working with Matplotlib in a virtual enviroment see 'Working with Matplotlib in Virtual environments' in the Matplotlib FAQ
+- Mac users: if you get an error similar to the following:
 
-You can solve it by the following commands:
-```
-cd ~/.matplotlib
-echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
-```
+  > RuntimeError: Python is not installed as a framework. The Mac OS X backend will not be able to function correctly if Python is not installed as a framework. _[...]_
+
+  You can solve it by the following commands:
+
+      cd ~/.matplotlib
+      echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
+
 
 - "Too many open files" : This error indicates deblur is trying to split a single fasta/q file into per-sample files, and the OS does not allow so many open simultaneous open files. Current solution is to use the qiime1.9 command split_sequence_file_on_sample_ids.py or the equivalent qiime2 command to split the single fasta/q file into a directory of per sample fasta/q files and then run deblur with this directory as the input to deblur (--seqs-fp).
 
