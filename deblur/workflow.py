@@ -39,7 +39,7 @@ def _get_fastq_variant(input_fp):
     for v in variants:
         try:
             next(skbio.read(input_fp, format='fastq', variant=v))
-        except:
+        except Exception:
             continue
         else:
             variant = v

@@ -45,7 +45,7 @@ def get_sequences(input_seqs):
     """
     try:
         seqs = [Sequence(id, seq) for id, seq in input_seqs]
-    except:
+    except Exception:
         seqs = []
 
     if len(seqs) == 0:
@@ -155,10 +155,10 @@ def deblur(input_seqs, mean_error=0.005,
 
             # We stop checking in the shortest sequence after removing trailing
             # indels. We need to do this in order to avoid double counting
-            # the insertions/deletions
-            l = min(seq_i_len, len(seq_j.sequence.rstrip('-')))
-            sub_seq_i = seq_i.np_sequence[:l]
-            sub_seq_j = seq_i.np_sequence[:l]
+            # the insertions/deletions.
+            length = min(seq_i_len, len(seq_j.sequence.rstrip('-')))
+            sub_seq_i = seq_i.np_sequence[:length]
+            sub_seq_j = seq_i.np_sequence[:length]
 
             mask = (sub_seq_i != sub_seq_j)
             # find all indels
