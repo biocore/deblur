@@ -935,7 +935,7 @@ class workflowTests(TestCase):
                 for seq in seqs_fasta[sample]:
                     seqs_f.write(">%s\n%s\n" % seq)
         output_dir = mkdtemp()
-        split_sequence_file_on_sample_ids_to_files(seqs=seqs_fp,
+        split_sequence_file_on_sample_ids_to_files(seqs_fp=seqs_fp,
                                                    outdir=output_dir)
         seqs_act = self.get_seqs_act_split_sequence_on_sample_ids(
             output_dir=output_dir)
