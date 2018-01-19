@@ -591,10 +591,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                         'output %s' % (seqs_fp, out_dir_split))
             mkdir(out_dir_split)
             created_split_dir = out_dir_split
-            with open(seqs_fp, 'U') as seqs_f:
-                split_sequence_file_on_sample_ids_to_files(
-                    seqs_f,
-                    out_dir_split)
+            split_sequence_file_on_sample_ids_to_files(seqs_fp, out_dir_split)
 
         patterns = ['*.fast[aq]', '*.fast[aq].gz', '*.fna', '*.fq', '*.fna.gz',
                     '*.fq.gz']

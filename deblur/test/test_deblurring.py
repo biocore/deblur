@@ -5,9 +5,8 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
-
 from unittest import TestCase, main
-from io import StringIO
+import os
 from os.path import join, dirname, abspath
 
 import skbio
@@ -16,9 +15,20 @@ import numpy as np
 from deblur.sequence import Sequence
 from deblur.workflow import sequence_generator
 from deblur.deblurring import get_sequences, deblur, get_default_error_profile
+from deblur.test.utils import make_tempfile
 
 
 class DeblurringTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.test_seqs_1_path = make_tempfile(TEST_SEQS_1, '.fasta').name
+        cls.test_seqs_2_path = make_tempfile(TEST_SEQS_2, '.fasta').name
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.test_seqs_1_path)
+        os.remove(cls.test_seqs_2_path)
+
     def setUp(self):
         self.seqs = [("151_9240;size=170;", "---tagggcaagactccatggt-----"),
                      ("151_6640;size=1068;", "---cggaggcgagatgcgtggt-----"),
@@ -84,8 +94,7 @@ class DeblurringTests(TestCase):
         self.assertEqual(obs_seqs, exp_seqs)
 
     def test_deblur_toy_example(self):
-        seqs_f = StringIO(TEST_SEQS_1)
-        obs = deblur(sequence_generator(seqs_f))
+        obs = deblur(sequence_generator(self.test_seqs_1_path))
         exp = [
             Sequence("E.Coli;size=1000;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -95,9 +104,7 @@ class DeblurringTests(TestCase):
         self.assertEqual(obs, exp)
 
     def test_deblur(self):
-        seqs_f = StringIO(TEST_SEQS_2)
-
-        obs = deblur(sequence_generator(seqs_f))
+        obs = deblur(sequence_generator(self.test_seqs_2_path))
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -109,10 +116,8 @@ class DeblurringTests(TestCase):
     def test_deblur_indel(self):
         """Test if also removes indel sequences
         """
-        seqs_f = StringIO(TEST_SEQS_2)
-
         # add the MSA for the indel
-        seqs = sequence_generator(seqs_f)
+        seqs = sequence_generator(self.test_seqs_1_path)
         newseqs = []
         for chead, cseq in seqs:
             tseq = cseq[:10] + '-' + cseq[10:]
@@ -141,9 +146,10 @@ class DeblurringTests(TestCase):
         error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
                       0.0000025, 0.0000025, 0.0000025, 0.0000025, 0.0000025,
                       0.0000005, 0.0000005, 0.0000005, 0.0000005]
-        seqs_f = StringIO(TEST_SEQS_2)
 
-        obs = deblur(sequence_generator(seqs_f), error_dist=error_dist)
+        seqs = sequence_generator(self.test_seqs_2_path)
+        obs = deblur(seqs, error_dist=error_dist)
+
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
@@ -156,8 +162,10 @@ class DeblurringTests(TestCase):
             [1, 0.06, 0.02, 0.02, 0.01,
              0.005, 0.005, 0.005, 0.001,
              0.001, 0.001, 0.0005])
-        seqs_f = StringIO(TEST_SEQS_2)
-        obs = deblur(sequence_generator(seqs_f), error_dist=error_dist)
+
+        seqs = sequence_generator(self.test_seqs_2_path)
+        obs = deblur(seqs, error_dist=error_dist)
+
         exp = [
             Sequence("E.Coli-999;size=720;",
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"

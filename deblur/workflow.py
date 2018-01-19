@@ -17,9 +17,9 @@ import numpy as np
 import subprocess
 import time
 import warnings
-import io
 import os
 
+import pysam
 import skbio
 from biom.table import Table
 from biom.util import biom_open
@@ -30,25 +30,6 @@ from deblur.deblurring import deblur
 
 sniff_fasta = skbio.io.io_registry.get_sniffer('fasta')
 sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
-
-
-def _get_fastq_variant(input_fp):
-    # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
-    variant = None
-    variants = ['illumina1.8', 'illumina1.3', 'solexa', 'sanger']
-    for v in variants:
-        try:
-            next(skbio.read(input_fp, format='fastq', variant=v))
-        except:
-            continue
-        else:
-            variant = v
-            break
-
-    if variant is None:
-        raise ValueError("Unknown variant, unable to interpret PHRED")
-
-    return variant
 
 
 def sequence_generator(input_fp):
@@ -65,11 +46,6 @@ def sequence_generator(input_fp):
     The use of this method is a stopgap to replicate the existing `parse_fasta`
     functionality while at the same time allowing for fastq support.
 
-    Raises
-    ------
-    skbio.io.FormatIdentificationWarning
-        If the format of the input file cannot be determined.
-
     Returns
     -------
     (str, str)
@@ -77,27 +53,16 @@ def sequence_generator(input_fp):
 
     """
     logger = logging.getLogger(__name__)
-    kw = {}
-    if sniff_fasta(input_fp)[0]:
-        format = 'fasta'
-    elif sniff_fastq(input_fp)[0]:
-        format = 'fastq'
-
-        kw['variant'] = _get_fastq_variant(input_fp)
-    else:
-        # usually happens when the fasta file is empty
-        # so need to return no sequences (and warn)
+    if not (sniff_fasta(input_fp)[0] or sniff_fastq(input_fp)[0]):
+        # usually happens when the FASTA/Q file is empty so need to return no
+        # sequences (and warn)
         msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
         logger.warn(msg)
         warnings.warn(msg, UserWarning)
         return
 
-    # some of the test code is using file paths, some is using StringIO.
-    if isinstance(input_fp, io.TextIOBase):
-        input_fp.seek(0)
-
-    for record in skbio.read(input_fp, format=format, **kw):
-        yield (record.metadata['id'], str(record))
+    for record in pysam.FastxFile(input_fp):
+        yield record.name, record.sequence
 
 
 def trim_seqs(input_seqs, trim_len, left_trim_len):
@@ -593,24 +558,23 @@ def sample_id_from_read_id(readid):
     return sampleid
 
 
-def split_sequence_file_on_sample_ids_to_files(seqs,
-                                               outdir):
+def split_sequence_file_on_sample_ids_to_files(seqs_fp, outdir):
     """Split FASTA file on sample IDs.
 
     Parameters
     ----------
-    seqs: file handler
-        file handler to demultiplexed FASTA file
+    seqs_fp: file path
+        path to demultiplexed FASTA file
     outdir: string
         dirpath to output split FASTA files
     """
     logger = logging.getLogger(__name__)
     logger.info('split_sequence_file_on_sample_ids_to_files'
-                ' for file %s into dir %s' % (seqs, outdir))
+                ' for file %s into dir %s' % (seqs_fp, outdir))
 
     outputs = {}
 
-    for bits in sequence_generator(seqs):
+    for bits in sequence_generator(seqs_fp):
         sample = sample_id_from_read_id(bits[0])
 
         if sample not in outputs:
