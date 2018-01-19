@@ -32,7 +32,6 @@ from deblur.workflow import (dereplicate_seqs,
                              start_log, sequence_generator,
                              sample_id_from_read_id,
                              remove_artifacts_from_biom_table,
-                             _get_fastq_variant,
                              filter_minreads_samples_from_table,
                              fasta_from_biom)
 from deblur.deblurring import get_default_error_profile
@@ -77,18 +76,6 @@ class workflowTests(TestCase):
         for f in self.files_to_remove:
             remove(f)
         rmtree(self.working_dir)
-
-    def test_get_fastq_variant(self):
-        exp = 'illumina1.8'
-        obs = _get_fastq_variant(self.seqs_fq_fp)
-        self.assertEqual(obs, exp)
-
-        exp = 'illumina1.3'
-        obs = _get_fastq_variant(self.seqs_fq_illumina13_fp)
-        self.assertEqual(obs, exp)
-
-        with self.assertRaises(ValueError):
-            _get_fastq_variant(self.seqs_fq_bad_fp)
 
     def test_sequence_generator_fasta(self):
         exp_len = 135

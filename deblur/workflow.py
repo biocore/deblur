@@ -32,25 +32,6 @@ sniff_fasta = skbio.io.io_registry.get_sniffer('fasta')
 sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
 
 
-def _get_fastq_variant(input_fp):
-    # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
-    variant = None
-    variants = ['illumina1.8', 'illumina1.3', 'solexa', 'sanger']
-    for v in variants:
-        try:
-            next(skbio.read(input_fp, format='fastq', variant=v))
-        except:
-            continue
-        else:
-            variant = v
-            break
-
-    if variant is None:
-        raise ValueError("Unknown variant, unable to interpret PHRED")
-
-    return variant
-
-
 def sequence_generator(input_fp):
     """Yield (id, sequence) from an input file
 
