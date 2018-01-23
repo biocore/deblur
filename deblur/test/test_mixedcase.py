@@ -1,9 +1,10 @@
 from unittest import TestCase, main
 from os.path import join, abspath, dirname
 
-from deblur.workflow import _system_call
+from deblur.workflow import _system_call, create_otu_table
 from tempfile import mkdtemp
 from shutil import rmtree
+from biom import load_table
 
 
 class TestScript(TestCase):
@@ -41,6 +42,26 @@ class TestScript(TestCase):
                     self.assertEqual(line[1:].strip(),
                                      line[1:].strip().upper())
 
+    def test_create_otu_table(self):
+        fp_table = join(self.output_dir, 'all.biom')
+        create_otu_table(
+            fp_table,
+            [(join(self.data_dir, 'usecase_mixedchars',
+                   ('1.SKB7.640196.fastq.trim.derep.'
+                    'no_artifacts.msa.deblur.no_chimeras')), '1.SKB7.640196'),
+             (join(self.data_dir, 'usecase_mixedchars',
+                   ('1.SKB8.640193.fastq.trim.derep.'
+                    'no_artifacts.deblur.no_chimeras')), '1.SKB8.640193')],
+            outputfasta_fp=join(self.output_dir, 'all.seqs'), minreads=0)
+        table = load_table(fp_table)
+
+        # should produce a table with two samples and two features
+        self.assertEqual(table.shape, (2, 2))
+
+        # assert that counts from different case entries are collapsed
+        self.assertTrue(list(table.to_dataframe().to_dense().loc[
+            ('TACGGGGGGGGTTAGCGTTATTCAATGATATTTGGCGTAAAGTGCATGTAGATGGTGTTAC'
+             'AAGTTAAAAAAATAAAAACTAAGGACAAATCTTTTCGTT'), :].values) == [60, 0])
 
 if __name__ == "__main__":
     main()
