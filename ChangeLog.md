@@ -1,5 +1,12 @@
 # deblur changelog
 
+## Version 1.0.4
+
+Official version 1.0.4 Released on 24 January 2018.
+
+### Bug fixes
+* During checking for chimeras via vsearch, lower quality nucleotides were indicated by lower case bases. This is not informative for Deblur, but led to issues on downstream analyses, e.g. importing the resulting table into QIIME2 or a disconnect of fragment sequences between the table and SEPP generated phylogenies. It also posed the risk of distributing read count to two different versions of the same sequence, when one version was all uppercase, the other with one or more lower case characters. With this bugfix-release: Deblur count tables only contain features with all uppercase nucleotide sequences.
+
 ## Version 1.0.3
 
 Official version 1.0.3 Released on 19 October 2017.
@@ -42,8 +49,8 @@ Official version 1.0. Released on 9 February 2017.
 * Removed the --skip-trimming flag and use --trim-length=-1 instead
 * The trim length parameter is now required.
 * Negative mode is always run. What that means is that an output is always generated with reads matching the negative database removed (an unfiltered output is still generated). By default, this means that any read which appears to be PhiX or Adapter will be filtered out.
-* Change output file names to all.biom, all.seqs.fa, reference-non-hit.biom, reference-non-hit.seqs.fa, reference-hit.biom, reference-hit.seqs.fa. The term "reference" in this case refers to sequences which recruited (hit) to the positive database or failed to recruit (non-hit). Recruitment is performed using SortMeRNA and a sequence is retained if it aligns with an e-value of 10 or less (i.e., a coarse filter). 
-* Changed --min-reads default value to 10 (was 0) in accordance with the manuscript. 
+* Change output file names to all.biom, all.seqs.fa, reference-non-hit.biom, reference-non-hit.seqs.fa, reference-hit.biom, reference-hit.seqs.fa. The term "reference" in this case refers to sequences which recruited (hit) to the positive database or failed to recruit (non-hit). Recruitment is performed using SortMeRNA and a sequence is retained if it aligns with an e-value of 10 or less (i.e., a coarse filter).
+* Changed --min-reads default value to 10 (was 0) in accordance with the manuscript.
 * Renamed --threads shortcut to -a (was -t) in remove_artifacts CLI
 
 ### Performance enhancements
