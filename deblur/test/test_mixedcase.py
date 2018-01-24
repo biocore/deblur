@@ -63,5 +63,6 @@ class TestScript(TestCase):
             ('TACGGGGGGGGTTAGCGTTATTCAATGATATTTGGCGTAAAGTGCATGTAGATGGTGTTAC'
              'AAGTTAAAAAAATAAAAACTAAGGACAAATCTTTTCGTT'), :].values) == [60, 0])
 
+
 if __name__ == "__main__":
     main()
