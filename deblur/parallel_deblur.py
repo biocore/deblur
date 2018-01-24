@@ -69,7 +69,7 @@ def run_functor(functor, *args, **kwargs):
     try:
         # This is where you do your actual work
         return functor(*args, **kwargs)
-    except:
+    except Exception:
         # Put all exception text into an exception and raise that
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 

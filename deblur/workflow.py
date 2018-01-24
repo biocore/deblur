@@ -39,7 +39,7 @@ def _get_fastq_variant(input_fp):
     for v in variants:
         try:
             next(skbio.read(input_fp, format='fastq', variant=v))
-        except:
+        except Exception:
             continue
         else:
             variant = v
@@ -720,13 +720,14 @@ def create_otu_table(output_fp, deblurred_list,
         csampidx = len(sampset)-1
         # read the fasta file and add to the matrix
         for chead, cseq in sequence_generator(cfilename):
+            cseq = cseq.upper()
             if cseq not in seqdict:
                 seqdict[cseq] = len(seqlist)
                 seqlist.append(cseq)
             cseqidx = seqdict[cseq]
             cfreq = float(sizeregexp.search(chead).group(0))
             try:
-                obs[cseqidx, csampidx] = cfreq
+                obs[cseqidx, csampidx] += cfreq
             except IndexError:
                 # exception means we ran out of space - add more OTUs
                 shape = obs.shape
