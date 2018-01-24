@@ -709,11 +709,11 @@ class workflowTests(TestCase):
         tableids = table.ids(axis='observation')
         # test a sequence present in both
         self.assertEqual(table.get_value_by_ids(
-            'TACGAGGggggCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCG'
+            'TACGAGGGGGGCGAGCGTTGTTCGGAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCG'
             'GTAAGTTTCGTGTGAAATCTTCGGGCTCAACTCGAAGCCTGCACGAAATACTGCCGGGC'
             'TTGAGTGTGGGAGAGGTGAGTGGAATTTCCGGT', 'testmerge'), 5)
         self.assertEqual(table.get_value_by_ids(
-            'TACGAGGggggCGAGCGTTGTTCG'
+            'TACGAGGGGGGCGAGCGTTGTTCG'
             'GAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGG'
             'CTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAAT'
             'TTCCGGT', 'testmerge2'), 8)
@@ -749,7 +749,7 @@ class workflowTests(TestCase):
                 self.assertNotIn(cid, table2ids)
 
         self.assertEqual(table2.get_value_by_ids(
-            'TACGAGGggggCGAGCGTTGTTCG'
+            'TACGAGGGGGGCGAGCGTTGTTCG'
             'GAATTATTGGGCGTAAAAGGTGCGTAGGCGGTTCGGTAAGTTTCGTGTGAAATCTTCGGG'
             'CTCAACTCGAAGCCTGCACGAAATACTGCCGGGCTTGAGTGTGGGAGAGGTGAGTGGAAT'
             'TTCCGGT', 'testmerge2'), 8)
