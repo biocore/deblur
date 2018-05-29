@@ -59,3 +59,5 @@ setup(name='deblur',
                         'h5py >= 2.2.0', 'scipy >= 0.15.1'],
       classifiers=classifiers
       )
+
+# This is a no-op change, with the intent of triggering travis on the repo. DO NOT MERGE THIS CHANGE.
