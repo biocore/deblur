@@ -60,4 +60,4 @@ setup(name='deblur',
       classifiers=classifiers
       )
 
-# This is a no-op change, with the intent of trigger travis on the repo. DO NOT MERGE THIS CHANGE.
+# This is a no-op change, with the intent of triggering travis on the repo. DO NOT MERGE THIS CHANGE.
