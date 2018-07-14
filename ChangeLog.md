@@ -1,5 +1,12 @@
 # deblur changelog
 
+## Version 1.0.5
+
+Official version 1.0.5 Released on 15 July 2018.
+
+### Bug fixes
+* Fixed problem running deblur on new python versions (due to python treating the sparse matrix size (1E9) as float rather than int).
+
 ## Version 1.0.4
 
 Official version 1.0.4 Released on 24 January 2018.
