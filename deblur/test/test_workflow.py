@@ -204,9 +204,9 @@ class workflowTests(TestCase):
                          output_fp=output_fp)
         self.assertTrue(isfile(output_fp))
 
-        exp = [("seq1;size=3;",
+        exp = [("seq1;size=3",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
-               ("seq6;size=2;",
+               ("seq6;size=2",
                 "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT")]
 
         act = [item for item in sequence_generator(output_fp)]
@@ -236,13 +236,13 @@ class workflowTests(TestCase):
                          min_size=1)
         self.assertTrue(isfile(output_fp))
 
-        exp = [("seq1;size=3;",
+        exp = [("seq1;size=3",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCG"),
-               ("seq6;size=2;",
+               ("seq6;size=2",
                 "CTGCAAGGCTAGGGGGCGGGAGAGGCGGGTGGTACTTGAGGGGAGAAT"),
-               ("seq4;size=1;",
+               ("seq4;size=1",
                 "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAAAGCGTCCT"),
-               ("seq5;size=1;",
+               ("seq5;size=1",
                 "TACCAGCCCCTTAAGTGGTAGGGACGATTATTTGGCCTAAAGCGTCCG")]
 
         act = [item for item in sequence_generator(output_fp)]
