@@ -1,6 +1,6 @@
 # deblur changelog
 
-## Version 1.0.5
+## Version 1.0.4-dev
 
 ### Bug fixes
 * Fixed problem running deblur on new python versions (due to python treating the sparse matrix size (1E9) as float rather than int).
