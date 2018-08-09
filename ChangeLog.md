@@ -1,5 +1,10 @@
 # deblur changelog
 
+## Version 1.0.5-dev
+
+### Bug fixes
+* Fixed problem causing deblur to ignore the indel error uper bound and use the mismatch error upper bound instead. This caused deblur to use default error rate of 0.06/0.02 instead of 0.01 which is the default for indel.
+
 ## Version 1.0.4-dev
 
 ### Bug fixes
