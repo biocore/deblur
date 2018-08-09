@@ -122,7 +122,7 @@ def deblur(input_seqs, mean_error=0.005,
     mod_factor = pow((1 - mean_error), seqs[0].unaligned_length)
     error_dist = np.array(error_dist) / mod_factor
 
-    max_h_dist = len(error_dist)-1
+    max_h_dist = len(error_dist) - 1
 
     for seq_i in seqs:
         # no need to remove neighbors if freq. is <=0
@@ -158,13 +158,19 @@ def deblur(input_seqs, mean_error=0.005,
             # the insertions/deletions
             length = min(seq_i_len, len(seq_j.sequence.rstrip('-')))
             sub_seq_i = seq_i.np_sequence[:length]
-            sub_seq_j = seq_i.np_sequence[:length]
+            sub_seq_j = seq_j.np_sequence[:length]
 
             mask = (sub_seq_i != sub_seq_j)
             # find all indels
             mut_is_indel = np.logical_or(sub_seq_i[mask] == 4,
                                          sub_seq_j[mask] == 4)
             num_indels = mut_is_indel.sum()
+            if num_indels > 0:
+                # need to account for indel in one sequence not solved in the other
+                # (so we have '-' at the end. Need to ignore it in the total count)
+                h_dist = np.count_nonzero(np.not_equal(seq_i.np_sequence[:length],
+                                                       seq_j.np_sequence[:length]))
+
             num_substitutions = h_dist - num_indels
 
             correction_value = num_err[num_substitutions]
