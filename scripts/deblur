@@ -73,7 +73,7 @@ def deblur_cmds():
               help="A comma separated list of error probabilities for each "
                    "hamming distance. The length of the list determines the "
                    "number of hamming distances taken into account.")
-@click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
+@click.option('--indel-prob', '-i', required=False, type=float, default=0.02,
               help='Insertion/deletion (indel) probability '
                    '(same for N indels)')
 @click.option('--indel-max', required=False, type=int, default=3,
@@ -479,7 +479,7 @@ def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
               help="A comma separated list of error probabilities for each "
                    "Hamming distance. The length of the list determines the "
                    "number of Hamming distances taken into account.")
-@click.option('--indel-prob', '-i', required=False, type=float, default=0.01,
+@click.option('--indel-prob', '-i', required=False, type=float, default=0.02,
               show_default=True,
               help=('Insertion/deletion (indel) probability. This probability '
                     'consistent for multiple indels; there is not an added '

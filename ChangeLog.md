@@ -1,9 +1,9 @@
 # deblur changelog
 
-## Version 1.0.5-dev
+## Version 1.0.4-dev
 
 ### Bug fixes
-* Fixed problem causing deblur to ignore the indel error uper bound and use the mismatch error upper bound instead. This caused deblur to use default error rate of 0.06/0.02 instead of 0.01 which is the default for indel.
+* Fixed problem causing deblur to ignore the indel error uper bound and use the mismatch error upper bound instead. This caused deblur to use the mismatch depenent default error rate instead of the default indel error rate (which is constant for up to 3 indels). Also increased the default indel error rate to 0.02. See [issue #178](https://github.com/biocore/deblur/issues/178) for more details.
 
 ## Version 1.0.4-dev
 
