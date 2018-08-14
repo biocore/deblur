@@ -118,16 +118,16 @@ class DeblurringTests(TestCase):
             tseq = cseq[:10] + '-' + cseq[10:]
             newseqs.append((chead, tseq))
 
-        # now add a sequence with an A insertion at the expected freq. (15 < 0.01 * (720 / 0.47) where 0.47 is the mod_factor) so should be removed
+        # now add a sequence with an A insertion at the expected freq. (30 < 0.02 * (720 / 0.47) where 0.47 is the mod_factor) so should be removed
         cseq = newseqs[0][1]
         tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
-        chead = '>indel1-read;size=15;'
+        chead = '>indel1-read;size=30;'
         newseqs.append((chead, tseq))
 
-        # and add a sequence with an A insertion but at higher freq. (not expected by indel upper bound - (16 > 0.01 * (720 / 0.47) so should not be removed)
+        # and add a sequence with an A insertion but at higher freq. (not expected by indel upper bound - (31 > 0.02 * (720 / 0.47) so should not be removed)
         cseq = newseqs[0][1]
         tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
-        chead = '>indel2-read;size=16;'
+        chead = '>indel2-read;size=31;'
         newseqs.append((chead, tseq))
 
         obs = deblur(newseqs)
@@ -146,7 +146,7 @@ class DeblurringTests(TestCase):
         self.assertEqual(len(obs), 2)
         # and that it is the correct sequence
         self.assertEqual(obs[0].sequence, exp[0].sequence)
-        self.assertEqual(obs[1].label, '>indel2-read;size=16;')
+        self.assertEqual(obs[1].label, '>indel2-read;size=31;')
 
     def test_deblur_with_non_default_error_profile(self):
         error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
