@@ -117,11 +117,21 @@ class DeblurringTests(TestCase):
         for chead, cseq in seqs:
             tseq = cseq[:10] + '-' + cseq[10:]
             newseqs.append((chead, tseq))
-        # now add a sequence with an A insertion
-        tseq = cseq[:10] + 'A' + cseq[10:-1]+'-'
+
+        # now add a sequence with an A insertion at the expected freq. (30 < 0.02 * (720 / 0.47) where 0.47 is the mod_factor) so should be removed
+        cseq = newseqs[0][1]
+        tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
+        chead = '>indel1-read;size=30;'
+        newseqs.append((chead, tseq))
+
+        # and add a sequence with an A insertion but at higher freq. (not expected by indel upper bound - (31 > 0.02 * (720 / 0.47) so should not be removed)
+        cseq = newseqs[0][1]
+        tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
+        chead = '>indel2-read;size=31;'
         newseqs.append((chead, tseq))
 
         obs = deblur(newseqs)
+
         # remove the '-' (same as in launch_workflow)
         for s in obs:
             s.sequence = s.sequence.replace('-', '')
@@ -132,10 +142,11 @@ class DeblurringTests(TestCase):
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
                      "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
-        # make sure we get 1 sequence as output
-        self.assertEqual(len(obs), 1)
+        # make sure we get 2 sequences as output - the original and the indel2 (too many reads for the expected indel probabilty)
+        self.assertEqual(len(obs), 2)
         # and that it is the correct sequence
         self.assertEqual(obs[0].sequence, exp[0].sequence)
+        self.assertEqual(obs[1].label, '>indel2-read;size=31;')
 
     def test_deblur_with_non_default_error_profile(self):
         error_dist = [1, 0.05, 0.000005, 0.000005, 0.000005, 0.000005,
