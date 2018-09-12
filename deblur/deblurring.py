@@ -70,7 +70,7 @@ def get_sequences(input_seqs):
 
 def deblur(input_seqs, mean_error=0.005,
            error_dist=None,
-           indel_prob=0.02, indel_max=3):
+           indel_prob=0.01, indel_max=3):
     """Deblur the reads
 
     Parameters
@@ -86,7 +86,7 @@ def deblur(input_seqs, mean_error=0.005,
         amount of hamming distances taken into account. Default: None, use
         the default error profile (from get_default_error_profile() )
     indel_prob : float, optional
-        Indel probability (same for N indels). Default: 0.02
+        Indel probability (same for N indels). Default: 0.01
     indel_max : int, optional
         The maximal number of indels expected by errors. Default: 3
 

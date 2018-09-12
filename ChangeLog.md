@@ -1,10 +1,11 @@
 # deblur changelog
 
-## Version 1.0.4-dev
+## Version 1.1.0
+
+Official version 1.1.0 Released on 12 September 2018.
 
 ### Bug fixes
-* Fixed problem causing deblur to ignore the indel error uper bound and use the mismatch error upper bound instead. This caused deblur to use the mismatch depenent default error rate instead of the default indel error rate (which is constant for up to 3 indels). Also increased the default indel error rate to 0.02. See [issue #178](https://github.com/biocore/deblur/issues/178) for more details.
-
+* Fixed problem causing deblur to ignore the indel error uper bound and use the mismatch error upper bound instead. This caused deblur to use the mismatch depenent default error rate instead of the default indel error rate (which is constant for up to 3 indels). See [issue #178](https://github.com/biocore/deblur/issues/178) for more details.
 * Fixed problem running deblur on new python versions (due to python treating the sparse matrix size (1E9) as float rather than int).
 
 ## Version 1.0.4
