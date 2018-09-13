@@ -12,7 +12,7 @@ before_install:
   - export TMPDIR=/tmp/deblur-testing
   - mkdir $TMPDIR
 install:
-  - conda create --yes -n deblur python=$PYTHON_VERSION pip nose flake8 h5py # "numpy<1.14.0,>=1.9.2"
+  - conda create --yes -n deblur python=$PYTHON_VERSION pip nose flake8 h5py libgcc # "numpy<1.14.0,>=1.9.2"
   - source activate deblur
   - conda install --yes -c bioconda "VSEARCH=2.8.3" 
   - conda install --yes -c bioconda MAFFT=7.310 
