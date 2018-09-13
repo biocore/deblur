@@ -15,7 +15,7 @@ install:
   - pip install -U pip coveralls
   - pip install --process-dependency-links .
 script:
-  - nosetests --with-doctest --with-coverage
+  - nosetests --with-doctest --with-coverage --cover-package=deblur
   - flake8 --max-line-length=200 deblur scripts/deblur setup.py
 after_success:
   - coveralls
