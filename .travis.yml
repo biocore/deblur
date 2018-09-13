@@ -25,5 +25,6 @@ script:
   - vsearch --version
   - ldd $(which vsearch)
   - python /home/travis/build/biocore/deblur/deblur/test/test_workflow.py workflowTests.test_dereplicate_seqs
+  - dmesg | tail -n 100
 after_success:
   - coveralls
