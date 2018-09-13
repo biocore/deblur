@@ -24,7 +24,6 @@ script:
     # flake8 --max-line-length=200 deblur scripts/deblur setup.py
   - vsearch --version
   - ldd $(which vsearch)
-  - python /home/travis/build/biocore/deblur/deblur/test/test_workflow.py workflowTests.test_remove_chimeras_denovo_from_seqs
-  - ls -lrt $TMPDIR/*
+  - python /home/travis/build/biocore/deblur/deblur/test/test_workflow.py workflowTests.test_dereplicate_seqs
 after_success:
   - coveralls
