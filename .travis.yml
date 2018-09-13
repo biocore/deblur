@@ -22,6 +22,6 @@ script:
     # flake8 --max-line-length=200 deblur scripts/deblur setup.py
   - python /home/travis/build/biocore/deblur/deblur/test/test_workflow.py workflowTests.test_remove_chimeras_denovo_from_seqs
   - ls -lrt $TMPDIR
-  - for d in $(ls -1 $TMPDIR); for f in $(ls -1 $TMPDIR/$d) do pushd $TMPDIR/$d; echo $d; head -n 2 $f; popd; done; done
+  - for d in $(ls -1 $TMPDIR); do for f in $(ls -1 $TMPDIR/$d) do pushd $TMPDIR/$d; echo $d; head -n 2 $f; popd; done; done
 after_success:
   - coveralls
