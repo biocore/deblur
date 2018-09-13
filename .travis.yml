@@ -24,7 +24,7 @@ script:
     # flake8 --max-line-length=200 deblur scripts/deblur setup.py
   - vsearch --version
   - ldd $(which vsearch)
-  - python /home/travis/build/biocore/deblur/deblur/test/test_workflow.py workflowTests.test_dereplicate_seqs
+  - bash replicate.sh 
   - dmesg | tail -n 100
 after_success:
   - coveralls
