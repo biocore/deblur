@@ -961,6 +961,7 @@ def _system_call(cmd, stdoutfilename=None):
     # This call blocks until the command is done
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
+
     print(cmd)
     print(stdout)
     print(stderr)
