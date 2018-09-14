@@ -19,3 +19,5 @@ script:
   - vsearch --derep_fulllength seqs.fasta --output seqs_derep.fasta --sizeout --fasta_width 0 --minuniquesize 1 --quiet --threads 1
   - dmesg | tail -n 10
   - head -n 25 /proc/cpuinfo
+  - echo "kick"
+
