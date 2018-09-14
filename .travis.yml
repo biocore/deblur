@@ -21,5 +21,6 @@ script:
   - bash replicate.sh
   - dmesg | tail -n 10
   - cat /proc/cpuinfo
+  - echo "kcik"
 after_success:
   - coveralls
