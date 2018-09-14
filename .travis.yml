@@ -21,4 +21,5 @@ script:
   - head -n 25 /proc/cpuinfo
   - echo "kick"
   - echo "kick"
+  - echo "kick"
 
