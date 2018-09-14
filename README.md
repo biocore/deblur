@@ -22,7 +22,7 @@ source activate deblurenv
 
 Install Deblur dependencies and Deblur itself:
 ```
-conda install -c bioconda -c biocore VSEARCH MAFFT=7.310 biom-format SortMeRNA==2.0 deblur
+conda install -c bioconda -c biocore "VSEARCH=2.7.0" MAFFT=7.310 SortMeRNA=2.0 biom-format deblur
 ```
 
 N.B. Some dependencies are version restricted at the moment but for different reasons. SortMeRNA 2.1 has a different output format which Deblur is not compatible with yet. A review of the changelog did not reveal any remarkable notes (e.g., bugs) about the reasons for the differences. In testing, the differences affected <0.1% of the sOTUs. As a precaution, we are advising the use of these specific versions for consistency with the manuscript.
@@ -38,7 +38,7 @@ If you are running Deblur directly, we recommend focusing on the `workflow` subc
 deblur workflow --help
 ```
 
-As a simple example, let's specify an input FASTA file, an output path and a sequence trim length of 150. This command will trim all sequences in `all_samples.fna` to 150nt in length; any read that is shorter will be omitted. This execution mode assumes that `all_samples.fna` is demultiplexed such that the sequence IDs are compatible with QIIME 1.9.1. On completion, a new directory `output` will be created with multiple output files (see the Input and Output Files section for more detail). 
+As a simple example, let's specify an input FASTA file, an output path and a sequence trim length of 150. This command will trim all sequences in `all_samples.fna` to 150nt in length; any read that is shorter will be omitted. This execution mode assumes that `all_samples.fna` is demultiplexed such that the sequence IDs are compatible with QIIME 1.9.1. On completion, a new directory `output` will be created with multiple output files (see the Input and Output Files section for more detail).
 
 ```
 deblur workflow --seqs-fp all_samples.fna --output-dir output -t 150
@@ -74,7 +74,7 @@ Important options
 
 Deblur cannot associate sequences with different lengths. As such, trimming reads is a required first step in the Deblur pipeline. The sequence trim length is specified by the ```-t NNN``` flag, where NNN denotes the length all sequences will be trimmed to. All reads shorter than this length will be discarded. If the input data are known to have a common length, it is possible to disable trimming by specifying a trim value of `-1`.
 
-Deblur can operate in parallel. The number of threads can be specified by the ```-O NNN``` flag (default it 1). Running more threads than available cores is not advised. 
+Deblur can operate in parallel. The number of threads can be specified by the ```-O NNN``` flag (default it 1). Running more threads than available cores is not advised.
 
 Positive and Negative Filtering
 ===============================
