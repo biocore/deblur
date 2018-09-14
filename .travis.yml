@@ -22,4 +22,5 @@ script:
   - echo "kick"
   - echo "kick"
   - echo "kick"
+  - echo "kick"
 
