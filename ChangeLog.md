@@ -1,5 +1,7 @@
 # deblur changelog
 
+## Version 1.1.0-dev
+
 ## Version 1.1.0
 
 Official version 1.1.0 Released on 12 September 2018.
