@@ -962,8 +962,4 @@ def _system_call(cmd, stdoutfilename=None):
     stdout, stderr = proc.communicate()
     return_value = proc.returncode
 
-    print(cmd)
-    print(stdout)
-    print(stderr)
-    print(return_value)
     return stdout, stderr, return_value
