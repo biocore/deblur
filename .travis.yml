@@ -20,4 +20,5 @@ script:
   - dmesg | tail -n 10
   - head -n 25 /proc/cpuinfo
   - echo "kick"
+  - echo "kick"
 
