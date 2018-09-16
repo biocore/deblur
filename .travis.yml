@@ -10,13 +10,18 @@ before_install:
   # Update conda itself
   - conda update --yes conda
 install:
-  - conda create --yes -n deblur python=$PYTHON_VERSION pip nose flake8 h5py
+  - conda create --yes -n deblur python=$PYTHON_VERSION #pip nose flake8 h5py
   - source activate deblur
-  - conda install --yes -c bioconda "VSEARCH=2.7.0" MAFFT=7.310 SortMeRNA=2.0
-  - pip install -U pip coveralls
-  - pip install --process-dependency-links .
+  - conda install --yes -c bioconda "VSEARCH=2.8.3" #MAFFT=7.310 SortMeRNA=2.0
 script:
-  - nosetests --with-doctest --with-coverage --cover-package=deblur
-  - flake8 --max-line-length=200 deblur scripts/deblur setup.py
-after_success:
-  - coveralls
+  - vsearch --version
+  - ldd $(which vsearch)
+  - vsearch --derep_fulllength seqs.fasta --output seqs_derep.fasta --sizeout --fasta_width 0 --minuniquesize 1 --quiet --threads 1
+  - dmesg | tail -n 10
+  - head -n 25 /proc/cpuinfo
+  - echo "kick"
+  - echo "kick"
+  - echo "kick"
+  - echo "kick"
+  - echo "kick"
+
