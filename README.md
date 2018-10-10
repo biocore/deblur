@@ -10,7 +10,7 @@ Install
 =======
 - Deblur requires Python 3.5. If Python 3.5 is not installed, you can create a [conda](http://conda.pydata.org/docs/install/quick.html) environment for Deblur using:
 ```
-conda create -n deblurenv python=3.5 numpy
+conda create -n deblurenv python=3.5 numpy=1.14.0
 ```
 
 and activate it using:
