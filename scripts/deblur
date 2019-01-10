@@ -109,6 +109,7 @@ def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
     output_path = "%s.clean" % seqs_fp
     with open(output_path, 'w') as f:
         for s in seqs:
+            s.sequence = s.sequence.replace('-', '')
             f.write(s.to_fasta())
 
 
