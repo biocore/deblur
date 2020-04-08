@@ -2,6 +2,10 @@
 
 ## Version 1.1.0-dev
 
+### Performance enhancements
+
+* Updated MAFFT version requirement from 7.310 to 7.394 (or greater).
+
 ## Version 1.1.0
 
 Official version 1.1.0 Released on 12 September 2018.
