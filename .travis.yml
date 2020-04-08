@@ -14,7 +14,7 @@ install:
   - source activate deblur
   - conda install --yes -c conda-forge -c bioconda -c defaults --override-channels "VSEARCH=2.7.0" "MAFFT>=7.394" SortMeRNA=2.0
   - pip install -U pip coveralls
-  - pip install --process-dependency-links .
+  - pip install .
 script:
   - nosetests --with-doctest --with-coverage --cover-package=deblur
   - flake8 --max-line-length=200 deblur scripts/deblur setup.py
