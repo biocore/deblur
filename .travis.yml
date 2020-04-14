@@ -12,7 +12,7 @@ before_install:
 install:
   - conda create --yes -n deblur python=$PYTHON_VERSION pip nose flake8 h5py
   - source activate deblur
-  - conda install --yes -c conda-forge -c bioconda -c defaults --override-channels "VSEARCH=2.7.0" "MAFFT>=7.394" SortMeRNA=2.0
+  - conda install --yes -c conda-forge -c bioconda -c defaults --override-channels "VSEARCH=2.7.0" "MAFFT>=7.394" SortMeRNA=2.0 biom-format
   - pip install -U pip coveralls
   - pip install .
 script:
