@@ -1,16 +1,16 @@
 Deblur
 ======
 
-[![Build Status](https://travis-ci.org/biocore/deblur.png?branch=master)](https://travis-ci.org/biocore/deblur)
+[![Build Status](https://github.com/biocore/deblur/actions/workflows/main.yml/badge.svg)](https://github.com/biocore/deblur/actions/workflows/main.yml)
 [![Coverage Status](https://coveralls.io/repos/github/biocore/deblur/badge.svg?branch=master)](https://coveralls.io/github/biocore/deblur?branch=master)
 
 Deblur is a greedy deconvolution algorithm for amplicon sequencing based on Illumina Miseq/Hiseq error profiles.
 
 Install
 =======
-- Deblur requires Python 3.5. If Python 3.5 is not installed, you can create a [conda](http://conda.pydata.org/docs/install/quick.html) environment for Deblur using:
+- Deblur requires Python 3.6. If Python 3.6 is not installed, you can create a [conda](http://conda.pydata.org/docs/install/quick.html) environment for Deblur using:
 ```
-conda create -n deblurenv python=3.5 numpy
+conda create -n deblurenv python=3.6 numpy
 ```
 
 and activate it using:
