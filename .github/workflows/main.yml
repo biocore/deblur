@@ -31,7 +31,7 @@ jobs:
           conda create --yes -n deblur python=${{ matrix.python-version }} pip nose flake8 h5py
           conda activate deblur
           conda install --yes -c bioconda "VSEARCH=2.7.0" MAFFT=7.310 SortMeRNA=2.0
-          pip install --process-dependency-links .
+          pip install -e .
 
       - name: Run tests
         shell: bash -l {0}
