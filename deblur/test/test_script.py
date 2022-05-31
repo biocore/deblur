@@ -14,7 +14,12 @@ def _system_call(cmd):
     if conda_env is not None:
         cmd = ['conda', 'activate', conda_env, ';'] + cmd
 
-    return workflow_system_call(cmd)
+    sout, serr, res = workflow_system_call(cmd)
+
+    if serr != 0:
+        print (sout, serr, res)
+
+    return sout, serr, res
 
 
 class TestScript(TestCase):
