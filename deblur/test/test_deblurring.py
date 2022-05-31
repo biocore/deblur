@@ -118,13 +118,17 @@ class DeblurringTests(TestCase):
             tseq = cseq[:10] + '-' + cseq[10:]
             newseqs.append((chead, tseq))
 
-        # now add a sequence with an A insertion at the expected freq. (30 < 0.02 * (720 / 0.47) where 0.47 is the mod_factor) so should be removed
+        # now add a sequence with an A insertion at the expected freq.
+        # (30 < 0.02 * (720 / 0.47) where 0.47 is the mod_factor) so should
+        # be removed
         cseq = newseqs[0][1]
         tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
         chead = '>indel1-read;size=30;'
         newseqs.append((chead, tseq))
 
-        # and add a sequence with an A insertion but at higher freq. (not expected by indel upper bound - (31 > 0.02 * (720 / 0.47) so should not be removed)
+        # and add a sequence with an A insertion but at higher freq. (not
+        # expected by indel upper bound - (31 > 0.02 * (720 / 0.47) so should
+        # not be removed)
         cseq = newseqs[0][1]
         tseq = cseq[:10] + 'A' + cseq[11:-1] + '-'
         chead = '>indel2-read;size=31;'
@@ -142,7 +146,8 @@ class DeblurringTests(TestCase):
                      "tacggagggtgcaagcgttaatcggaattactgggcgtaaagcgcacgcaggcggt"
                      "ttgttaagtcagatgtgaaatccccgggctcaacctgggaactgcatctgatactg"
                      "gcaagcttgagtctcgtagaggggggcagaattccag")]
-        # make sure we get 2 sequences as output - the original and the indel2 (too many reads for the expected indel probabilty)
+        # make sure we get 2 sequences as output - the original and the
+        # indel2 (too many reads for the expected indel probabilty)
         self.assertEqual(len(obs), 2)
         # and that it is the correct sequence
         self.assertEqual(obs[0].sequence, exp[0].sequence)

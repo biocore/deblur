@@ -63,4 +63,4 @@ jobs:
     - name: lint
       run: |
        pip install -q flake8
-       flake8 --max-line-length=200 deblur scripts/deblur setup.py
+       flake8 deblur scripts/deblur setup.py

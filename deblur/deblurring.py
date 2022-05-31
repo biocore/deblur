@@ -166,10 +166,12 @@ def deblur(input_seqs, mean_error=0.005,
                                          sub_seq_j[mask] == 4)
             num_indels = mut_is_indel.sum()
             if num_indels > 0:
-                # need to account for indel in one sequence not solved in the other
-                # (so we have '-' at the end. Need to ignore it in the total count)
-                h_dist = np.count_nonzero(np.not_equal(seq_i.np_sequence[:length],
-                                                       seq_j.np_sequence[:length]))
+                # need to account for indel in one sequence not solved in the
+                # other (so we have '-' at the end. Need to ignore it in the
+                # total count)
+                h_dist = np.count_nonzero(
+                    np.not_equal(seq_i.np_sequence[:length],
+                                 seq_j.np_sequence[:length]))
 
             num_substitutions = h_dist - num_indels
 

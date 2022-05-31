@@ -58,7 +58,8 @@ class TestScript(TestCase):
         sout, serr, res = _system_call(cmd)
         self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
-        # test default parameters except min-reads set to 0, negative mode, single thread
+        # test default parameters except min-reads set to 0, negative mode,
+        # single thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
                "--trim-length", "150", '-w', '--min-reads', '0']

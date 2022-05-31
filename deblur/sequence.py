@@ -43,7 +43,8 @@ class Sequence(object):
         self.sequence = sequence.upper()
         self.length = len(self.sequence)
         self.unaligned_length = self.length - self.sequence.count('-')
-        self.frequency = float(re.search('(?<=size=)\w+', self.label).group(0))
+        self.frequency = float(
+            re.search(r'(?<=size=)\w+', self.label).group(0))
         self.np_sequence = np.array(
             [trans_dict[b] for b in self.sequence], dtype=np.int8)
 
@@ -63,7 +64,7 @@ class Sequence(object):
         str
             The FASTA representation of the sequence
         """
-        prefix, suffix = re.split('(?<=size=)\w+', self.label, maxsplit=1)
+        prefix, suffix = re.split(r'(?<=size=)\w+', self.label, maxsplit=1)
         new_count = int(round(self.frequency))
         new_label = "%s%d%s" % (prefix, new_count, suffix)
         return ">%s\n%s\n" % (new_label, self.sequence)
