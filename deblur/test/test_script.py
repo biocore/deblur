@@ -1,9 +1,9 @@
 from unittest import TestCase, main
 from os.path import join, abspath, dirname
 from os import environ
+import subprocess
 
 from biom import load_table
-from deblur.workflow import _system_call as workflow_system_call
 from deblur.workflow import sequence_generator
 from tempfile import mkdtemp
 
@@ -14,12 +14,17 @@ def _system_call(cmd):
     if conda_env is not None:
         cmd = ['conda', 'activate', conda_env, ';'] + cmd
 
-    sout, serr, res = workflow_system_call(cmd)
+    proc = subprocess.Popen(' '.join(cmd), universal_newlines=True, shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    if serr != 0:
-        print (sout, serr, res)
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
 
-    return sout, serr, res
+    if stderr != 0:
+        print(cmd)
+        print(stdout, stderr, return_value)
+
+    return stdout, stderr, return_value
 
 
 class TestScript(TestCase):
