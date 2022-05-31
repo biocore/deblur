@@ -3,7 +3,7 @@ from os.path import join, abspath, dirname
 from os import environ
 
 from biom import load_table
-from deblur.workflow import workflow_system_call
+from deblur.workflow import _system_call as workflow_system_call
 from deblur.workflow import sequence_generator
 from tempfile import mkdtemp
 
