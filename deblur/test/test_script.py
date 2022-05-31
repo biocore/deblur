@@ -1,10 +1,20 @@
 from unittest import TestCase, main
 from os.path import join, abspath, dirname
+from os import environ
 
 from biom import load_table
-from deblur.workflow import _system_call
+from deblur.workflow import workflow_system_call
 from deblur.workflow import sequence_generator
 from tempfile import mkdtemp
+
+
+def _system_call(cmd):
+    # this is a wrapper so tests pass in the github actions
+    conda_env = environ.get('CONDA_DEFAULT_ENV')
+    if conda_env is not None:
+        cmd = ['conda', 'activate', conda_env, ';'] + cmd
+
+    return workflow_system_call(cmd)
 
 
 class TestScript(TestCase):
