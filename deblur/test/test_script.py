@@ -10,11 +10,11 @@ from tempfile import mkdtemp
 
 def _system_call(original_cmd):
     # this is a wrapper so tests pass in the github actions
-    cmd = ' '.join(original_cmd)
+    cmd = '  '.join(original_cmd)
 
     conda_env = environ.get('CONDA_DEFAULT_ENV')
     if conda_env is not None:
-        cmd = f"bash -c '. ~/.profile; conda activate {conda_env}; {cmd}'"
+        cmd = f"bash -c '. ~/.profile; conda activate {conda_env}; {cmd};'"
 
     proc = subprocess.Popen(cmd, universal_newlines=True, shell=True,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
