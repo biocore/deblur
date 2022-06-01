@@ -6,7 +6,6 @@ omit =
     */__init__.py
 source = deblur
 branch = True
-include = */deblur/*
 
 [report]
 exclude_lines =
