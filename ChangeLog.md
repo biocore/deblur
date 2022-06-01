@@ -4,7 +4,8 @@
 
 ### Performance enhancements
 
-* Updated to Python 3.8
+* Updated to Python 3.8.
+* Update MAFFT to >=7.39.
 
 ## Version 1.1.0
 
