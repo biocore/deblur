@@ -8,9 +8,9 @@ Deblur is a greedy deconvolution algorithm for amplicon sequencing based on Illu
 
 Install
 =======
-- Deblur requires Python 3.6. If Python 3.6 is not installed, you can create a [conda](http://conda.pydata.org/docs/install/quick.html) environment for Deblur using:
+- Deblur requires Python 3.8. If Python 3.8 is not installed, you can create a [conda](http://conda.pydata.org/docs/install/quick.html) environment for Deblur using:
 ```
-conda create -n deblurenv python=3.6 numpy
+conda create -n deblurenv python=3.8 numpy
 ```
 
 and activate it using:
