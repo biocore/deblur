@@ -34,6 +34,13 @@ jobs:
           pip install coveralls
           pip install -e .
 
+      - name: Install packages
+        shell: bash -l {0}
+        run: |
+          conda activate deblur
+          deblur  workflow  --seqs-fp  /home/runner/work/deblur/deblur/deblur/test/data/seqs_s5.fasta  --output-dir  tmp2d56sxs4  --trim-length  150  -w;
+          bash -c '. ~/.profile; conda activate deblur; deblur  workflow  --seqs-fp  /home/runner/work/deblur/deblur/deblur/test/data/seqs_s5.fasta  --output-dir  /tmp/tmp2d56sxs4  --trim-length  150  -w;'
+
       - name: Run tests
         shell: bash -l {0}
         run: |
