@@ -2,6 +2,10 @@
 
 ## Version 1.1.0-dev
 
+### Performance enhancements
+
+* Updated to Python 3.8
+
 ## Version 1.1.0
 
 Official version 1.1.0 Released on 12 September 2018.
