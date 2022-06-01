@@ -8,9 +8,9 @@ from deblur.workflow import sequence_generator
 from tempfile import mkdtemp
 
 
-def _system_call(original_cmd):
+def _system_call(cmd):
     # this is a wrapper so tests pass in the github actions
-    cmd = '  '.join(original_cmd)
+    cmd = '  '.join(cmd)
 
     conda_env = environ.get('CONDA_DEFAULT_ENV')
     if conda_env is not None:
@@ -23,7 +23,6 @@ def _system_call(original_cmd):
     return_value = proc.returncode
 
     if stderr != 0:
-        print(original_cmd)
         print(cmd)
         print(stdout, stderr, return_value)
 
