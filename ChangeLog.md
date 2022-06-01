@@ -5,8 +5,9 @@
 ### Performance enhancements
 
 * Updated to Python 3.8.
-* Update MAFFT to >=7.39.
-* Update VSEARCH to >=2.7.0.
+* Updated MAFFT to >=7.394.
+* Updated VSEARCH to >=2.7.0.
+* Updated support to click > 8.
 
 ## Version 1.1.0
 
