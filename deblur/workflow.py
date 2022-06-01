@@ -33,7 +33,7 @@ sniff_fastq = skbio.io.io_registry.get_sniffer('fastq')
 
 
 def _get_fastq_variant(input_fp):
-    # http://scikit-bio.org/docs/latest/generated/skbio.io.format.fastq.html#format-parameters
+    # https://bit.ly/3GEDIxF
     variant = None
     variants = ['illumina1.8', 'illumina1.3', 'solexa', 'sanger']
     for v in variants:
@@ -276,12 +276,14 @@ def fasta_from_biom(table, fasta_file_name):
         Name of the fasta output file
     '''
     logger = logging.getLogger(__name__)
-    logger.debug('saving biom table sequences to fasta file %s' % fasta_file_name)
+    logger.debug(
+        'saving biom table sequences to fasta file %s' % fasta_file_name)
 
     with open(fasta_file_name, 'w') as f:
         for cseq in table.ids(axis='observation'):
             f.write('>%s\n%s\n' % (cseq, cseq))
-    logger.info('saved biom table sequences to fasta file %s' % fasta_file_name)
+    logger.info(
+        'saved biom table sequences to fasta file %s' % fasta_file_name)
 
 
 def remove_artifacts_from_biom_table(table_filename,
@@ -311,13 +313,10 @@ def remove_artifacts_from_biom_table(table_filename,
     logger.info('getting 16s sequences from the biom table')
 
     # remove artifacts from the fasta file. output is in clean_fp fasta file
-    clean_fp, num_seqs_left, tmp_files = remove_artifacts_seqs(fasta_filename, ref_fp,
-                                                               working_dir=biom_table_dir,
-                                                               ref_db_fp=ref_db_fp,
-                                                               negate=False, threads=threads,
-                                                               verbose=verbose,
-                                                               sim_thresh=sim_thresh,
-                                                               coverage_thresh=coverage_thresh)
+    clean_fp, num_seqs_left, tmp_files = remove_artifacts_seqs(
+        fasta_filename, ref_fp, working_dir=biom_table_dir,
+        ref_db_fp=ref_db_fp, negate=False, threads=threads, verbose=verbose,
+        sim_thresh=sim_thresh, coverage_thresh=coverage_thresh)
     if clean_fp is None:
         logger.warn("No clean sequences in %s" % fasta_filename)
         return tmp_files
@@ -696,13 +695,14 @@ def create_otu_table(output_fp, deblurred_list,
                 'into output table %s' % (len(deblurred_list), output_fp))
 
     # the regexp for finding the number of reads of a sequence
-    sizeregexp = re.compile('(?<=size=)\w+')
+    sizeregexp = re.compile(r'(?<=size=)\w+')
     seqdict = {}
     seqlist = []
     sampset = set()
     samplist = []
     # arbitrary size for the sparse results matrix so we won't run out of space
-    obs = scipy.sparse.dok_matrix((int(1E9), len(deblurred_list)), dtype=np.double)
+    obs = scipy.sparse.dok_matrix(
+        (int(1E9), len(deblurred_list)), dtype=np.double)
 
     # load the sequences from all samples into a sprase matrix
     sneaking_extensions = {'fasta', 'fastq', 'fna', 'fq', 'fa'}
@@ -839,13 +839,10 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
                      output_fp=output_derep_fp,
                      min_size=min_size, threads=threads_per_sample)
     # Step 3: Remove artifacts
-    output_artif_fp, num_seqs_left, _ = remove_artifacts_seqs(seqs_fp=output_derep_fp,
-                                                              ref_fp=ref_fp,
-                                                              working_dir=working_dir,
-                                                              ref_db_fp=ref_db_fp,
-                                                              negate=True,
-                                                              threads=threads_per_sample,
-                                                              sim_thresh=sim_thresh)
+    output_artif_fp, num_seqs_left, _ = remove_artifacts_seqs(
+        seqs_fp=output_derep_fp, ref_fp=ref_fp, working_dir=working_dir,
+        ref_db_fp=ref_db_fp, negate=True, threads=threads_per_sample,
+        sim_thresh=sim_thresh)
     if not output_artif_fp:
         warnings.warn('Problem removing artifacts from file %s' %
                       seqs_fp, UserWarning)

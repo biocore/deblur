@@ -59,7 +59,7 @@ class TestScript(TestCase):
         self.assertEqual(table.shape, (2, 2))
 
         # assert that counts from different case entries are collapsed
-        self.assertTrue(list(table.to_dataframe().to_dense().loc[
+        self.assertTrue(list(table.to_dataframe().sparse.to_dense().loc[
             ('TACGGGGGGGGTTAGCGTTATTCAATGATATTTGGCGTAAAGTGCATGTAGATGGTGTTAC'
              'AAGTTAAAAAAATAAAAACTAAGGACAAATCTTTTCGTT'), :].values) == [60, 0])
 

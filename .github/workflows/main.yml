@@ -2,14 +2,12 @@ name: "Main CI"
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ master ]
   push:
-    branches:
-      - main
+    branches: [ master ]
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
 
     strategy:
@@ -29,15 +27,16 @@ jobs:
 
       - name: Install packages
         shell: bash -l {0}
-        run:
+        run: |
           conda create --yes -n deblur python=${{ matrix.python-version }} pip nose flake8 h5py
           conda activate deblur
           conda install --yes -c bioconda "VSEARCH=2.7.0" MAFFT=7.310 SortMeRNA=2.0
-          pip install --process-dependency-links .
+          pip install coveralls
+          pip install -e .
 
       - name: Run tests
         shell: bash -l {0}
-        run:
+        run: |
           conda activate deblur
           nosetests --with-doctest --with-coverage --cover-package=deblur
 
@@ -47,9 +46,6 @@ jobs:
     steps:
     - name: Coveralls Finished
       uses: AndreMiras/coveralls-python-action@develop
-      with:
-        github-token: ${{ secrets.github_token }}
-        parallel-finished: true
 
   lint:
     runs-on: ubuntu-latest
@@ -65,4 +61,4 @@ jobs:
     - name: lint
       run: |
        pip install -q flake8
-       flake8 --max-line-length=200 deblur scripts/deblur setup.py
+       flake8 deblur scripts/deblur setup.py

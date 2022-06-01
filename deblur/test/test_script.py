@@ -1,10 +1,32 @@
 from unittest import TestCase, main
 from os.path import join, abspath, dirname
+from os import environ
+import subprocess
 
 from biom import load_table
-from deblur.workflow import _system_call
 from deblur.workflow import sequence_generator
 from tempfile import mkdtemp
+
+
+def _system_call(cmd):
+    # this is a wrapper so tests pass in the github actions
+    cmd = '  '.join(cmd)
+
+    conda_env = environ.get('CONDA_DEFAULT_ENV')
+    if conda_env is not None:
+        cmd = f"bash -c '. ~/.profile; conda activate {conda_env}; {cmd};'"
+
+    proc = subprocess.Popen(cmd, universal_newlines=True, shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, stderr = proc.communicate()
+    return_value = proc.returncode
+
+    if stderr != 0:
+        print(cmd)
+        print(stdout, stderr, return_value)
+
+    return stdout, stderr, return_value
 
 
 class TestScript(TestCase):
@@ -58,7 +80,8 @@ class TestScript(TestCase):
         sout, serr, res = _system_call(cmd)
         self.validate_results(self.output_biom, self.orig_one_seq_fp)
 
-        # test default parameters except min-reads set to 0, negative mode, single thread
+        # test default parameters except min-reads set to 0, negative mode,
+        # single thread
         cmd = ["deblur", "workflow", "--seqs-fp", self.seqs_fp,
                "--output-dir", self.output_dir,
                "--trim-length", "150", '-w', '--min-reads', '0']
