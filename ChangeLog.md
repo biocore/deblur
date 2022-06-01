@@ -6,6 +6,7 @@
 
 * Updated to Python 3.8.
 * Update MAFFT to >=7.39.
+* Update VSEARCH to >=2.7.0.
 
 ## Version 1.1.0
 
