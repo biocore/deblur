@@ -40,15 +40,12 @@ jobs:
           conda activate deblur
           nosetests --with-doctest --with-coverage --cover-package=deblur
 
-  coverage:
-    name: "Upload coverage"
+  coveralls_finish:
     needs: main
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls Finished
       uses: AndreMiras/coveralls-python-action@develop
-      with:
-        github-token: ${{ secrets.github_token }}
 
   lint:
     runs-on: ubuntu-latest
