@@ -1,9 +1,12 @@
 # deblur changelog
 
-## Version 1.1.0-dev
+## Version 1.1.1
+
+Official version 1.1.1 Released on 2 June 2022.
 
 ### Performance enhancements
 
+* Moved CI to GitHub Actions.
 * Updated to Python 3.8.
 * Updated MAFFT to >=7.394.
 * Updated VSEARCH to >=2.7.0.
