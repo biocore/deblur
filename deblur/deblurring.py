@@ -50,7 +50,7 @@ def get_sequences(input_seqs):
 
     if len(seqs) == 0:
         logger = logging.getLogger(__name__)
-        logger.warn('No sequences found in fasta file!')
+        logger.warning('No sequences found in fasta file!')
         return None
 
     # Check that all the sequence lengths (aligned and unaligned are the same)
@@ -113,7 +113,7 @@ def deblur(input_seqs, mean_error=0.005,
     # Get the sequences
     seqs = get_sequences(input_seqs)
     if seqs is None:
-        logger.warn('no sequences deblurred')
+        logger.warning('no sequences deblurred')
         return None
     logger.info('deblurring %d sequences' % len(seqs))
 
