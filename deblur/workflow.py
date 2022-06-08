@@ -257,7 +257,7 @@ def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
     bad_samples = samp_ids[samp_sum < minreads]
     if len(bad_samples) > 0:
         logger.warning('removed %d samples with reads per sample<%d'
-                    % (len(bad_samples), minreads))
+                       % (len(bad_samples), minreads))
         table = table.filter(bad_samples, axis='sample',
                              inplace=inplace, invert=True)
     else:
@@ -879,7 +879,7 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
             warnings.warn('multiple sequence alignment file %s contains '
                           'no sequences' % output_msa_fp, UserWarning)
             logger.warning('no sequences returned from deblur for file %s' %
-                        output_msa_fp)
+                           output_msa_fp)
             return None
         for s in seqs:
             # remove '-' from aligned sequences
