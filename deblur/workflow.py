@@ -88,7 +88,7 @@ def sequence_generator(input_fp):
         # usually happens when the fasta file is empty
         # so need to return no sequences (and warn)
         msg = "input file %s does not appear to be FASTA or FASTQ" % input_fp
-        logger.warn(msg)
+        logger.warning(msg)
         warnings.warn(msg, UserWarning)
         return
 
@@ -143,7 +143,7 @@ def trim_seqs(input_seqs, trim_len, left_trim_len):
                  'than the trim length (%d). ' \
                  'Are you using the correct -t trim length?' \
                  % (totseqs-okseqs, totseqs, trim_len)
-        logger.warn(errmsg)
+        logger.warning(errmsg)
         warnings.warn(errmsg, UserWarning)
     else:
         logger.debug('trimmed to length %d (%d / %d remaining)'
@@ -256,8 +256,8 @@ def filter_minreads_samples_from_table(table, minreads=1, inplace=True):
     samp_ids = table.ids(axis='sample')
     bad_samples = samp_ids[samp_sum < minreads]
     if len(bad_samples) > 0:
-        logger.warn('removed %d samples with reads per sample<%d'
-                    % (len(bad_samples), minreads))
+        logger.warning('removed %d samples with reads per sample<%d'
+                       % (len(bad_samples), minreads))
         table = table.filter(bad_samples, axis='sample',
                              inplace=inplace, invert=True)
     else:
@@ -318,7 +318,7 @@ def remove_artifacts_from_biom_table(table_filename,
         ref_db_fp=ref_db_fp, negate=False, threads=threads, verbose=verbose,
         sim_thresh=sim_thresh, coverage_thresh=coverage_thresh)
     if clean_fp is None:
-        logger.warn("No clean sequences in %s" % fasta_filename)
+        logger.warning("No clean sequences in %s" % fasta_filename)
         return tmp_files
 
     logger.debug('removed artifacts from sequences input %s'
@@ -414,7 +414,7 @@ def remove_artifacts_seqs(seqs_fp,
     logger.info('remove_artifacts_seqs file %s' % seqs_fp)
 
     if stat(seqs_fp).st_size == 0:
-        logger.warn('file %s has size 0, continuing' % seqs_fp)
+        logger.warning('file %s has size 0, continuing' % seqs_fp)
         return None, 0, []
 
     if coverage_thresh is None:
@@ -878,8 +878,8 @@ def launch_workflow(seqs_fp, working_dir, mean_error, error_dist,
         if seqs is None:
             warnings.warn('multiple sequence alignment file %s contains '
                           'no sequences' % output_msa_fp, UserWarning)
-            logger.warn('no sequences returned from deblur for file %s' %
-                        output_msa_fp)
+            logger.warning('no sequences returned from deblur for file %s' %
+                           output_msa_fp)
             return None
         for s in seqs:
             # remove '-' from aligned sequences
