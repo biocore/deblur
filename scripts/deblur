@@ -325,10 +325,8 @@ def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample,
     """Multiple sequence alignment"""
     start_log(level=log_level * 10, filename=log_file)
     alignment = multiple_sequence_alignment(seqs_fp,
-                                            threads=threads_per_sample)
-
-    with open(output_fp, 'w') as f:
-        f.write(alignment.to_fasta())
+                                            threads=threads_per_sample,
+                                            output_fp=output_fp)
 
 
 # DE NOVO CHIMERA REMOVAL COMMAND

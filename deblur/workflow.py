@@ -492,7 +492,7 @@ def remove_artifacts_seqs(seqs_fp,
     return output_fp, okseqs, [blast_output_filename]
 
 
-def multiple_sequence_alignment(seqs_fp, threads=1):
+def multiple_sequence_alignment(seqs_fp, threads=1, output_fp=None):
     """Perform multiple sequence alignment on FASTA file using MAFFT.
 
     Parameters
@@ -517,7 +517,10 @@ def multiple_sequence_alignment(seqs_fp, threads=1):
     if stat(seqs_fp).st_size == 0:
         logger.warning('msa failed. file %s has no reads' % seqs_fp)
         return None
-    msa_fp = seqs_fp + '.msa'
+    if output_fp is None:
+        msa_fp = seqs_fp + '.msa'
+    else:
+        msa_fp = output_fp
     params = ['mafft', '--quiet', '--preservecase', '--parttree', '--auto',
               '--thread', str(threads), seqs_fp]
     sout, serr, res = _system_call(params, stdoutfilename=msa_fp)
