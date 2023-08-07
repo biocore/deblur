@@ -49,7 +49,7 @@ class Sequence(object):
             [trans_dict[b] for b in self.sequence], dtype=np.int8)
 
     def __eq__(self, other):
-        return (type(self) == type(other) and
+        return (isinstance(other, type(self)) and
                 self.sequence == other.sequence and
                 self.frequency == other.frequency)
 
