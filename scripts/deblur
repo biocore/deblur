@@ -531,8 +531,8 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
-    logger.warning('deblur version %s workflow started on %s' %
-                  (__version__, seqs_fp))
+    logger.warning('deblur version %s workflow started on %s' % 
+                   (__version__, seqs_fp))
     logger.warning('parameters: %s' % locals())
 
     # set the error distribution
