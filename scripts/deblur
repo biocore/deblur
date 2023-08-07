@@ -252,8 +252,8 @@ def remove_artifacts(seqs_fp, output_dir, ref_fp, ref_db_fp,
                              "does not match the number of indexed "
                              "reference databases")
     else:
-        logger.warn('sortmerna database does not exist, '
-                    'creating it into dir %s' % output_dir)
+        logger.warning('sortmerna database does not exist, '
+                       'creating it into dir %s' % output_dir)
         ref_db_fp = build_index_sortmerna(
             ref_fp=ref_fp,
             working_dir=output_dir)
@@ -531,9 +531,9 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
     """Launch deblur workflow"""
     start_log(level=log_level * 10, filename=log_file)
     logger = logging.getLogger(__name__)
-    logger.warn('deblur version %s workflow started on %s' %
-                (__version__, seqs_fp))
-    logger.warn('parameters: %s' % locals())
+    logger.warning('deblur version %s workflow started on %s' %
+                  (__version__, seqs_fp))
+    logger.warning('parameters: %s' % locals())
 
     # set the error distribution
     if error_dist is None:
@@ -634,7 +634,7 @@ def workflow(seqs_fp, output_dir, pos_ref_fp, pos_ref_db_fp,
                     min_size=min_size, ref_fp=ref_fp, ref_db_fp=ref_db_fp,
                     threads_per_sample=threads_per_sample)
                 if deblurred_file_name is None:
-                    logger.warn('deblurring failed for file %s' % input_fp)
+                    logger.warning('deblurring failed for file %s' % input_fp)
         logger.info('finished processing per sample fasta files')
     else:
         # we're want to start parallel mode - so need to create
