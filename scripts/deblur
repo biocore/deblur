@@ -109,7 +109,7 @@ def deblur_seqs(seqs_fp, mean_error, error_dist, indel_prob,
     seqs = deblur(sequence_generator(seqs_fp), mean_error, error_dist,
                   indel_prob, indel_max)
 
-    output_path = "%s.clean" % seqs_fp
+    output_path = "%s.deblur" % seqs_fp
     with open(output_path, 'w') as f:
         for s in seqs:
             f.write(s.to_fasta())
