@@ -8,7 +8,7 @@
 
 from unittest import TestCase, main
 from shutil import rmtree
-from tempfile import mkdtemp
+from tempfile import mkdtemp, NamedTemporaryFile
 from os import listdir, remove
 from types import GeneratorType
 from os.path import join, isfile, abspath, dirname, splitext
@@ -34,7 +34,8 @@ from deblur.workflow import (dereplicate_seqs,
                              remove_artifacts_from_biom_table,
                              _get_fastq_variant,
                              filter_minreads_samples_from_table,
-                             fasta_from_biom)
+                             fasta_from_biom,
+                             upper_fasta)
 from deblur.deblurring import get_default_error_profile
 
 
@@ -212,6 +213,28 @@ class workflowTests(TestCase):
         act = [item for item in sequence_generator(output_fp)]
 
         self.assertEqual(act, exp)
+
+    def test_upper_fasta(self):
+        fasta = (">Seq1\nAAGtttcA\n"
+                 ">Seq2\nAAAAGCcA\n"
+                 ">Seq3\nAAGTGCAA\n")
+        fasta_exp = (">Seq1\nAAGTTTCA\n"
+                 ">Seq2\nAAAAGCCA\n"
+                 ">Seq3\nAAGTGCAA\n")
+
+        in_fa = join(self.working_dir, "seqs_lower.fasta")
+
+        with open(in_fa, 'w') as f:
+            f.write(fasta)
+
+        upper_fasta(in_fa)
+
+        with open(in_fa) as f:
+            fasta_out = f.read()
+
+        remove(in_fa)
+
+        self.assertEqual(fasta_exp, fasta_out)
 
     def test_dereplicate_seqs(self):
         """ Test dereplicate_seqs() method functionality,
@@ -528,6 +551,69 @@ class workflowTests(TestCase):
         for label, seq in sequence_generator(output_fp):
             label = label.split()[0]
             seqs_obs.append(label)
+        self.assertEqual(seqs_non_chimera, seqs_obs)
+
+    def test_remove_chimeras_denovo_from_seqs_lower(self):
+        """ Test remove_chimeras_denovo_from_seqs() method functionality.
+            Remove chimeric sequences from a FASTA file using the UCHIME
+            algorithm, implemented in VSEARCH.
+        """
+        seqs = [("s1_104;size=2;", "GTGCCAGCCGCCGCGGTAATACCCGCAGCTCAAGTGGTG"
+                                   "GTCGCTATTATTGAGCCTAAAACGTCCGTAGTCGGCTTT"
+                                   "GTAAATCCCTGGGTAAATCGGGAAGCTTAACTTTCCGAC"
+                                   "TTCCGAGGAGACTGTCAAACTTGGGACCGGGAG"),
+                ("s1_106;size=2;", "GTGTCAGCCGCCGCGGTAATACCAGCTCTCCGAGTGGTG"
+                                   "TGGATGTTTATTGGGCCTAAAGCGTCCGTAGCCGGCTGC"
+                                   "GCAAGTCTGTCGGGAAATCCGCACGCCTAACGTGCGGGC"
+                                   "GTCCGGCGGAAACTGCGTGGCTTGGGACCGGAA"),
+                ("s1_1;size=9;", "TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAA"
+                                 "ACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"
+                                 "CGCTTAACGATCCGATTCTGGGGAGACTGCAAAGCTTGGGA"
+                                 "CCGGGCGAGGTTAGAGGTACTCTCGGG"),
+                ("s1_20;size=9;", "TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAA"
+                                  "AACGTTCGTAGCCGGTTTGATAAATCCTTGGGTAAATCGG"
+                                  "GAAGCTTAACTTTCCGATTCCGAGGAGACTGTCAAACTTG"
+                                  "GGACCGGGAGAGGCTAGAGGTACTTCTGGG"),
+                ("s1_40;size=8;", "TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAA"
+                                  "AGCATCCGTAGCTGGCTAGGTTAGTCCCCTGTTAAATCCA"
+                                  "CCGAATTAATCGTTGGATGCGGGGGATACTGCTTGGCTAG"
+                                  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+                ("s1_60;size=8;", "TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAA"
+                                  "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
+                                  "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
+                                  "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
+        names_non_chimera = ["s1_1;size=9;", "s1_20;size=9;",
+                            "s1_40;size=8;", "s1_60;size=8;"]
+        seqs_non_chimera = [("TACCCGCAGCTCAAGTGGTGGTCGCTATTATTGAGCCTAAA"
+                             "ACGTCCGTAGTCGGCTTTGTAAATCCCTGGGTAAATCGGGT"
+                             "CGCTTAACGATCCGATTCTGGGGAGACTGCAAAGCTTGGGA"
+                             "CCGGGCGAGGTTAGAGGTACTCTCGGG"),
+                            ("TACCTGCAGCCCAAGTGGTGGTCGATTTTATTGAGTCTAA"
+                             "AACGTTCGTAGCCGGTTTGATAAATCCTTGGGTAAATCGG"
+                             "GAAGCTTAACTTTCCGATTCCGAGGAGACTGTCAAACTTG"
+                             "GGACCGGGAGAGGCTAGAGGTACTTCTGGG"),
+                            ("TACCAGCTCTCCGAGTGGTGTGGATGTTTATTGGGCCTAA"
+                             "AGCATCCGTAGCTGGCTAGGTTAGTCCCCTGTTAAATCCA"
+                             "CCGAATTAATCGTTGGATGCGGGGGATACTGCTTGGCTAG"
+                             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+                            ("TACCGGCAGCTCAAGTGATGACCGCTATTATTGGGCCTAA"
+                             "AGCGTCCGTAGCCGGCTGCGCAAGTCTGTCGGGAAATCCG"
+                             "CACGCCTAACGTGCGGGTCCGGCGGAAACTGCGTGGCTTG"
+                             "GGACCGGAAGACTCGAGGGGTACGTCAGGG")]
+        seqs_fp = join(self.working_dir, "seqs.fasta")
+        with open(seqs_fp, 'w') as seqs_f:
+            for seq in seqs:
+                seqs_f.write(">%s\n%s\n" % seq)
+        output_fp = remove_chimeras_denovo_from_seqs(
+            seqs_fp=seqs_fp,
+            working_dir=self.working_dir)
+        names_obs = []
+        seqs_obs = []
+        for label, seq in sequence_generator(output_fp):
+            label = label.split()[0]
+            names_obs.append(label)
+            seqs_obs.append(seq)
+        self.assertEqual(names_non_chimera, names_obs)
         self.assertEqual(seqs_non_chimera, seqs_obs)
 
     def test_multiple_sequence_alignment(self):
