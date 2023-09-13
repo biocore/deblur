@@ -356,10 +356,10 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
 
 # GENERATE BIOM TABLE COMMAND
 @deblur_cmds.command()
-@click.argument('seqs_fp', required=True,
+@click.argument('seqs_dir', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_biom_fp', required=True,
+@click.argument('output_biom_dir', required=True,
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
 @click.option('--min-reads', required=False, type=int, default=10,
@@ -370,6 +370,9 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
               default='.fasta.trim.derep.no_artifacts.msa.deblur.no_chimeras',
               show_default=True,
               help='ending of files to be added to the biom table')
+@click.option('--overwrite', '-w', required=False, type=bool, default=False,
+              is_flag=True,
+              show_default=True, help="Overwrite output directory if exists.")
 @click.option('--log-level', required=False,
               type=click.IntRange(1, 5, clamp=True), default=2,
               show_default=True, help="Level of messages for log file"
@@ -379,28 +382,49 @@ def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def build_biom_table(seqs_fp, output_biom_fp, min_reads, file_type, log_level,
-                     log_file):
+def build_biom_table(seqs_dir, output_biom_dir, min_reads, file_type,
+                     overwrite, log_level, log_file):
     """Generate a BIOM table from a directory of chimera removed fasta files
     Parameters
     ----------
-    seqs_fp : str
+    seqs_dir : str
       the path to the directory containing the chimera removed fasta files
-    output_biom_fp : str
-      the path where to save the output biom table files
-      ('all.biom', 'reference-hit.biom', 'reference-non-hit.biom')
+    output_biom_dir : str
+      the directory where to save the output biom table files
+      ('all.biom', 'all.seq.fa')
+    min_reads: int
+      In output biom table - keep only sequences appearing at least
+      min-reads in all samples combined.
     file_type : str
       the files type to add to the table
       (default='.trim.derep.no_artifacts.msa.deblur.no_chimeras',
       can be '.fasta' or '.fa' if needed)
+    overwrite: bool
+      Overwrite output directory if exists.
     """
     start_log(level=log_level * 10, filename=log_file)
-    output_filename = 'all.biom'
-    output_fp = join(output_biom_fp, output_filename)
-    outputfasta_filename = 'all.seq.fa'
-    outputfasta_fp = join(output_biom_fp, outputfasta_filename)
+    logger = logging.getLogger(__name__)
 
-    samples = get_files_for_table(seqs_fp, file_type)
+    # Create output directory
+    if exists(output_biom_dir):
+        if overwrite:
+            logger.debug('overwrite is on - deleting directory %s' %
+                         output_biom_dir)
+            rmtree(output_biom_dir)
+        else:
+            logger.critical('output directory %s already exists' %
+                            output_biom_dir)
+            raise OSError("Output directory already exists. Choose a "
+                          "different directory or use option "
+                          "--overwrite (-w)")
+    makedirs(output_biom_dir)
+
+    output_filename = 'all.biom'
+    output_fp = join(output_biom_dir, output_filename)
+    outputfasta_filename = 'all.seq.fa'
+    outputfasta_fp = join(output_biom_dir, outputfasta_filename)
+
+    samples = get_files_for_table(seqs_dir, file_type)
     create_otu_table(output_fp, samples,
                      outputfasta_fp=outputfasta_fp, minreads=min_reads)
 
