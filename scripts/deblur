@@ -336,7 +336,7 @@ def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample,
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_fp', required=True,
+@click.argument('output_dir', required=True,
                 type=click.Path(resolve_path=True, readable=True,
                                 exists=False, file_okay=True))
 @click.option('--log-level', required=False,
@@ -348,10 +348,10 @@ def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample,
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def remove_chimeras_denovo(seqs_fp, output_fp, log_level, log_file):
+def remove_chimeras_denovo(seqs_fp, output_dir, log_level, log_file):
     """Remove chimeras de novo using UCHIME (VSEARCH implementation)"""
     start_log(level=log_level * 10, filename=log_file)
-    remove_chimeras_denovo_from_seqs(seqs_fp, output_fp)
+    remove_chimeras_denovo_from_seqs(seqs_fp, output_dir)
 
 
 # GENERATE BIOM TABLE COMMAND
