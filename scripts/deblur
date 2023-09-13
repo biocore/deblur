@@ -305,9 +305,6 @@ def build_db_index(ref_fp, output_dir, log_level, log_file):
 @click.argument('seqs_fp', required=True,
                 type=click.Path(resolve_path=True, readable=True, exists=True,
                                 file_okay=True))
-@click.argument('output_fp', required=True,
-                type=click.Path(resolve_path=True, readable=True, exists=False,
-                                file_okay=True))
 @click.option('--threads-per-sample', '-a', required=False, type=int,
               default=1, show_default=True,
               help="Number of threads to use per sample (0 to use all)")
@@ -320,15 +317,12 @@ def build_db_index(ref_fp, output_dir, log_level, log_file):
                               exists=False, dir_okay=True),
               default='deblur.log',
               show_default=True, help="log file name")
-def multiple_seq_alignment(seqs_fp, output_fp, threads_per_sample,
+def multiple_seq_alignment(seqs_fp, threads_per_sample,
                            log_level, log_file):
     """Multiple sequence alignment"""
     start_log(level=log_level * 10, filename=log_file)
-    alignment = multiple_sequence_alignment(seqs_fp,
-                                            threads=threads_per_sample)
-
-    with open(output_fp, 'w') as f:
-        f.write(alignment.to_fasta())
+    multiple_sequence_alignment(seqs_fp,
+                                threads=threads_per_sample)
 
 
 # DE NOVO CHIMERA REMOVAL COMMAND
