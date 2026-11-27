@@ -1,5 +1,5 @@
 Deblur
-======
+=======
 
 [![Build Status](https://github.com/biocore/deblur/actions/workflows/main.yml/badge.svg)](https://github.com/biocore/deblur/actions/workflows/main.yml)
 [![Coverage Status](https://coveralls.io/repos/github/biocore/deblur/badge.svg?branch=master)](https://coveralls.io/github/biocore/deblur?branch=master)
