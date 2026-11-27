@@ -56,8 +56,8 @@ jobs:
             click
             hdmedians
             cython
-            scikit-bio=0.5
-            biom-format=2.1
+            scikit-bio
+            biom-format
           init-shell: bash
           cache-environment: true
           post-cleanup: all
