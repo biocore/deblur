@@ -55,6 +55,7 @@ jobs:
             pytest-cov
             click
             hdmedians
+            cython
             scikit-bio=0.5
             biom-format=2.1
           init-shell: bash
