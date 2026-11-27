@@ -53,6 +53,10 @@ jobs:
             sortmerna=2.0
             pytest
             pytest-cov
+            click
+            hdmedians
+            scikit-bio=0.5
+            biom-format=2.1
           init-shell: bash
           cache-environment: true
           post-cleanup: all
@@ -67,7 +71,8 @@ jobs:
           echo "::endgroup::"
 
       - name: Install deblur
-        run: python -m pip install -e .
+        # install dependencies through conda, not via pip
+        run: python -m pip install --no-deps -e .
 
       - name: Run tests
         run: |
