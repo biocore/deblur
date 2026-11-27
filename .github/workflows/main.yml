@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.10", "3.11"]  #  "3.12" and later fail due to missing build for old skbio 0.5.x and other deps
+        python-version: ["3.8", "3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]  #  "3.12" and later fail due to missing build for old skbio 0.5.x and other deps
 
     defaults:
       run:
@@ -112,7 +112,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.15"
 
       - name: Lint with flake8
         run: |
